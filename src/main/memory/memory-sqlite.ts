@@ -741,6 +741,41 @@ function closeOpenLoop(loopId: number, resolutionNotes: string): boolean {
   });
 }
 
+// 아주 오래 언급되지 않은 미완료 주제를 아카이브하는 기준. 프롬프트 노출 상한
+// (`OPEN_LOOP_PROMPT_MAX_AGE_DAYS`, 2주)과는 목적이 다르다 — 그쪽은 "펫이 꺼내지 않게",
+// 이쪽은 "표가 무한정 쌓이지 않게"다. 그래서 훨씬 길게 잡는다. 이사·자격증처럼 느리게
+// 진행되는 일이 여기 걸리면 안 되고, 반년이 지나도록 한 번도 다시 언급되지 않은 주제는
+// 사용자에게도 잊힌 항목으로 본다.
+const OPEN_LOOP_ARCHIVE_AGE_DAYS = 180;
+
+/**
+ * 기준일보다 오래 언급되지 않은 열린 주제를 닫는다. 이미 닫힌 주제는 건드리지 않으므로
+ * 여러 번 불러도 안전하다(시작할 때 한 번 부른다). 닫은 개수를 돌려준다.
+ */
+function archiveStaleOpenLoops(maxAgeDays = OPEN_LOOP_ARCHIVE_AGE_DAYS): number {
+  if (!db) return 0;
+
+  return runPersistentMutation("Archive stale open loops", 0, database => {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+    // 마지막 언급 시각을 못 읽는 행은 남긴다 — 프롬프트 필터와 같은 판단이다.
+    const staleCondition =
+      `is_closed = 0 AND last_mentioned_at IS NOT NULL AND last_mentioned_at < ?`;
+    const pending = database.exec(
+      `SELECT COUNT(*) FROM open_loops WHERE ${staleCondition}`,
+      [cutoff]
+    );
+    const archived = Number(pending[0]?.values[0][0]) || 0;
+    if (archived === 0) return 0;
+    database.run(
+      `UPDATE open_loops SET is_closed = 1, closed_at = ?, resolution_notes = ?
+       WHERE ${staleCondition}`,
+      [now.toISOString(), `${maxAgeDays}일 이상 언급되지 않아 자동 정리`, cutoff]
+    );
+    return archived;
+  });
+}
+
 function getOpenLoopsCount(): number {
   if (!db) return 0;
 
@@ -851,6 +886,8 @@ export {
   insertOpenLoop,
   getOpenLoops,
   closeOpenLoop,
+  archiveStaleOpenLoops,
+  OPEN_LOOP_ARCHIVE_AGE_DAYS,
   getOpenLoopsCount,
   insertEpisode,
   getEpisodesCount,

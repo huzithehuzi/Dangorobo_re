@@ -100,13 +100,15 @@ import {
   insertOpenLoop,
   insertEpisode,
   getEpisodesCount,
-  getOpenLoopsCount
+  getOpenLoopsCount,
+  archiveStaleOpenLoops
 } from "./main/memory/memory-sqlite.js";
 import { registerMemoryIpcHandlers } from "./main/memory/memory-ipc.js";
 import {
   findRelatedMemories,
   buildMemoryContextBlock,
-  buildOpenLoopsContextBlock
+  buildOpenLoopsContextBlock,
+  selectPromptOpenLoops
 } from "./main/memory/memory-search.js";
 import { validateExtractedMemory } from "./main/memory/memory-extraction.js";
 import { createMemoryExtractionRunner } from "./main/memory/memory-extraction-runner.js";
@@ -1081,7 +1083,7 @@ function relatedMemoryBlock(question: string): string {
       RELATED_MEMORY_PROMPT_LIMIT
     );
     return buildMemoryContextBlock(related, settings.language) +
-      buildOpenLoopsContextBlock(getOpenLoops(), settings.language);
+      buildOpenLoopsContextBlock(selectPromptOpenLoops(getOpenLoops()), settings.language);
   } catch (error) {
     // 기억을 못 읽는다고 답변 자체가 실패하면 안 된다 — 기억 없이 그냥 답한다.
     console.error("[Memory] 관련 기억 블록을 만들지 못했다:", error);
@@ -1217,7 +1219,11 @@ const petChatService = createPetChatService({
   // 기억이 꺼져 있으면 relatedMemoryBlock이 아무것도 넣지 않으므로, 기억을 소재로 삼는
   // 화제도 후보에서 빠져야 한다 — 재료 없이 지시만 주면 모델이 기억을 지어낸다.
   hasLongTermMemory: () => settings.assistantMemoryEnabled && getMemoryCount() > 0,
-  hasOpenLoops: () => settings.assistantMemoryEnabled && getOpenLoopsCount() > 0,
+  // 프롬프트에 실제로 올라가는 것과 같은 기준을 써야 한다 — 전체 개수로 재면 오래된
+  // 주제만 남은 상태에서 "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은 비어
+  // 모델이 주제를 지어낸다.
+  hasOpenLoops: () => settings.assistantMemoryEnabled &&
+    selectPromptOpenLoops(getOpenLoops()).length > 0,
   openPanel: (message, expression) => {
     bubblePanels.setAssistantActive(true);
     petWindow?.webContents.send("pet-chat:open", { message, expression });
@@ -1386,6 +1392,12 @@ app.whenReady().then(async () => {
   }
   if (settings.assistantMemoryEnabled) {
     assistantHistory.loadMemory();
+  }
+  // 반년 넘게 다시 언급되지 않은 미완료 주제를 닫는다. 프롬프트 노출은 이미 2주로 잘리므로
+  // 이건 표가 무한정 쌓이는 것만 막는 정리다(시작할 때 한 번).
+  const archivedLoops = archiveStaleOpenLoops();
+  if (archivedLoops > 0) {
+    console.log(`[Memory] 오래된 미완료 주제 ${archivedLoops}개를 자동 정리했다.`);
   }
   checklistState = loadChecklistFromDisk();
   favoritesPanelsState = loadFavoritesPanelsFromDisk();

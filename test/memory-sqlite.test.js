@@ -32,6 +32,8 @@ const {
   insertOpenLoop,
   getOpenLoops,
   closeOpenLoop,
+  archiveStaleOpenLoops,
+  OPEN_LOOP_ARCHIVE_AGE_DAYS,
   getOpenLoopsCount,
   getEpisodesCount,
   getAllMemories,
@@ -442,4 +444,49 @@ test("저장 실패 시 모든 변경 API가 실패를 반환하고 인메모리
     memory_value: "저장 재개"
   }), true);
   assert.equal(getMemoryCount(), 2);
+});
+
+// ── 오래된 미완료 주제 자동 정리 (2026-08-14) ────────────────────────────────────
+//
+// 프롬프트 노출은 memory-search가 2주로 자르고, 이쪽은 표가 무한정 쌓이는 것만 막는다.
+// 방금 넣은 행의 나이를 뒤로 돌릴 수단이 없으므로 기준일을 0/아주 큰 값으로 줘서
+// 경계 양쪽을 확인한다.
+
+test("자동 정리는 기준보다 오래된 열린 주제만 닫는다", async (t) => {
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const episodeId = insertEpisode({
+    session_id: "stale-loop-session",
+    date: "2026-08-14",
+    summary: "오래된 주제 정리 기준"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "정리 대상 주제" }), true);
+  assert.equal(getOpenLoopsCount(), 1);
+
+  // 기준이 아주 길면 방금 넣은 주제는 살아 있다 — 진행 중인 장기 과제를 닫지 않는다.
+  assert.equal(archiveStaleOpenLoops(3650), 0);
+  assert.equal(getOpenLoopsCount(), 1);
+
+  // 기준을 0일로 주면 이미 지난 시각의 주제가 닫힌다.
+  assert.equal(archiveStaleOpenLoops(0), 1);
+  assert.equal(getOpenLoopsCount(), 0);
+  assert.deepEqual(getOpenLoops(), [], "닫힌 주제는 열린 목록에서 빠진다");
+
+  // 여러 번 불러도 안전하다(시작할 때마다 부른다) — 닫힌 주제를 다시 세지 않는다.
+  assert.equal(archiveStaleOpenLoops(0), 0);
+});
+
+test("자동 정리 기준일은 프롬프트 노출 상한보다 훨씬 길다", () => {
+  // 둘은 목적이 다르다. 이 값이 2주 근처로 내려오면 진행 중인 일까지 닫히기 시작한다.
+  assert.equal(OPEN_LOOP_ARCHIVE_AGE_DAYS, 180);
+  const { OPEN_LOOP_PROMPT_MAX_AGE_DAYS } = require("../src/main/memory/memory-search.js");
+  assert.ok(OPEN_LOOP_ARCHIVE_AGE_DAYS > OPEN_LOOP_PROMPT_MAX_AGE_DAYS * 4);
 });

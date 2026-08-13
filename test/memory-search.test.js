@@ -12,8 +12,12 @@ const {
   scoreMemory,
   findRelatedMemories,
   buildMemoryContextBlock,
-  buildOpenLoopsContextBlock
+  buildOpenLoopsContextBlock,
+  selectPromptOpenLoops,
+  OPEN_LOOP_PROMPT_MAX_AGE_DAYS
 } = require("../src/main/memory/memory-search.js");
+const fs = require("node:fs");
+const path = require("node:path");
 
 /** @param {number} days */
 function daysAgo(days) {
@@ -214,4 +218,64 @@ test("날짜가 깨져 있어도 블록이 만들어진다", () => {
   const block = buildOpenLoopsContextBlock([{ topic: "무언가", last_mentioned_at: null }], "ko");
   assert.ok(block.includes("무언가"));
   assert.ok(!block.includes("NaN"));
+});
+
+// ── 오래된 미완료 주제 걸러내기 (2026-08-14) ─────────────────────────────────────
+//
+// 오래 언급되지 않은 주제를 계속 프롬프트에 넣으면 펫이 몇 달 전 일을 되묻는다.
+// DB에서 지우지는 않으므로, 여기서 고정하는 것은 "무엇을 프롬프트에 올리는지"뿐이다.
+
+test("상한보다 오래된 주제는 프롬프트에서 빠지고 최근 것만 남는다", () => {
+  const fresh = { topic: "이번 주 발표", last_mentioned_at: daysAgo(2) };
+  const edge = { topic: "상한 직전", last_mentioned_at: daysAgo(OPEN_LOOP_PROMPT_MAX_AGE_DAYS - 1) };
+  const stale = { topic: "석 달 전 이사", last_mentioned_at: daysAgo(90) };
+
+  assert.deepEqual(
+    selectPromptOpenLoops([fresh, edge, stale]).map((loop) => loop.topic),
+    ["이번 주 발표", "상한 직전"]
+  );
+});
+
+test("상한 일수는 기본값으로 쓰이고 호출부가 덮어쓸 수 있다", () => {
+  assert.equal(OPEN_LOOP_PROMPT_MAX_AGE_DAYS, 14);
+  const loops = [{ topic: "열흘 전", last_mentioned_at: daysAgo(10) }];
+  assert.equal(selectPromptOpenLoops(loops).length, 1, "기본 상한 안");
+  assert.equal(selectPromptOpenLoops(loops, 7).length, 0, "상한을 줄이면 빠진다");
+});
+
+test("마지막 언급 시각을 못 읽는 주제는 남긴다", () => {
+  // 날짜를 못 읽었다는 이유로 조용히 사라지면 원인을 찾기 어렵다.
+  const loops = [
+    { topic: "날짜 없음", last_mentioned_at: null },
+    { topic: "깨진 날짜", last_mentioned_at: "언젠가" }
+  ];
+  assert.equal(selectPromptOpenLoops(loops).length, 2);
+});
+
+test("걸러낸 결과를 그대로 블록에 넣으면 오래된 주제가 안 실린다", () => {
+  const loops = [
+    { topic: "어제 산 재료", last_mentioned_at: daysAgo(1) },
+    { topic: "작년 자격증", last_mentioned_at: daysAgo(300) }
+  ];
+  const block = buildOpenLoopsContextBlock(selectPromptOpenLoops(loops), "ko");
+  assert.ok(block.includes("어제 산 재료"));
+  assert.ok(!block.includes("작년 자격증"));
+});
+
+test("main은 프롬프트 블록과 펫대화 판정에 같은 필터를 쓴다", () => {
+  // 둘이 갈리면 "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은 비어서,
+  // 모델이 없는 주제를 지어낸다.
+  const mainSource = fs
+    .readFileSync(path.join(__dirname, "..", "src", "main.ts"), "utf8")
+    .replace(/\s+/g, " ");
+  assert.ok(
+    mainSource.includes("buildOpenLoopsContextBlock(selectPromptOpenLoops(getOpenLoops())"),
+    "프롬프트 블록이 필터를 거친다"
+  );
+  assert.ok(
+    mainSource.includes(
+      "hasOpenLoops: () => settings.assistantMemoryEnabled && selectPromptOpenLoops(getOpenLoops()).length > 0"
+    ),
+    "펫대화 판정도 같은 필터를 거친다"
+  );
 });
