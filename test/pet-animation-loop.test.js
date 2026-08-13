@@ -221,6 +221,8 @@ function createHarness(options = {}) {
   if (options.tail) tailPivot.add(options.tail);
 
   const pet = new THREE.Group();
+  const modelRoot = new THREE.Group();
+  pet.add(modelRoot);
   const pointer = new THREE.Vector2();
   const postProcessUniforms = { uTime: { value: -1 } };
   const renderSettings = derivePetRenderSettings(DEFAULT_SETTINGS);
@@ -257,6 +259,7 @@ function createHarness(options = {}) {
 
   const loop = createAnimationLoop(/** @type {any} */ ({
     pet,
+    modelRoot,
     frontCorrection: new THREE.Quaternion(),
     postProcessUniforms,
     pointer,
@@ -312,8 +315,13 @@ function createHarness(options = {}) {
 
   const harness = {
     control, log, idleAllowed, expressions,
-    model, pet, pointer, headPivot, tailPivot, hand, handMirror, clock,
+    model, pet, modelRoot, pointer, headPivot, tailPivot, hand, handMirror, clock,
     postProcessUniforms, renderSettings,
+    /**
+     * 펫이 실제로 바라보는 좌우 각도. 머리와 몸통이 나눠 맡으므로 우선순위 사다리는
+     * 머리 로컬 각도가 아니라 이 합으로 판정한다.
+     */
+    gazeY: () => headPivot.rotation.y + modelRoot.rotation.y,
     /** 다음 프레임이 예약돼 있는지. */
     isScheduled: () => pending !== null,
     /** @param {number} [delta] */
@@ -376,7 +384,7 @@ test("델타는 0.05로 잘려 오래 멈췄다 돌아와도 한 프레임에 �
   // 10초짜리 한 프레임과 0.05초짜리 한 프레임이 같은 추종량을 낸다.
   slow.step(10);
   capped.step(0.05);
-  closeTo(slow.headPivot.rotation.y, capped.headPivot.rotation.y, 1e-9, "추종은 잘린 델타로만 진행한다");
+  closeTo(slow.gazeY(), capped.gazeY(), 1e-9, "추종은 잘린 델타로만 진행한다");
   // 시계 자체는 실제 경과를 그대로 들고 있어야 한다(uTime은 실시간이다).
   assert.equal(slow.clock.elapsedTime, 10);
 });
@@ -411,9 +419,54 @@ test("평상시 머리는 부드러워진 포인터를 정해진 비율로 따�
   const h = settledHarness();
 
   h.step();
-  closeTo(h.headPivot.rotation.y, 62, 1e-6, "y는 0.62배");
+  closeTo(h.gazeY(), 62, 1e-6, "좌우 시선 총합은 0.62배");
   closeTo(h.headPivot.rotation.x, -27, 1e-6, "x는 -0.27배");
   closeTo(h.headPivot.rotation.z, -5, 1e-6, "z는 -0.05배");
+});
+
+test("몸통은 좌우 시선의 일부만 나눠 맡고 총 시선 방향은 그대로다", () => {
+  const h = settledHarness();
+
+  h.step();
+  // 몸통이 각도를 "더하는" 방식이면 총합이 0.62배를 넘어 목이 모델 한계까지 비틀린다.
+  closeTo(h.gazeY(), 62, 1e-6, "총 시선은 몸통 도입 전과 같다");
+  closeTo(h.modelRoot.rotation.y, 62 * 0.18, 1e-6, "몸통이 정해진 비율만 맡는다");
+  closeTo(h.headPivot.rotation.y, 62 * 0.82, 1e-6, "머리에는 나머지가 남는다");
+  assert.ok(
+    Math.abs(h.modelRoot.rotation.y) < Math.abs(h.headPivot.rotation.y),
+    "몸통은 머리보다 덜 돌아간다"
+  );
+});
+
+test("몸통은 가로축만 돌아간다", () => {
+  // 위아래(x)나 기울임(z)까지 몸통에 주면 발이 떠 보이거나 넘어가는 것처럼 보인다.
+  const h = settledHarness();
+
+  const states = [
+    () => {},
+    () => { h.control.petting = true; },
+    () => { h.control.petting = false; h.control.restActive = true; },
+    () => { h.control.restActive = false; h.control.dragging = true; },
+    () => { h.control.dragging = false; h.control.idle = true; }
+  ];
+  for (const enter of states) {
+    enter();
+    h.run(1);
+    assert.equal(h.modelRoot.rotation.x, 0, "몸통에 위아래 회전이 없다");
+    assert.equal(h.modelRoot.rotation.z, 0, "몸통에 기울임이 없다");
+  }
+});
+
+test("커서를 따라가지 않는 상태에서는 몸통도 제자리로 돌아온다", () => {
+  const h = settledHarness();
+
+  h.step();
+  assert.ok(Math.abs(h.modelRoot.rotation.y) > 1, "먼저 몸통이 돌아간 상태를 만든다");
+
+  h.control.idle = true;
+  h.run(4);
+  // 몸통은 최종 시선 각도에서 파생되므로 잠들어 추종이 사라지면 함께 풀린다.
+  assert.ok(Math.abs(h.modelRoot.rotation.y) < 0.01, `잠들면 몸통도 정면으로 돌아온다 (실측 ${h.modelRoot.rotation.y})`);
 });
 
 test("드래그 반응이 수면보다 앞선다", () => {
@@ -421,12 +474,12 @@ test("드래그 반응이 수면보다 앞선다", () => {
 
   h.control.idle = true;
   h.run(4);
-  assert.ok(Math.abs(h.headPivot.rotation.y) < 0.01, "먼저 잠든 상태를 만든다");
+  assert.ok(Math.abs(h.gazeY()) < 0.01, "먼저 잠든 상태를 만든다");
 
   h.control.dragging = true;
   h.step();
   closeTo(
-    h.headPivot.rotation.y,
+    h.gazeY(),
     Math.sin(h.clock.elapsedTime * 21) * 0.16,
     1e-9,
     "드래그 흔들림 공식을 그대로 쓴다"
@@ -442,7 +495,7 @@ test("수면이 AI 답변보다 앞선다", () => {
   h.run(4);
 
   assert.ok(
-    Math.abs(h.headPivot.rotation.y) < 0.01,
+    Math.abs(h.gazeY()) < 0.01,
     "잠들면 커서 추종이 사라진다 — 답변 분기였다면 35 근처가 나온다"
   );
   closeTo(h.headPivot.rotation.z, 0.06, 1e-3, "수면 분기의 고정 기울임");
@@ -458,7 +511,7 @@ test("AI 답변이 쓰다듬기보다 앞선다", () => {
   h.control.assistantActive = true;
   h.control.answerBubbleHidden = false;
   h.step();
-  closeTo(h.headPivot.rotation.y, 35, 1e-6, "답변 분기: 0.35배");
+  closeTo(h.gazeY(), 35, 1e-6, "답변 분기: 0.35배");
 });
 
 test("쓰다듬기가 미디어 끄덕임보다 앞선다", () => {
@@ -480,7 +533,7 @@ test("펫대화 말풍선만 열려 있어도 답변과 같은 취급을 받는�
   h.control.assistantActive = true;
   h.control.petChatBubbleHidden = false;
   h.step();
-  closeTo(h.headPivot.rotation.y, 35, 1e-6, "답변 분기 계수를 쓴다");
+  closeTo(h.gazeY(), 35, 1e-6, "답변 분기 계수를 쓴다");
 });
 
 // ── 시간축 성질 ────────────────────────────────────────────────────────────────
@@ -496,8 +549,8 @@ test("추종 속도는 프레임률에 종속되지 않는다", () => {
 
   // 지수 감쇠라 프레임 분할과 무관하게 같은 값이 나와야 한다. 고정 계수 lerp로 되돌리면
   // 144Hz 쪽이 2배 넘게 빨라져 크게 벌어진다.
-  closeTo(fast.headPivot.rotation.y, slow.headPivot.rotation.y, 1e-9, "60Hz와 144Hz가 같다");
-  assert.ok(slow.headPivot.rotation.y > 61, "1초면 대부분 따라잡는다");
+  closeTo(fast.gazeY(), slow.gazeY(), 1e-9, "60Hz와 144Hz가 같다");
+  assert.ok(slow.gazeY() > 61, "1초면 대부분 따라잡는다");
 });
 
 test("숨쉬기는 위상을 누적하므로 오래 켜 둔 뒤 속도가 바뀌어도 크기가 튀지 않는다", () => {
@@ -525,15 +578,15 @@ test("알람 amount는 임계 아래로 떨어지면 0으로 스냅돼 잔여 �
   withAlarm.control.restActive = true;
   withAlarm.run(2);
   without.run(2);
-  assert.notEqual(withAlarm.headPivot.rotation.y, without.headPivot.rotation.y);
+  assert.notEqual(withAlarm.gazeY(), without.gazeY());
 
   // 알람을 끄고 0.7초. 스냅이 없으면 amount가 0.002 언저리로 남아 알람 포즈가 계속 섞인다.
   withAlarm.control.restActive = false;
   withAlarm.run(0.7);
   without.run(0.7);
   closeTo(
-    withAlarm.headPivot.rotation.y,
-    without.headPivot.rotation.y,
+    withAlarm.gazeY(),
+    without.gazeY(),
     1e-12,
     "알람이 꺼진 뒤에는 한 번도 알람이 없던 것과 완전히 같아야 한다"
   );
@@ -704,7 +757,7 @@ test("수면 판정은 미디어 재생 중에는 서지 않는다", () => {
   h.control.mediaStatus = "Playing";
   h.run(4);
   // 잠들었다면 커서 추종이 사라진다. 미디어 끄덕임 분기에 남아 있어야 한다.
-  assert.ok(h.headPivot.rotation.y > 29, "영상을 보는 동안에는 재우지 않는다");
+  assert.ok(h.gazeY() > 29, "영상을 보는 동안에는 재우지 않는다");
 });
 
 // ── 손 ────────────────────────────────────────────────────────────────────────

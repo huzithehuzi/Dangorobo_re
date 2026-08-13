@@ -1428,6 +1428,7 @@ const petModelLoader = createPetModelLoader({
 // 프레임 루프. 로딩 뒤에 재대입되는 값과 렌더러가 소유한 플래그는 getter로 넘긴다.
 const animationLoop = createAnimationLoop({
   pet,
+  modelRoot,
   frontCorrection,
   postProcessUniforms,
   pointer,

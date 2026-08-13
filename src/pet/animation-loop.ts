@@ -37,6 +37,7 @@ type TailBendData = {
 type AnimationLoopDependencies = {
   // 씬 핸들과 기하 상수.
   pet: THREE.Group;
+  modelRoot: THREE.Group;
   frontCorrection: THREE.Quaternion;
   postProcessUniforms: Record<string, { value: unknown }>;
   pointer: THREE.Vector2;
@@ -76,7 +77,7 @@ type AnimationLoopDependencies = {
 
 function createAnimationLoop(deps: AnimationLoopDependencies) {
   const {
-    pet, frontCorrection, postProcessUniforms, pointer, clock,
+    pet, modelRoot, frontCorrection, postProcessUniforms, pointer, clock,
     BASE_PET_Y, PET_BOTTOM_ANCHOR_Y,
     assistantAnswerBubble, petChatBubble, mediaPlayer,
     model, renderSettings, squishMotion, interactionState, assistantPanels,
@@ -138,6 +139,11 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
   // (미디어 재생 중에는 재우지 않기 위해 — 영상 보는 동안 잠들면 곤란하다).
   const SLEEP_HEAD_DROOP_RAD = 0.34;
   let sleepAmount = 0;
+  // 좌우 시선 중 몸통(modelRoot)이 나눠 맡는 비율. 나머지는 머리에 남는다 —
+  // 자세한 이유는 updateHeadRotation() 끝의 주석 참고. 평상시 추종의 최대 좌우 각도가
+  // 0.62rad(약 35도)이므로 몸통은 최대 약 6도만 돌아간다("머리만큼은 아니고 살짝").
+  // 더 올릴 거라면 몸 무늬·데칼이 옆으로 밀려 보이지 않는지 실제 창에서 함께 확인할 것.
+  const BODY_FOLLOW_RATIO = 0.18;
   // 숨쉬기 위상. 속도(breatheSpeed)가 sleepAmount에 따라 변하므로 `elapsed * speed`로
   // 계산하면 안 된다 — 잠들거나 깨는 동안 속도가 바뀌는 순간 sin의 인자가
   // `Δspeed * elapsed`만큼 통째로 점프해서(유휴 5분이면 elapsed가 300초 이상이라 180라디안,
@@ -416,7 +422,10 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     return { sleeping, dragReacting, assistantAnswerShown, celebrating, routineMotion, answerMotion };
   }
 
-  /** 머리 회전: 평상시 추종 → 아이들 루틴 → 알람 순으로 덮어쓴다. */
+  /**
+   * 머리 회전: 평상시 추종 → 아이들 루틴 → 알람 순으로 덮어쓴다.
+   * 마지막에 정해진 좌우 각도의 일부를 몸통이 나눠 맡는다(아래 BODY_FOLLOW_RATIO).
+   */
   function updateHeadRotation(elapsed: number, state: ReturnType<typeof updateFrameState>) {
     // 수면은 boolean(sleeping)이 아니라 sleepAmount로 판정한다 — 잠들고 깨는 사이에도
     // 추종 성분이 서서히 줄어야 해서다.
@@ -512,7 +521,17 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
       headRotX = THREE.MathUtils.lerp(headRotX, alarmRotX, alarmAmount);
       headRotZ = THREE.MathUtils.lerp(headRotZ, alarmRotZ, alarmAmount);
     }
-    deps.headPivot().rotation.y = headRotY;
+    // 몸통도 커서 쪽으로 살짝 돌아간다(2026-08-13). 위에서 정한 headRotY를 "펫이 실제로
+    // 바라보는 총 좌우 각도"로 보고 그중 BODY_FOLLOW_RATIO만 몸통이 맡고 나머지를 머리에
+    // 남긴다 — 그래서 총 시선 방향은 예전과 같고, 목이 꺾이는 정도만 줄어든다. 몸통에
+    // 각도를 그냥 더하면 총 각도가 그만큼 커져 목이 모델 한계를 넘어 비틀린다.
+    // 최종 headRotY에서 뽑으므로 아이들 루틴 좌우 스윕·알람 흔들기·드래그 허우적임에도
+    // 몸통이 같은 비율로 함께 따라오고, 새 상태를 추가해도 따로 손댈 필요가 없다.
+    // **가로축(rotation.y)만 준다** — 위아래(x)·기울임(z)까지 몸통에 주면 발이 땅에서 떠
+    // 보이거나 몸이 넘어가는 것처럼 보인다.
+    const bodyYaw = headRotY * BODY_FOLLOW_RATIO;
+    modelRoot.rotation.y = bodyYaw;
+    deps.headPivot().rotation.y = headRotY - bodyYaw;
     deps.headPivot().rotation.x = headRotX;
     deps.headPivot().rotation.z = headRotZ;
   }
