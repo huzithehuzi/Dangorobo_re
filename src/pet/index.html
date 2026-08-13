@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko" data-i18n-doc-title="index.docTitle">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'sha256-mRcZoVzkwNcN7zyO4Uwppd8M023H5RDOFrxx1FvGFXQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data:; font-src 'self' data:; connect-src 'self' blob:; form-action 'none'" />
+    <title>당고로보</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="../shared/color-picker.css" />
+    <link rel="stylesheet" href="../shared/ui-motion.css" />
+  </head>
+  <body>
+    <main id="pet-stage" data-i18n-aria-label="index.petStageAriaLabel" aria-label="마우스를 바라보는 로우폴리 고양이">
+      <canvas id="pet-canvas"></canvas>
+      <!-- 쓰다듬기 하트 이펙트(2026-08-08). renderer.js가 하트를 만들어 넣었다가 애니메이션
+           끝나면 지운다 — 클릭을 막으면 안 되므로 pointer-events는 항상 꺼둔다. -->
+      <div id="petting-hearts" aria-hidden="true"></div>
+      <section id="rest-bubble" class="speech-bubble" hidden>
+        <span id="rest-icon" class="rest-icon" aria-hidden="true"></span>
+        <strong id="rest-title" data-i18n="alarm.defaultTitle">잠깐 쉬어갈 시간이에요!</strong>
+        <span id="rest-message" data-i18n="alarm.defaultMessage">눈과 어깨를 가볍게 풀어주세요.</span>
+        <button id="rest-confirm" type="button" data-i18n="common.confirm">확인</button>
+      </section>
+      <section id="assistant-question-bubble" class="speech-bubble assistant-bubble" hidden>
+        <strong data-i18n="assistant.askTitle">펫에게 질문</strong>
+        <textarea id="assistant-question" maxlength="1000" rows="4" data-i18n-placeholder="assistant.questionPlaceholder" placeholder="궁금한 내용을 입력하세요"></textarea>
+        <span id="assistant-status" data-i18n="assistant.ctrlEnterHint">Ctrl + Enter로 질문할 수 있어요.</span>
+        <div class="assistant-actions">
+          <button id="assistant-submit" type="button" data-i18n="assistant.askButton">질문하기</button>
+          <button id="pet-chat-call-now" class="secondary-button" type="button" data-i18n="petChat.callNowButton">부르기</button>
+          <button id="assistant-cancel" class="secondary-button" type="button" data-i18n="common.close">닫기</button>
+        </div>
+      </section>
+      <section id="assistant-answer-bubble" class="speech-bubble assistant-bubble" hidden>
+        <div id="assistant-answer-text" class="assistant-answer-text"></div>
+        <button id="assistant-answer-close" type="button" data-i18n="common.confirm">확인</button>
+      </section>
+      <section id="pet-chat-bubble" class="speech-bubble assistant-bubble" hidden>
+        <div id="pet-chat-message" class="assistant-answer-text"></div>
+        <textarea id="pet-chat-reply" maxlength="1000" rows="3" data-i18n-placeholder="petChat.replyPlaceholder" placeholder="답장을 입력하세요 (선택)"></textarea>
+        <span id="pet-chat-status" data-i18n="petChat.replyOrCloseHint">답장하거나 닫기를 눌러주세요.</span>
+        <div class="assistant-actions">
+          <button id="pet-chat-submit" type="button" data-i18n="petChat.replyButton">답장하기</button>
+          <button id="pet-chat-close" class="secondary-button" type="button" data-i18n="common.close">닫기</button>
+        </div>
+      </section>
+      <section id="favorites-bubble" class="speech-bubble favorites-bubble" hidden>
+        <strong data-i18n="favorites.title">즐겨찾기</strong>
+        <span id="favorites-status" data-i18n="favorites.selectPrompt">실행할 항목을 선택하세요.</span>
+        <div id="favorites-list" class="favorites-list"></div>
+        <button id="favorites-close" class="secondary-button" type="button" data-i18n="common.close">닫기</button>
+      </section>
+      <section id="mode-card" class="speech-bubble mode-card" hidden>
+        <strong data-i18n="moveMode.title">펫 이동 모드</strong>
+        <span data-i18n="moveMode.hint">펫을 드래그해 이동 · Ctrl + Shift + P로 완료</span>
+      </section>
+      <!-- 펫 주변 커스터마이징 오버레이(2026-08-06). 라벨 카드는 renderer.js가
+           BODY_COLOR_DEFS를 돌며 만들고, 각 파츠의 3D 좌표를 project()해서 매 프레임
+           펫 좌우에 붙인다. -->
+      <div id="customize-layer" hidden>
+        <div id="customize-labels"></div>
+        <!-- 색 선택 팔레트. <input type="color">의 네이티브 대화상자를 쓰면 이 창의
+             always-on-top + setFocusable/setIgnoreMouseEvents 조합 때문에 대화상자가
+             포커스를 잃고 바로 닫혀버려서(2026-08-06), 창 안에서 직접 그린다. -->
+        <!-- 안쪽 내용(채도·명도 영역, 색조 슬라이더, hex 칸)은 공용 피커
+             color-picker.js가 만들어 넣는다. 여기 있는 건 위치를 잡는 껍데기뿐이다. -->
+        <div id="customize-palette" hidden></div>
+        <div id="customize-toolbar">
+          <span id="customize-hint" data-i18n="customizeOnPet.hint">파츠 색을 눌러 바꿔보세요</span>
+          <button id="customize-cancel" class="customize-secondary" type="button" data-i18n="customizeOnPet.cancelButton">취소</button>
+          <button id="customize-done" type="button" data-i18n="customizeOnPet.doneButton">완료</button>
+        </div>
+      </div>
+      <div id="media-player" class="speech-bubble media-player" hidden>
+        <button id="media-previous" type="button" class="media-toggle" data-i18n-aria-label="media.previousLabel" aria-label="이전 곡">
+          <svg viewBox="0 0 24 24"><rect x="5" y="4" width="2.5" height="16" rx="1"></rect><polygon points="19,4 8,12 19,20"></polygon></svg>
+        </button>
+        <button id="media-play" type="button" class="media-toggle" data-i18n-aria-label="media.playLabel" aria-label="재생">
+          <svg viewBox="0 0 24 24"><polygon points="6,4 20,12 6,20"></polygon></svg>
+        </button>
+        <button id="media-pause" type="button" class="media-toggle" data-i18n-aria-label="media.pauseLabel" aria-label="일시정지">
+          <svg viewBox="0 0 24 24"><rect x="5" y="4" width="4.5" height="16" rx="1"></rect><rect x="14.5" y="4" width="4.5" height="16" rx="1"></rect></svg>
+        </button>
+        <button id="media-next" type="button" class="media-toggle" data-i18n-aria-label="media.nextLabel" aria-label="다음 곡">
+          <svg viewBox="0 0 24 24"><polygon points="5,4 16,12 5,20"></polygon><rect x="16.5" y="4" width="2.5" height="16" rx="1"></rect></svg>
+        </button>
+      </div>
+    </main>
+    <script src="../shared/i18n.js"></script>
+    <script src="../shared/favorite-icons.js"></script>
+    <script src="../shared/customization-catalog.js"></script>
+    <script src="../shared/sound-catalog.js"></script>
+    <script src="../shared/ui-motion.js"></script>
+    <script src="../shared/color-picker.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../node_modules/three/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

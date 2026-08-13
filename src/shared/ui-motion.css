@@ -1,0 +1,207 @@
+/* 공용 UI 모션 레이어 — 창 7개(펫/설정/기록/체크리스트/즐겨찾기 창/즐겨찾기 독/우클릭 메뉴)가
+   전부 이 파일 하나를 쓴다. 2026-08-08 신설.
+
+   ⚠ 각 창의 HTML에서 자기 CSS보다 **나중에** 링크해야 한다(theme-vars.css와 반대다).
+   여기 규칙이 기존 :hover/:active를 덮어써야 하는 경우가 있어서다. 다만 명시도는
+   일부러 낮게(요소 선택자 위주) 잡아뒀다 — `.fab`/`.pie-item`처럼 클래스로 position이나
+   transform을 이미 잡아둔 버튼은 그쪽이 이겨서 이 파일의 영향을 받지 않는다.
+   AGENTS.md의 "transform을 쓰는 버튼" 주의사항과 같은 이유다.
+
+   여기서 쓰는 색은 창마다 이름이 다르다:
+     - 독립 창 6개: theme-vars.css의 --accent
+     - 펫 말풍선(styles.css): --bubble-button (별개 체계)
+   그래서 항상 `var(--accent, var(--bubble-button, #d75566))` 순으로 폴백을 건다.
+   ⚠ 이 폴백 체인을 `:root`에 `--ui-accent-any` 같은 변수 하나로 묶으면 안 된다 — 커스텀
+   속성은 선언된 그 요소에서 값이 정해져 내려오므로, `--bubble-button`을 `.speech-bubble`에
+   선언하는 펫 창에서는 :root 시점엔 아직 없어서 항상 기본색으로 굳어버린다. 쓰는 자리마다
+   그대로 적어야 각 요소에서 제대로 해석된다.
+
+   모든 효과는 `prefers-reduced-motion: reduce`에서 꺼진다(파일 맨 아래). */
+
+/* ── 0. 테마 적용 전 깜빡임 방지 ────────────────────────────────────────
+   독립 창 6개는 전부 테마·UI 배율·폰트를 `getSettings()`(비동기 IPC)가 돌아온 **뒤에**
+   적용한다. 그래서 그 사이 한두 프레임 동안 theme-vars.css의 기본값(차콜)과 100% 배율로
+   먼저 그려졌다가 사용자 설정으로 바뀌는 게 보였다("설정 창 열 때 잠깐 기본 UI색으로
+   보임", 2026-08-08 리포트).
+
+   `<html data-ui-await-theme>`가 붙은 창은 `data-ui-ready`가 설정될 때까지 본문을 숨긴다.
+   각 창 JS가 테마를 적용한 직후 `window.PetUiMotion.markReady()`를 부르고, 부르지 않아도
+   ui-motion.js가 안전망 타이머로 강제로 열어준다(IPC가 실패해도 빈 창이 남지 않게).
+
+   ⚠ `display: none`이 아니라 `visibility: hidden`이어야 한다 — 우클릭 메뉴는 main이 DOM
+   크기를 재서 창 크기를 정하는데, display:none이면 레이아웃이 통째로 0이 된다. */
+html[data-ui-await-theme]:not([data-ui-ready]) body { visibility: hidden; }
+
+/* ── 1. 커서 추종 하이라이트 ────────────────────────────────────────────
+   ui-motion.js가 호버 중인 요소에 --ui-glow-x/--ui-glow-y(px)를 넣어준다.
+   ::after를 쓰는 이유: settings.css의 `.settings-tab.active::before`(왼쪽 강조 바,
+   버튼 바깥 -6px에 있다)와 겹치지 않게 하려고. 같은 이유로 overflow:hidden도 쓰지
+   않는다 — 그 강조 바가 잘린다. */
+/* ⚠ `:where()`로 감싸 **명시도를 0으로** 만든다. 그냥 `.ui-glow`(0,1,0)로 두면 클래스로
+   position을 잡아둔 버튼(`.fab`·`.pie-item`·`.gradient-stop`)과 명시도가 같은데 이 파일이
+   더 뒤에 링크되므로 호버하는 순간 그쪽 position을 덮어쓴다. 지금까지는 그 버튼들이
+   전부 "호버 시 유일한 in-flow 자식"이라 좌표가 우연히 같게 나와 티가 안 났을 뿐이라,
+   레이아웃이 조금만 바뀌어도 호버할 때 튀는 버그가 된다.
+   position이 없는 평범한 버튼에는 그대로 적용된다(선언이 아예 없는 것보다는 이기므로). */
+:where(.ui-glow) { position: relative; }
+.ui-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* 진폭 조정 이력(2026-08-08, 같은 날 두 번):
+       72px·30%   → "호버할 때 잘 안 보인다"
+       120px·48%  → "범위는 좋은데 색이 너무 진하다"
+       120px·26%  ← 지금. **반경은 그대로 두고 알파만** 낮췄다.
+     중간 정지점(58%)을 하나 더 둬서 가장자리가 뚝 끊기지 않고 버튼 전체에 은은하게 깔린다 —
+     반경만 키우고 정지점이 없으면 밝은 부분이 좁은 채로 흐린 영역만 넓어져 오히려 잘 안 보인다.
+     "잘 안 보인다"가 다시 나오면 알파가 아니라 아래 윤곽선 쪽을 손댈 것(글자가 묻힌다). */
+  background: radial-gradient(
+    circle 120px at var(--ui-glow-x, 50%) var(--ui-glow-y, 50%),
+    color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 26%, transparent) 0%,
+    color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 12%, transparent) 58%,
+    transparent 100%
+  );
+  opacity: 0;
+  /* 내용(글자·아이콘) **위에** 얹히는 광택이다(Fluent의 reveal highlight와 같은 방식).
+     z-index를 음수로 내리면 버튼 자체 배경 뒤로 숨어 아예 안 보이므로 위에 둘 수밖에 없고,
+     그래서 알파를 이보다 더 올리면 글자가 묻히기 시작한다 — 더 눈에 띄게 하고 싶으면
+     알파가 아니라 아래 테두리 강조 쪽을 손댈 것. */
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.ui-glow.ui-glow-on::after { opacity: 1; }
+/* 광택만으로는 어두운 배경에서 경계가 모호해서, 호버 중인 요소의 윤곽도 같이 강조한다.
+   글자 위에 겹치지 않으므로 알파 제한에서 자유롭고, 어떤 버튼이 반응 중인지가 확실해진다.
+   ⚠ box-shadow가 아니라 outline을 쓴다 — `.fab:hover`/`.pie-item:hover`가 그림자로 입체감을
+   내고 있어서, 명시도 0,2,0인 이 규칙이 box-shadow였다면 그걸 지워버린다.
+   `outline-offset: -1px`이라 요소 크기는 그대로다(레이아웃에 영향 없음). */
+.ui-glow.ui-glow-on {
+  outline: 1px solid color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 58%, transparent);
+  outline-offset: -1px;
+}
+
+/* ── 2. 누름 파문(ripple) ──────────────────────────────────────────────
+   버튼 안에 요소를 넣으면 overflow:hidden이 필요해서 위의 강조 바가 잘린다. 그래서
+   ui-motion.js가 body 바로 아래에 **버튼과 같은 자리·같은 모서리 반경**의 호스트를
+   position:fixed로 띄우고 그 안에서만 파문을 그린다. 버튼의 스타일은 전혀 안 건드린다. */
+.ui-ripple-host {
+  position: fixed;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+.ui-ripple {
+  position: absolute;
+  width: var(--ui-ripple-size, 120px);
+  height: var(--ui-ripple-size, 120px);
+  margin-top: calc(var(--ui-ripple-size, 120px) / -2);
+  margin-left: calc(var(--ui-ripple-size, 120px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    /* 가운데를 거의 흰색으로 둔다 — 파문이 뜨는 자리는 중립 배경(설정 탭)일 수도,
+       이미 강조색으로 칠해진 버튼(저장)일 수도 있어서, 강조색만 쓰면 후자에서 묻힌다. */
+    color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 22%, white) 0%,
+    color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 55%, transparent) 52%,
+    transparent 72%
+  );
+  opacity: 0.62;
+  transform: scale(0.12);
+  animation: ui-ripple-expand 460ms cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+}
+@keyframes ui-ripple-expand {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* ── 3. 카드형 행: 호버 시 살짝 떠오름 ──────────────────────────────────
+   버튼이 아니라 목록 카드라 :active 축소 규칙(각 창 CSS에 있음)과 겹치지 않는다.
+   transform을 새로 쓰는 셀렉터들이므로 여기서만 관리한다. */
+.favorite-item,
+.checklist-item,
+.log-entry,
+.memory-card {
+  transition: transform 160ms cubic-bezier(0.22, 0.9, 0.3, 1), box-shadow 160ms ease,
+    border-color 140ms ease, background 140ms ease;
+}
+.favorite-item:hover,
+.checklist-item:hover,
+.log-entry:hover,
+.memory-card:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px color-mix(in srgb, black 26%, transparent);
+}
+
+/* ── 4. 창이 열릴 때 패널이 떠오르며 나타남 ────────────────────────────
+   ui-motion.js가 첫 프레임에 <html>에 .ui-window-enter를 붙였다가 애니메이션이
+   끝나면 뗀다(붙인 채로 두면 이후 DOM 변경에서 다시 재생될 여지가 있다). */
+@keyframes ui-window-enter {
+  from { opacity: 0; transform: translateY(7px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.ui-window-enter body > * {
+  animation: ui-window-enter 260ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+/* ── 5. 설정창 탭 전환 ────────────────────────────────────────────────
+   activateTab()이 새 패널에 .active를 붙이는 순간 재생된다. 위 진입 애니메이션과
+   같은 곡선이라 창 열기 → 탭 전환의 움직임이 한 계열로 읽힌다. */
+@keyframes ui-panel-swap {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.tab-panel.active { animation: ui-panel-swap 220ms cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+
+/* ── 6. 목록 항목 스태거 등장 ──────────────────────────────────────────
+   ui-motion.js가 새로 그려진 목록의 자식에 --ui-i(0,1,2…)를 넣어준다.
+   지연은 6번째 항목에서 상한을 둔다 — 항목이 20개면 마지막이 1초 뒤에 뜨는 게
+   생동감이 아니라 렉처럼 보인다. */
+@keyframes ui-item-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+.ui-stagger-item {
+  animation: ui-item-enter 220ms cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  animation-delay: calc(min(var(--ui-i, 0), 6) * 28ms);
+}
+
+/* ── 7. 체크박스·라디오 누름 반응 ──────────────────────────────────────
+   버튼에만 있던 :active 축소를 입력 컨트롤에도 준다(설정창에 토글이 아주 많다). */
+input[type="checkbox"],
+input[type="radio"] { transition: transform 90ms ease; }
+input[type="checkbox"]:active:not(:disabled),
+input[type="radio"]:active:not(:disabled) { transform: scale(0.88); }
+
+/* ── 8. 포커스 링 ──────────────────────────────────────────────────────
+   키보드 탐색 시에만(:focus-visible) 강조색 링이 부드럽게 자란다. 마우스 클릭에는
+   안 나오므로 위의 파문과 겹치지 않는다. */
+button,
+input,
+select,
+textarea { transition: box-shadow 140ms ease, transform 90ms ease; }
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.ui-glow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 40%, transparent);
+}
+
+/* ── 9. 움직임 최소화 설정 존중 ────────────────────────────────────────
+   Windows의 "애니메이션 표시" 끄기가 이 미디어 쿼리로 들어온다. 감성적인 효과라도
+   멀미·주의력 문제로 끄는 사용자가 있으므로 전부 비활성화한다(포커스 링처럼 움직이지
+   않는 것만 남긴다). */
+@media (prefers-reduced-motion: reduce) {
+  .ui-glow::after { display: none; }
+  .ui-ripple { display: none; }
+  .favorite-item:hover,
+  .checklist-item:hover,
+  .log-entry:hover,
+  .memory-card:hover { transform: none; }
+  .ui-window-enter body > *,
+  .tab-panel.active,
+  .ui-stagger-item { animation: none; }
+  input[type="checkbox"]:active:not(:disabled),
+  input[type="radio"]:active:not(:disabled) { transform: none; }
+}

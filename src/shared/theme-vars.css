@@ -1,0 +1,72 @@
+/* 말풍선 테마 변수 — 독립 창 6개(기록/체크리스트/즐겨찾기 창/즐겨찾기 독/펫 우클릭 메뉴/설정)
+   공용. 2026-08-07 이전에는 이 블록이 여섯 파일에 각각 복사돼 있었고, 그중 settings.css만
+   값이 어긋나 있었다(테두리 #505565 vs #454b5a 등). 테마를 추가하거나 유도 공식을 바꿀 땐
+   이 파일 하나만 고치면 된다.
+
+   펫 말풍선(styles.css)은 여기 해당하지 않는다 — 그쪽은 `.speech-bubble`에 걸리는
+   `--bubble-*` 라는 별개의 변수 체계를 쓴다.
+
+   각 창의 HTML에서 자기 CSS보다 **먼저** 링크해야 한다.
+
+   ⚠ 이 파일은 `:root`에 **배경을 칠하지 않는다.** 여섯 창 중 배경이 필요한 건 기록창뿐이고,
+   나머지(체크리스트·즐겨찾기 창·독·우클릭 메뉴)는 `body { background: transparent }`인 투명
+   창이라 패널을 자기가 그린다. `:root`에 배경을 주면 그 값이 캔버스로 전파돼서 `body`의
+   transparent로는 못 덮고 창 전체가 불투명해진다(2026-08-07에 이걸로 파이 메뉴가 통째로
+   회색 판이 됐다).
+
+   글씨색은 3단이다:
+     --text        본문·제목
+     --text-muted  라벨·보조 설명
+     --text-dim    힌트·경로처럼 가장 흐린 것
+   강조색으로 칠한 배경 위의 글자(#fff)는 이 3단을 쓰지 않는다 — 배경이 테마 배경이 아니라
+   강조색이라, 사용자가 고른 글씨색을 따라가면 대비가 무너진다.
+
+   ⚠ 의미색(성공 초록 / 경고 주황 / 위험·오류 분홍)도 **고정 밝은 톤으로 박으면 안 된다.**
+   그건 어두운 배경 전제라 밝은 배경 테마에서 통째로 묻힌다. 대신
+   `color-mix(in srgb, <채도 있는 기준색> N%, var(--text))` 꼴로 써서 글씨색을 따라가게 할 것
+   (기준색: 초록 #2e9e5b / 주황 #b3761f / 빨강 #d7566b). 흰 글씨면 예전 톤이 거의 그대로 나온다.
+   마찬가지로 흰색 반투명 오버레이(`rgba(255,255,255,N)`)를 버튼 배경으로 쓰면 밝은 테마에서
+   글씨와 같이 밝아져 묻히므로 `color-mix(var(--text) N%, transparent)`를 쓴다. */
+:root {
+  /* 차콜 테마 = 마스코트 기본 프리셋("미로")의 배색(2026-08-09, 배포 전 마지막 조정).
+     surface/surface-soft/border는 :root[data-theme="custom"]과 같은 비율(각각 bg를 검정
+     15%/흰색 8%로 섞고, border는 accent 45% + bg 55%)로 새 bg/accent에서 다시 계산해
+     손으로 하드코딩했다 — 값만 바뀌었을 뿐 다른 프리셋과 관계식은 동일하다. */
+  --bg: #232529;
+  --surface: #1e1f23;
+  --surface-soft: #35363a;
+  --border: #6a5317;
+  --accent: #c08b00;
+  --text: #f7f7f9;
+  --text-muted: #aeb4c0;
+  --text-dim: #8f97a5;
+  /* 예전부터 쓰던 이름 — 기존 var(--muted) 사용처를 그대로 두기 위해 별칭으로 남긴다. */
+  --muted: var(--text-muted);
+  color-scheme: dark;
+}
+:root[data-theme="rose"] {
+  --bg: #2b2028; --surface: #21171d; --surface-soft: #3b2833; --border: #69485a; --accent: #d65f87;
+}
+:root[data-theme="ocean"] {
+  --bg: #192b38; --surface: #12212b; --surface-soft: #203c4d; --border: #3f6478; --accent: #3f91bd;
+}
+:root[data-theme="forest"] {
+  --bg: #1d3029; --surface: #14231e; --surface-soft: #264438; --border: #456c58; --accent: #4f9a70;
+}
+:root[data-theme="amber"] {
+  --bg: #34291c; --surface: #251d14; --surface-soft: #493821; --border: #765b38; --accent: #c68436;
+}
+/* 커스텀 테마만 사용자가 배경·강조색·글씨색을 직접 고른다(--custom-bg/--custom-accent/--custom-text).
+   보조 글씨색 2단은 고른 글씨색을 배경 쪽으로 섞어 만든다 — 그래야 어떤 글씨색을 골라도
+   본문과의 관계가 유지된다. 기본값(#f7f7f9)일 때 예전 고정값과 거의 같은 색이 나오도록
+   비율(68% / 52%)을 맞춰뒀다. */
+:root[data-theme="custom"] {
+  --bg: var(--custom-bg, #20232b);
+  --surface: color-mix(in srgb, var(--custom-bg, #20232b) 85%, black 15%);
+  --surface-soft: color-mix(in srgb, var(--custom-bg, #20232b) 92%, white 8%);
+  --border: color-mix(in srgb, var(--custom-accent, #d75566) 45%, var(--custom-bg, #20232b) 55%);
+  --accent: var(--custom-accent, #d75566);
+  --text: var(--custom-text, #f7f7f9);
+  --text-muted: color-mix(in srgb, var(--custom-text, #f7f7f9) 68%, var(--custom-bg, #20232b) 32%);
+  --text-dim: color-mix(in srgb, var(--custom-text, #f7f7f9) 52%, var(--custom-bg, #20232b) 48%);
+}

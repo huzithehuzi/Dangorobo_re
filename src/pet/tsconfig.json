@@ -1,0 +1,25 @@
+{
+  // 펫 창(src/pet) 전용 타입 검사 설정. 루트 tsconfig.json과 나눠 둔 이유는 모듈 체계다:
+  // package.json에 "type": "module"이 없어서 루트 설정(NodeNext)은 .js를 CommonJS로 보는데,
+  // renderer.ts의 런타임 산출물은 index.html에서 <script type="module">로 불러오는 진짜 ES 모듈이라
+  // import.meta.url을 쓴다(사운드·텍스처 경로를 자기 위치 기준으로 만든다).
+  // ui/tsconfig.json이 React 창을 위해 같은 이유로 나뉘어 있다 — npm run typecheck가 셋을 다 돌린다.
+  //
+  // moduleResolution이 Bundler인 것도 같은 맥락이다. 펫 창은 번들러를 쓰지 않고
+  // index.html의 importmap + vendored three로 직접 로드하므로, Node의 CommonJS 해석
+  // 규칙(확장자 필수 등)을 따를 이유가 없다.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["./*.ts", "../../types/**/*.d.ts"],
+  "exclude": ["./*.js"]
+}

@@ -1,0 +1,21 @@
+{
+  // 펫 창 모듈 전용 제자리 emit 설정. 타입 검사는 build:pet의 첫 단계에서 tsconfig.json으로
+  // 끝낸 뒤, 여기서는 검사에 성공한 src/pet의 .ts만 같은 이름의 브라우저 ESM .js로 변환한다.
+  //
+  // renderer가 Settings 타입을 main 소스에서 참조하므로 일반 project emit은 그 의존 모듈까지
+  // ES 모듈로 다시 내보내 CommonJS main 산출물을 덮어쓴다. noResolve + noCheck는 두 번째 emit
+  // 단계가 의존 소스를 따라가지 않게 하며, 첫 단계의 strict/noEmit 검사를 대신하지 않는다.
+  //
+  // noResolve 때문에 펫 모듈끼리의 import도 해석되지 않으므로, import 지정자는 브라우저가
+  // 그대로 읽을 수 있게 반드시 `./이름.js` 확장자까지 적는다. 타입만 쓰는 import는
+  // `import type`으로 적어야 emit에 남지 않는다.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "noCheck": true,
+    "noResolve": true
+  },
+  "include": ["./*.ts"],
+  "exclude": ["./*.js"]
+}

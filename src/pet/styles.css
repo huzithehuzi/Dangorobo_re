@@ -1,0 +1,611 @@
+:root {
+  --ui-font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  --ui-font-size-scale: 1;
+  color-scheme: dark;
+  font-family: var(--ui-font-family);
+}
+:root[data-ui-font="malgun"] { --ui-font-family: "Malgun Gothic", "맑은 고딕", sans-serif; }
+:root[data-ui-font="gulim"] { --ui-font-family: "Gulim", "굴림", sans-serif; }
+:root[data-ui-font="batang"] { --ui-font-family: "Batang", "바탕", serif; }
+:root[data-ui-font="gungsuh"] { --ui-font-family: "Gungsuh", "궁서", serif; }
+:root[data-ui-font="monospace"] { --ui-font-family: "D2Coding", "NanumGothicCoding", "GulimChe", "굴림체", Consolas, monospace; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body, #pet-stage {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+}
+#pet-stage { position: relative; }
+#pet-canvas {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  height: 420px;
+  -webkit-app-region: no-drag;
+}
+#pet-canvas.move-mode { -webkit-app-region: drag; }
+
+.mode-card,
+.speech-bubble {
+  position: absolute;
+  z-index: 2;
+  color: #fff;
+  background: rgba(28, 30, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-app-region: no-drag;
+}
+
+.mode-card { text-align: center; }
+.mode-card strong,
+.mode-card span,
+.speech-bubble strong,
+.speech-bubble span { display: block; }
+.mode-card strong { margin-bottom: 3px; font-size: calc(12px * var(--ui-font-size-scale)); }
+.mode-card span { color: var(--bubble-subtext); font-size: calc(10px * var(--ui-font-size-scale)); }
+
+.speech-bubble {
+  /* 차콜 = 마스코트 기본 프리셋("미로")의 배색(2026-08-09). --bubble-border는 다른 테마들처럼
+     강조색을 밝게 희석한 톤(HSL 유지, L≈78%)으로 맞췄다 — 예전엔 무채색 흰 반투명이었는데
+     그대로 두면 이 테마만 다른 테마들과 다르게 강조색이 테두리에 안 묻어난다. */
+  --bubble-bg: rgba(35, 37, 41, 0.95);
+  --bubble-border: rgba(255, 224, 143, 0.35);
+  --bubble-text: #ffffff;
+  --bubble-subtext: #d8dbe4;
+  --bubble-button: #c08b00;
+  --bubble-button-hover: #eeac00;
+  top: 12px;
+  left: 14px;
+  width: 272px;
+  padding: 12px 14px 11px;
+  border-color: var(--bubble-border);
+  border-radius: 15px;
+  color: var(--bubble-text);
+  background: var(--bubble-bg);
+  text-align: center;
+  pointer-events: auto;
+  animation: bubble-in 180ms ease-out;
+}
+.speech-bubble[data-theme="rose"],
+#customize-layer[data-theme="rose"] {
+  --bubble-bg: rgba(67, 36, 54, 0.96);
+  --bubble-border: rgba(255, 194, 218, 0.4);
+  --bubble-subtext: #f4dbe5;
+  --bubble-button: #d65f87;
+  --bubble-button-hover: #e9799d;
+}
+.speech-bubble[data-theme="ocean"],
+#customize-layer[data-theme="ocean"] {
+  --bubble-bg: rgba(25, 52, 72, 0.96);
+  --bubble-border: rgba(157, 220, 255, 0.42);
+  --bubble-subtext: #d4edf8;
+  --bubble-button: #3f91bd;
+  --bubble-button-hover: #58a9d3;
+}
+.speech-bubble[data-theme="forest"],
+#customize-layer[data-theme="forest"] {
+  --bubble-bg: rgba(31, 59, 49, 0.96);
+  --bubble-border: rgba(177, 232, 197, 0.4);
+  --bubble-subtext: #d7ebde;
+  --bubble-button: #4f9a70;
+  --bubble-button-hover: #67b487;
+}
+.speech-bubble[data-theme="amber"],
+#customize-layer[data-theme="amber"] {
+  --bubble-bg: rgba(72, 51, 27, 0.96);
+  --bubble-border: rgba(255, 218, 151, 0.42);
+  --bubble-subtext: #f2e1c4;
+  --bubble-button: #c68436;
+  --bubble-button-hover: #dd9b4b;
+}
+/* 커스텀 테마만 배경·강조색·글씨색을 사용자가 직접 고른다.
+   --bubble-subtext는 예전 공식(강조색 22% + 흰색 78%)에서 "흰색"만 --custom-text로
+   바꾼 것이다 — 기본값이 #ffffff라 글씨색을 안 건드린 사용자에게는 예전과 완전히 같은
+   색이 나오고, 글씨색을 바꾸면 보조 글씨도 따라간다(2026-08-07). */
+.speech-bubble[data-theme="custom"],
+#customize-layer[data-theme="custom"] {
+  --bubble-bg: color-mix(in srgb, var(--custom-bg, #20232b) 95%, transparent);
+  --bubble-border: color-mix(in srgb, var(--custom-accent, #d75566) 42%, white 15%);
+  --bubble-text: var(--custom-text, #ffffff);
+  --bubble-subtext: color-mix(in srgb, var(--custom-accent, #d75566) 22%, var(--custom-text, #ffffff) 78%);
+  --bubble-button: var(--custom-accent, #d75566);
+  --bubble-button-hover: color-mix(in srgb, var(--custom-accent, #d75566) 82%, white 18%);
+}
+.speech-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 16px;
+  height: 16px;
+  background: var(--bubble-bg);
+  border-right: 1px solid var(--bubble-border);
+  border-bottom: 1px solid var(--bubble-border);
+  transform: translateX(-50%) rotate(45deg);
+}
+.rest-icon {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 6px;
+  color: var(--bubble-button);
+}
+.rest-icon svg { width: 100%; height: 100%; display: block; }
+.speech-bubble strong { font-size: calc(14px * var(--ui-font-size-scale)); }
+.speech-bubble span { margin-top: 3px; color: var(--bubble-subtext); font-size: calc(11px * var(--ui-font-size-scale)); }
+
+button {
+  width: 100%;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #d75566;
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+button:hover { background: #ed6577; }
+.speech-bubble button { background: var(--bubble-button); }
+.speech-bubble button:hover { background: var(--bubble-button-hover); }
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(5px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 쓰다듬기 하트 이펙트(2026-08-08) — 머리 위 좌표(top)만 renderer.js가 매 생성 시
+   계산해서 넣고, 가로 위치는 여기서 화면 중앙(펫 창 폭 기준) 언저리로 잡는다.
+   기준은 말풍선(.speech-bubble)과 같은 left:50%+translateX(-50%) 중앙정렬 방식이라
+   커스터마이징 모드로 창이 넓어져도(펫이 항상 중앙) 따로 계산할 필요가 없다.
+   시작 지점(--heart-start-x)과 뜨는 동안의 드리프트(--heart-drift)를 renderer.js가
+   하트마다 다른 랜덤 값으로 채워 넣어서, 항상 정중앙 한 줄로만 뜨지 않게 한다. */
+#petting-hearts { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+.petting-heart {
+  position: absolute;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(calc(-50% + var(--heart-start-x, 0px)), -50%);
+  animation: petting-heart-float 1700ms ease-out forwards;
+}
+.petting-heart svg { width: 100%; height: 100%; display: block; }
+@keyframes petting-heart-float {
+  0% { opacity: 0; transform: translate(calc(-50% + var(--heart-start-x, 0px)), -50%) scale(0.5); }
+  20% { opacity: 1; transform: translate(calc(-50% + var(--heart-start-x, 0px)), -50%) scale(1); }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--heart-start-x, 0px) + var(--heart-drift, 0px)), calc(-50% - 72px)) scale(1);
+  }
+}
+#pet-canvas.pixel-art {
+  image-rendering: pixelated;
+  filter: contrast(1.04) saturate(0.94);
+}
+
+.assistant-bubble {
+  text-align: left;
+}
+.assistant-bubble textarea {
+  width: 100%;
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 9px;
+  outline: none;
+  color: var(--bubble-text);
+  background: rgba(0, 0, 0, 0.2);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: none;
+  -webkit-app-region: no-drag;
+}
+.assistant-bubble textarea:focus {
+  border-color: var(--bubble-button-hover);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bubble-button) 35%, transparent);
+}
+.assistant-bubble #assistant-status {
+  min-height: 16px;
+  line-height: 1.35;
+}
+.assistant-actions {
+  display: flex;
+  gap: 7px;
+}
+.assistant-actions button { flex: 1; }
+/* 보조 버튼(닫기 등)은 강조색으로 칠하지 않고 말풍선 배경 위에 얕은 오버레이만 얹는다.
+   그래서 글씨도 흰색 고정이 아니라 말풍선 글씨색을 따라가야 한다 — 안 그러면 밝은 배경
+   테마에서 흰 글씨가 그대로 묻혀 "닫기가 안 보인다"가 된다(2026-08-07 수정). */
+.assistant-bubble .secondary-button {
+  color: var(--bubble-text);
+  background: color-mix(in srgb, var(--bubble-text) 14%, transparent);
+}
+.assistant-bubble .secondary-button:hover {
+  background: color-mix(in srgb, var(--bubble-text) 23%, transparent);
+}
+.assistant-answer-text {
+  max-height: 190px;
+  padding-right: 3px;
+  overflow-y: auto;
+  color: var(--bubble-subtext);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-app-region: no-drag;
+}
+.image-resize-panel { text-align: left; }
+.image-resize-panel label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--bubble-subtext);
+  font-size: 12px;
+}
+.image-resize-panel select {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 7px 9px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 8px;
+  outline: none;
+  color: var(--bubble-text);
+  background: rgba(0, 0, 0, 0.25);
+  font: inherit;
+  font-size: 12px;
+  -webkit-app-region: no-drag;
+}
+.image-resize-panel select:focus {
+  border-color: var(--bubble-button-hover);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bubble-button) 35%, transparent);
+}
+/* 번역될 클립보드 내용 미리보기(앞부분만). 길면 잘라서 두 줄까지만 보여준다. */
+.translate-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 8px 0 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 7px;
+  color: var(--bubble-subtext);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.translate-preview:empty { display: none; }
+/* 번역 결과 확인 화면. 바로 복사하지 않고 사용자가 보고 나서 "복사"를 누르게 한다. */
+.translate-result-label {
+  margin-bottom: 6px;
+  color: var(--bubble-accent, var(--bubble-button));
+  font-size: 11px;
+  font-weight: 700;
+}
+.translate-result-text {
+  overflow-y: auto;
+  max-height: 160px;
+  padding: 8px 9px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 8px;
+  color: var(--bubble-text, #fff);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.translate-result-panel .image-resize-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.document-summary-limit { display: block; margin: -5px 0 10px; color: var(--bubble-subtext); font-size: 10px; text-align: right; }
+.image-resize-panel label[for="document-summary-extra-request"] { display: block; margin-top: 2px; }
+.image-resize-panel #document-summary-extra-request { min-height: 72px; resize: vertical; }
+.document-summary-result-panel { text-align: center; }
+.document-summary-result-panel strong { display: block; margin-bottom: 5px; }
+.document-summary-result-panel span { display: block; overflow-wrap: anywhere; }
+.document-summary-result-icon { margin-bottom: 6px; font-size: 24px; }
+.document-summary-result-panel .image-resize-actions { display: flex; gap: 8px; margin-top: 12px; }
+.image-resize-panel .image-resize-actions {
+  display: flex;
+  gap: 7px;
+}
+.image-resize-panel .image-resize-actions button { flex: 1; margin-top: 0; }
+.image-resize-status {
+  margin-top: 9px;
+  color: var(--bubble-subtext);
+  font-size: 12px;
+  text-align: center;
+}
+.assistant-bubble button:disabled {
+  opacity: 0.58;
+  cursor: wait;
+}
+
+.media-player {
+  --media-scale: 1;
+  --media-opacity: 1;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--media-scale));
+  width: auto;
+  padding: calc(6px * var(--media-scale));
+  border-radius: 999px;
+  opacity: var(--media-opacity);
+  transform: translateX(-50%);
+  animation: none;
+}
+.media-player::after { display: none; }
+.media-toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: calc(28px * var(--media-scale));
+  height: calc(28px * var(--media-scale));
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+.media-toggle:hover { background: color-mix(in srgb, var(--bubble-button) 25%, transparent); }
+.media-toggle svg {
+  width: calc(15px * var(--media-scale));
+  height: calc(15px * var(--media-scale));
+  fill: var(--bubble-text);
+  pointer-events: none;
+}
+.favorites-bubble { text-align: left; }
+.favorites-list {
+  display: grid;
+  gap: 6px;
+  /* 즐겨찾기는 최대 12개까지 등록되므로(2026-08-07 이전엔 8개), 스크롤 없이 전부 한
+     번에 보이도록 넉넉하게 잡는다(펫 창 상단에 항상 남겨두는 여백 안에서 충분히
+     감당되는 높이). "즐겨찾기의 본분에 맞지 않는다"는 피드백으로 190px → 420px(8개
+     기준, 2026-08-02)로 늘렸던 걸 12개 기준 560px로 다시 늘렸다. */
+  max-height: 560px;
+  margin-top: 9px;
+  padding-right: 2px;
+  overflow-y: auto;
+  -webkit-app-region: no-drag;
+}
+/* .speech-bubble button { background: var(--bubble-button); }(위쪽, 확인/닫기 같은
+   주요 버튼용 규칙)이 element+class 선택자라 class 하나짜리 .favorite-launch-button
+   보다 우선순위가 높아서 계속 이겨버렸다 — 그래서 즐겨찾기 버튼이 항상 테마 강조색
+   단색으로 칠해졌고, 아이콘 색도 같은 강조색을 쓰다 보니 서로 묻혀 안 보이는 문제가
+   생겼다(2026-08-02, "아이콘도 파란색, 버튼도 파란색이라 안 보임" 피드백). 클래스를
+   하나 더 붙여서(`.favorites-bubble .favorite-launch-button`) 명시도를 올려 이긴다. */
+.favorites-bubble .favorite-launch-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--bubble-border);
+  color: var(--bubble-text);
+  background: color-mix(in srgb, var(--bubble-text) 10%, transparent);
+  text-align: left;
+}
+.favorites-bubble .favorite-launch-button:hover { background: color-mix(in srgb, var(--bubble-text) 18%, transparent); }
+.favorite-launch-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  object-fit: contain;
+}
+.favorite-launch-icon-template { display: flex; align-items: center; justify-content: center; }
+.favorite-launch-icon-template svg { width: 100%; height: 100%; }
+.speech-bubble .secondary-button { color: var(--bubble-text); background: color-mix(in srgb, var(--bubble-text) 14%, transparent); }
+.speech-bubble .secondary-button:hover { background: color-mix(in srgb, var(--bubble-text) 23%, transparent); }
+
+.favorites-list.favorites-list-grid {
+  grid-template-columns: repeat(4, minmax(46px, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  padding-right: 0;
+}
+.favorites-list-grid .favorite-launch-button {
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 7px 5px;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  word-break: break-word;
+}
+.favorites-list-grid .favorite-launch-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.favorites-list-grid.favorites-list-labels-hidden .favorite-launch-button {
+  min-height: 54px;
+  padding: 8px 5px;
+}
+.favorites-list-grid.favorites-list-labels-hidden .favorite-launch-icon {
+  width: 30px;
+  height: 30px;
+}
+.favorite-launch-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+img.favorite-launch-icon {
+  display: block;
+  object-fit: contain;
+}
+
+/* ── 펫 주변 커스터마이징 오버레이 (2026-08-06) ─────────────────────────────
+   설정창 탭에서 이름만 보고 색을 고르는 게 비직관적이라는 피드백에 대응해, 펫 좌우에
+   파츠별 색상 카드를 띄우고 연결선으로 실제 파츠와 묶는다. 위치는 renderer.js의
+   updateCustomizeLayout()이 매 프레임 3D 좌표를 project()해서 계산한다. */
+#customize-layer {
+  /* 말풍선과 같은 테마 변수를 쓴다. 테마별 값은 위쪽 .speech-bubble[data-theme=...]
+     블록에 이 선택자를 같이 넣어뒀고, 여기 값은 기본(charcoal) 폴백이다.
+     renderer.js가 다른 말풍선들과 함께 dataset.theme를 세팅한다. */
+  --bubble-bg: rgba(35, 37, 41, 0.95);
+  --bubble-border: rgba(255, 224, 143, 0.35);
+  --bubble-subtext: #d8dbe4;
+  --bubble-button: #c08b00;
+  --bubble-button-hover: #eeac00;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  /* 레이어 자체는 클릭을 통과시키고, 카드/툴바만 이벤트를 받는다 — 그래야 모드 중에도
+     펫을 드래그해 옮길 수 있다. */
+  pointer-events: none;
+}
+.customize-row {
+  position: absolute;
+  pointer-events: none;
+}
+.customize-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 132px;
+  padding: 6px 8px 7px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 9px;
+  color: var(--bubble-text);
+  background: var(--bubble-bg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  animation: bubble-in 160ms ease-out;
+}
+.customize-name {
+  overflow: hidden;
+  color: var(--bubble-subtext);
+  font-size: calc(10.5px * var(--ui-font-size-scale));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customize-value-row { display: flex; align-items: center; gap: 5px; }
+.customize-hex {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 3px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.34);
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.customize-hex:focus { outline: none; border-color: rgba(255, 255, 255, 0.55); }
+/* width/margin은 전역 button 규칙(width:100%, margin-top:9px)을 되돌리는 것 */
+.customize-swatch {
+  flex: none;
+  width: 26px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.customize-swatch:hover { border-color: rgba(255, 255, 255, 0.7); }
+
+/* 색 팔레트의 위치 껍데기. 안쪽(채도·명도 영역, 색조 슬라이더, hex 칸)은 2026-08-08부터
+   공용 피커(color-picker.css의 .pcp-*)가 그린다 — 설정창과 같은 피커를 쓰기 위해서다.
+   네이티브 <input type="color">의 색 대화상자는 이 창의 always-on-top +
+   setFocusable/setIgnoreMouseEvents 조합에 밀려 곧바로 닫혀버려서 쓸 수 없다. */
+#customize-palette {
+  position: absolute;
+  z-index: 4;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  animation: bubble-in 140ms ease-out;
+}
+/* 이 창에서는 패널이 말풍선 테마를 따라야 해서 배경만 덮어쓴다(공용 기본값은 --surface). */
+#customize-palette .pcp-panel {
+  border-color: var(--bubble-border);
+  background: var(--bubble-bg);
+  backdrop-filter: blur(10px);
+}
+/* 연결선. 회전 기준점과 방향은 좌우 열에 따라 JS가 지정한다. */
+.customize-leader {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.55));
+  pointer-events: none;
+}
+.customize-row[data-side="right"] .customize-leader {
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.55));
+}
+#customize-toolbar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 999px;
+  background: var(--bubble-bg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+#customize-hint { color: var(--bubble-subtext); font-size: calc(10.5px * var(--ui-font-size-scale)); white-space: nowrap; }
+/* width/margin은 위쪽 전역 button 규칙(width:100%, margin-top:9px)을 되돌리는 것 */
+#customize-done {
+  width: auto;
+  margin: 0;
+  flex: none;
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--bubble-button, #d75566);
+  font: inherit;
+  font-size: calc(11px * var(--ui-font-size-scale));
+  cursor: pointer;
+}
+#customize-done:hover { background: var(--bubble-button-hover, #ed6577); }
+.customize-secondary {
+  width: auto;
+  margin: 0;
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid var(--bubble-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bubble-text) 14%, transparent);
+  font-size: calc(11px * var(--ui-font-size-scale));
+}
+.customize-secondary:hover { background: rgba(255, 255, 255, 0.22); }
+
+/* 누를 때 살짝 눌리는 반응(2026-08-07). 저장소에 :active 규칙이 하나도 없었어서 충돌은 없다.
+   transform을 이미 쓰는 요소(파이 항목, 독 FAB 등)는 여기서 덮어쓰면 translate가 사라져
+   위치가 튀므로 해당 파일에서 따로 처리한다. */
+button { transition: transform 90ms ease; }
+button:active:not(:disabled) { transform: scale(0.94); }

@@ -1,0 +1,514 @@
+/* 테마 값은 theme-vars.css(공용)에서 온다 — settings.html이 이 파일보다 먼저 링크한다.
+   설정창은 예전부터 --settings-* 라는 자기 이름을 쓰고 있어서 그대로 두고, 여기서 공용
+   변수에 이어 붙이기만 한다. 2026-08-07 이전에는 이 파일이 테마 블록을 자체적으로 들고
+   있었고 값이 나머지 다섯 창과 미묘하게 달라서(테두리 #505565 vs #454b5a 등) 설정창만
+   톤이 어긋나 보였다. */
+:root {
+  --settings-bg: var(--bg);
+  --settings-field: var(--surface);
+  --settings-panel: var(--surface-soft);
+  --settings-border: var(--border);
+  --settings-accent: var(--accent);
+  /* 사이드바 그룹 라벨처럼 어두운 배경에서 읽혀야 하는 곳에 쓰는 밝은 강조색.
+     공용 변수엔 없는 설정창 전용 값이다. */
+  --settings-accent-hover: color-mix(in srgb, var(--accent) 85%, white 15%);
+  --ui-font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  --ui-font-size-scale: 1;
+  font-family: var(--ui-font-family);
+  color: var(--text);
+  background: var(--settings-bg);
+}
+:root[data-ui-font="malgun"] { --ui-font-family: "Malgun Gothic", "맑은 고딕", sans-serif; }
+:root[data-ui-font="gulim"] { --ui-font-family: "Gulim", "굴림", sans-serif; }
+:root[data-ui-font="batang"] { --ui-font-family: "Batang", "바탕", serif; }
+:root[data-ui-font="gungsuh"] { --ui-font-family: "Gungsuh", "궁서", serif; }
+:root[data-ui-font="monospace"] { --ui-font-family: "D2Coding", "NanumGothicCoding", "GulimChe", "굴림체", Consolas, monospace; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-width: 400px; background: var(--settings-bg); }
+#settings-form { min-height: 100vh; }
+.settings-load-failure { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.settings-load-failure-card { width: min(100%, 460px); }
+.settings-load-failure-card p { margin-top: 10px; }
+
+/* 좌측 사이드바 레이아웃 (2026-08-05)
+   탭이 11개로 늘어나 가로 5열 그리드가 5/5/1로 깨지던 걸 세로 목록으로 바꿨다.
+   사이드바는 fixed로 창 왼쪽에 붙고, 본문과 저장 푸터는 --settings-nav-width만큼
+   왼쪽을 비운다. 창이 좁아지면 아래 미디어 쿼리가 가로 pill 바로 되돌린다. */
+:root { --settings-nav-width: 168px; }
+.settings-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  width: var(--settings-nav-width);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 14px;
+  border-right: 1px solid var(--settings-border);
+  background: color-mix(in srgb, var(--settings-bg) 88%, black 12%);
+  scrollbar-width: thin;
+}
+.settings-content {
+  margin-left: var(--settings-nav-width);
+  padding: 16px 18px 88px;
+}
+.settings-header { padding: 18px 16px 14px; }
+h1 { margin: 0; font-size: calc(17px * var(--ui-font-size-scale)); line-height: 1.3; }
+p { margin: 6px 0 0; color: var(--text-muted); font-size: calc(11px * var(--ui-font-size-scale)); line-height: 1.5; }
+.settings-tabs { display: flex; flex-direction: column; gap: 17px; padding: 0 10px; }
+.settings-tab-group { display: flex; flex-direction: column; gap: 2px; }
+/* 강조색은 원색(--settings-accent)이 아니라 밝은 쪽(--settings-accent-hover)을 쓴다 —
+   어두운 사이드바 배경에서 작은 글자를 읽을 만한 명도를 확보하기 위함. */
+.settings-tab-group-label {
+  padding: 0 8px 5px;
+  color: var(--settings-accent-hover, var(--settings-accent));
+  font-size: calc(12.5px * var(--ui-font-size-scale));
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.settings-tab {
+  position: relative;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+  text-align: left;
+  cursor: pointer;
+}
+.settings-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+.settings-tab.active { color: var(--text); border-color: color-mix(in srgb, var(--settings-accent) 55%, transparent); background: color-mix(in srgb, var(--settings-accent) 25%, transparent); }
+/* 활성 탭 왼쪽 강조 바 — 세로 목록에서 현재 위치를 한눈에 알아보게 한다. */
+.settings-tab.active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -6px;
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--settings-accent);
+  transform: translateY(-50%);
+}
+/* max-width: 창을 아주 넓게 늘렸을 때 setting-row의 라벨과 입력칸이 양 끝으로
+   너무 멀어져 짝을 읽기 힘들어지는 걸 막는다(기본 창 너비에서는 영향 없음). */
+.tab-panel { max-width: 740px; padding: 18px; border: 1px solid color-mix(in srgb, var(--settings-border) 75%, transparent); border-radius: 14px; background: var(--settings-panel); }
+
+/* 창이 좁으면(사이드바 168px을 빼면 본문이 눌린다) 원래의 가로 탭 바로 돌아간다.
+   .settings-tab-group에 display:contents를 주어 그룹 래퍼를 무시하고
+   버튼들만 한 flex-wrap 줄에 자연스럽게 채운다. */
+@media (max-width: 620px) {
+  .settings-sidebar {
+    position: static;
+    width: auto;
+    padding-bottom: 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--settings-border);
+  }
+  .settings-content { margin-left: 0; }
+  .settings-header { padding: 16px 18px 10px; }
+  h1 { font-size: calc(20px * var(--ui-font-size-scale)); }
+  .settings-tabs { flex-direction: row; flex-wrap: wrap; gap: 5px; padding: 0 12px; }
+  .settings-tab-group { display: contents; }
+  .settings-tab-group-label { display: none; }
+  .settings-tab { padding: 7px 11px; text-align: center; }
+  .settings-tab.active::before { display: none; }
+}
+.settings-group { margin-top: 18px; padding-top: 15px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
+/* 탭의 첫 그룹은 위에 이미 .tab-panel 패딩이 있어 이 border-top이 패널 맨 위에 붙은 뜬금없는
+   가로줄로 보인다(외형 탭 "초기화" 버튼, 2026-08-09). 구분선이 필요하면 원하는 위치에
+   <hr class="settings-divider">를 직접 넣을 것 — 이 클래스는 그 기본 줄만 지운다. */
+.settings-group.no-top-divider { margin-top: 0; padding-top: 0; border-top: none; }
+h2 { margin: 0 0 12px; color: var(--text); font-size: calc(13px * var(--ui-font-size-scale)); }
+label { display: flex; align-items: center; }
+.toggle-row { gap: 9px; margin: 11px 0; font-size: calc(13px * var(--ui-font-size-scale)); }
+.toggle-row input { width: 17px; height: 17px; accent-color: var(--settings-accent); }
+.compact-toggle { margin-top: 9px; }
+.setting-row { justify-content: space-between; gap: 12px; margin: 10px 0; font-size: calc(13px * var(--ui-font-size-scale)); }
+.input-wrap { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+.input-wrap input, .input-wrap select {
+  width: 92px;
+  padding: 7px 9px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--settings-field);
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+}
+.input-wrap select { width: 132px; }
+.input-wrap input[type="time"] { width: 132px; }
+.shortcut-recorder {
+  width: 240px;
+  padding: 7px 9px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--settings-field);
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+  font-family: Consolas, monospace;
+  text-align: center;
+  cursor: pointer;
+}
+.shortcut-recorder:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
+.shortcut-recorder.disabled { opacity: 0.45; cursor: not-allowed; }
+.shortcut-toggle { display: flex; align-items: center; gap: 4px; font-size: calc(11px * var(--ui-font-size-scale)); color: var(--text-dim); white-space: nowrap; }
+.shortcut-toggle input { width: 15px; height: 15px; accent-color: var(--settings-accent); }
+.shortcut-recorder.recording {
+  border-color: var(--settings-accent);
+  color: var(--settings-accent);
+  background: color-mix(in srgb, var(--settings-accent) 14%, var(--settings-field));
+}
+/* `.color-input-group`(네이티브 <input type="color"> + hex 칸 조합)은 2026-08-08에
+   공용 피커(color-picker.css의 .pcp-field)로 전부 대체돼 더 이상 쓰이지 않는다. */
+/* 색 행은 `<label>`이 아니라 `<div>`라 label 규칙의 display:flex를 못 받는다
+   (펼쳐진 피커 패널 클릭이 label 활성화로 스와치에 전달되는 걸 막으려고 div로 바꿨다). */
+.setting-row { display: flex; align-items: center; }
+/* 피커가 펼쳐지면 행이 세로로 길어지므로, 라벨이 가운데가 아니라 위쪽에 붙어야 자연스럽다. */
+.setting-row:has(.pcp-field.pcp-open) { align-items: flex-start; }
+
+/* ── 사용자 지정 팔레트: 그라디언트 맵 편집기(2026-08-08) ────────────────── */
+/* 정지점 핸들이 막대 밖(위아래)으로 튀어나오므로 overflow를 자르지 않는다. */
+.gradient-bar {
+  position: relative;
+  height: 34px;
+  margin: 4px 0 20px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  /* 배경(linear-gradient)은 settings.js가 정지점에서 만들어 넣는다. */
+}
+.gradient-stop {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  /* 좌우 위치는 JS가 left(%)로 준다 — translate로 핸들 가운데를 그 위치에 맞춘다. */
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+.gradient-stop.selected { border-color: var(--settings-accent); height: 32px; }
+/* AGENTS.md 참고: transform을 쓰는 버튼은 공통 :active 축소 규칙이 위치를 덮어쓰므로
+   translate를 그대로 다시 써야 한다.
+   ⚠ 명시도까지 이겨야 한다. 상대는 `button:active:not(:disabled)`(0,2,1)이고 이 파일
+   **뒤쪽**에 있어서, `.gradient-stop:active`(0,2,0)로는 진다 — 그러면 누르는 순간 정지점이
+   translate(-50%,-50%)를 잃고 오른쪽 아래로 튀고, transition 때문에 스르륵 미끄러지듯
+   움직인다(2026-08-08 "정지점이 이리저리 움직인다" 리포트). 앞에 `.gradient-bar`를 붙여
+   (0,3,0)으로 올린다. */
+.gradient-bar .gradient-stop:active { transform: translate(-50%, -50%) scale(0.94); cursor: grabbing; }
+.gradient-actions { display: flex; gap: 8px; margin-bottom: 4px; }
+.gradient-actions .secondary-action { flex: 1 1 0; margin: 0; }
+.text-field { display: block; margin-top: 12px; }
+.text-field > span { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: calc(12px * var(--ui-font-size-scale)); }
+.text-field input, .text-field textarea, .favorite-name {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--settings-field);
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+  resize: none;
+}
+.setting-note { margin: 7px 0 0; color: var(--text-dim); font-size: calc(11px * var(--ui-font-size-scale)); line-height: 1.5; }
+.setting-note.ready { color: color-mix(in srgb, #2e9e5b 52%, var(--text)); }
+.setting-note.missing { color: color-mix(in srgb, #b3761f 52%, var(--text)); }
+.setting-note a { color: var(--settings-accent, #6ea8fe); }
+.setting-note a:hover { color: var(--settings-accent-hover, #8fbfff); }
+.settings-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: var(--settings-nav-width);
+  z-index: 6;
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--settings-border);
+  background: color-mix(in srgb, var(--settings-bg) 95%, transparent);
+  backdrop-filter: blur(14px);
+}
+@media (max-width: 620px) { .settings-footer { left: 0; } }
+.save-button, .secondary-action {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  background: var(--settings-accent);
+  font: inherit;
+  cursor: pointer;
+}
+.save-button:hover, .secondary-action:hover { background: var(--settings-accent-hover); }
+.secondary-action { margin-top: 11px; border: 1px solid var(--settings-border); color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); font-size: 12px; }
+.secondary-action:hover { background: color-mix(in srgb, var(--text) 15%, transparent); }
+.save-error { margin-bottom: 8px; padding: 9px 10px; border: 1px solid #9b4b55; border-radius: 8px; color: color-mix(in srgb, #d7566b 42%, var(--text)); background: color-mix(in srgb, #d7566b 20%, var(--settings-panel)); font-size: 12px; }
+.save-success { margin-bottom: 8px; padding: 9px 10px; border: 1px solid #4b9b6a; border-radius: 8px; color: color-mix(in srgb, #2e9e5b 42%, var(--text)); background: color-mix(in srgb, #2e9e5b 20%, var(--settings-panel)); font-size: 12px; text-align: center; }
+input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+#outline-color { width: 58px; height: 34px; padding: 3px; cursor: pointer; }
+#ui-font-preset { width: 190px; }
+#assistant-personality { width: 154px; }
+.favorite-items { display: grid; gap: 9px; margin-top: 14px; }
+.alarm-add-form { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--settings-border); }
+.favorite-empty { padding: 18px 12px; border: 1px dashed var(--settings-border); border-radius: 10px; color: var(--text-dim); text-align: center; font-size: 12px; }
+/* 카드는 두 줄짜리 압축형 — 아이콘 버튼 / (이름 + 대상 경로) / 순서·삭제 버튼.
+   아이콘 선택지 20개는 카드에 펼치지 않고 아이콘 버튼의 팝오버로 뺐다(2026-08-07). */
+.favorite-item { position: relative; padding: 9px 10px; border: 1px solid color-mix(in srgb, var(--settings-border) 70%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--settings-field) 72%, transparent); transition: border-color 120ms ease, background 120ms ease; }
+.favorite-item:hover { border-color: var(--settings-border); background: color-mix(in srgb, var(--settings-field) 90%, transparent); }
+.favorite-item-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.favorite-item-main { display: grid; gap: 3px; min-width: 0; }
+/* 알람 카드는 제목 + 삭제 버튼 2열이다(즐겨찾기의 3열 그리드를 그대로 쓰면 버튼이
+   가운데 열에 들어가 제목 옆에 붙는다). 제목은 길면 말줄임 — 최대 40자라 한글이면
+   카드 폭을 쉽게 넘긴다. */
+.alarm-item-row { grid-template-columns: minmax(0, 1fr) auto; }
+.alarm-item-title { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.favorite-remove { width: 32px; height: 32px; padding: 0; border: 1px solid var(--settings-border); border-radius: 8px; color: color-mix(in srgb, #d7566b 45%, var(--text)); background: color-mix(in srgb, var(--text) 8%, transparent); font: inherit; cursor: pointer; }
+.favorite-remove:hover { background: rgba(215,85,102,0.25); }
+.favorite-item-actions { display: flex; gap: 4px; }
+.favorite-move { width: 26px; height: 32px; padding: 0; border: 1px solid var(--settings-border); border-radius: 8px; color: var(--text-muted); background: rgba(255,255,255,0.07); font: inherit; cursor: pointer; }
+.favorite-move:hover { background: rgba(255,255,255,0.14); }
+.favorite-edit { width: 32px; height: 32px; padding: 0; border: 1px solid var(--settings-border); border-radius: 8px; color: var(--text-muted); background: rgba(255,255,255,0.07); font: inherit; font-size: 14px; cursor: pointer; }
+.favorite-edit:hover { background: rgba(255,255,255,0.14); }
+.favorite-edit.active { border-color: var(--settings-accent); color: var(--settings-accent); }
+.alarm-item-toggle { width: 17px; height: 17px; margin-right: 2px; accent-color: var(--settings-accent); }
+.alarm-days-picker { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.alarm-day-toggle { width: 30px; height: 28px; padding: 0; border: 1px solid var(--settings-border); border-radius: 7px; color: var(--text-dim); background: var(--settings-field); font: inherit; font-size: 11px; cursor: pointer; }
+.alarm-day-toggle:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
+.alarm-day-toggle.active { color: #fff; background: var(--settings-accent); border-color: var(--settings-accent); }
+.alarm-form-actions { display: flex; gap: 8px; }
+.alarm-form-actions button { margin-top: 9px; }
+
+.favorite-icon-slot { position: relative; flex: none; }
+.favorite-icon-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 7px;
+  border: 1px solid var(--settings-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.favorite-icon-button:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); background: rgba(255,255,255,0.12); }
+.favorite-icon-button[aria-expanded="true"] { border-color: var(--settings-accent); background: color-mix(in srgb, var(--settings-accent) 20%, transparent); }
+.favorite-icon-preview-icon { display: block; width: 100%; height: 100%; }
+.favorite-icon-preview-icon svg { width: 100%; height: 100%; display: block; }
+
+/* 아이콘 선택 팝오버 — 아이콘 버튼 기준으로 아래에, 창 밖으로 나가면 위로 뒤집는다. */
+.favorite-icon-picker {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 6;
+  width: 288px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--settings-accent) 32%, var(--settings-border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--settings-bg) 90%, black 10%);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+/* .favorite-items가 display:grid라 각 .favorite-item이 암묵적으로 독립 스태킹 컨텍스트가
+   된다(그리드/플렉스 아이템은 z-index:auto라도 position:relative처럼 취급됨) — 팝오버의
+   z-index:6은 자기 카드 안에서만 유효해서, 카드 밖으로 넘치는 부분(다음 카드와 겹치는
+   영역)이 다음 형제 카드 뒤로 깔려버린다(2026-08-08, "호버하면 아이콘 선택창 순서가
+   이상해짐" 리포트). 팝오버가 열린 카드 자체에 z-index를 줘서 형제 카드보다 위로 올린다. */
+.favorite-item:has(.favorite-icon-picker.open) { z-index: 1; }
+.favorite-icon-picker.flip-up { top: auto; bottom: calc(100% + 7px); }
+.favorite-icon-picker-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.favorite-icon-picker-title { flex: none; color: var(--text-dim); font-size: 10px; }
+.favorite-icon-preview-label { overflow: hidden; color: var(--text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.favorite-icon-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.favorite-icon-choice {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  border: 1px solid var(--settings-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.favorite-icon-choice svg { width: 100%; height: 100%; display: block; }
+.favorite-icon-choice:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
+.favorite-icon-choice.active { border-color: var(--settings-accent); background: color-mix(in srgb, var(--settings-accent) 22%, transparent); color: var(--settings-accent); }
+.favorite-target { overflow: hidden; padding-left: 2px; color: var(--text-dim); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.favorite-icon-color-group { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 9px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
+.favorite-icon-color-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.favorite-icon-color { width: 26px; height: 26px; padding: 0; border: 1px solid var(--settings-border); border-radius: 6px; background: none; flex: none; cursor: pointer; }
+.favorite-icon-color:disabled { opacity: 0.4; cursor: not-allowed; }
+.preset-item-actions { display: flex; gap: 6px; align-items: center; justify-content: center; }
+.preset-item-actions .secondary-action { width: auto; margin-top: 0; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+
+/* 커스터마이징 프리셋 카드: 펫 창이 렌더해준 머리 썸네일이 곧 "적용" 버튼이다. */
+.preset-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px; }
+.preset-items .favorite-empty { grid-column: 1 / -1; }
+.preset-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.preset-thumb {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--settings-border) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--settings-field) 72%, transparent);
+  cursor: pointer;
+}
+.preset-thumb:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
+.preset-thumb img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.preset-thumb img.pixelated { image-rendering: pixelated; }
+.preset-thumb-placeholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-align: center;
+}
+.preset-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--settings-accent) 62%, transparent);
+  color: #ffffff;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.preset-thumb:hover .preset-thumb-overlay,
+.preset-thumb:focus-visible .preset-thumb-overlay { opacity: 1; }
+.preset-card-name { overflow: hidden; color: var(--text-muted); font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.settings-divider { margin: 18px 0; border: none; border-top: 2px solid var(--settings-accent); opacity: 0.4; }
+.lighting-group { margin-top: 16px; padding: 12px; border: 1px solid color-mix(in srgb, var(--settings-border) 50%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--settings-field) 50%, transparent); }
+.lighting-group h3 { margin: 0 0 10px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.lighting-group .setting-row { margin: 8px 0; }
+.lighting-group .setting-row:first-of-type { margin-top: 0; }
+
+.favorite-icon-preview-icon img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.favorite-icon-choice img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.favorite-icon-custom { width: auto; min-width: 44px; padding: 0 7px; font-size: 10px; }
+
+/* ── 기억 관리 탭 (2026-08-05) ───────────────────────────────────────────
+   원래 이 탭의 통계·기억 카드·미완료 주제에는 CSS가 하나도 없어서 태그가
+   날것으로 보였다. 다른 탭(즐겨찾기 카드/조명 그룹)과 같은 카드 문법을 쓴다. */
+h3 { margin: 0 0 10px; color: var(--text-muted); font-size: calc(12px * var(--ui-font-size-scale)); font-weight: 600; }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.button-row .secondary-action { flex: 1 1 140px; width: auto; margin-top: 0; }
+.secondary-action.danger { border-color: color-mix(in srgb, #d7566b 45%, var(--settings-border)); color: color-mix(in srgb, #d7566b 45%, var(--text)); background: rgba(215, 86, 107, 0.14); }
+.secondary-action.danger:hover { background: rgba(215, 86, 107, 0.28); }
+
+.memory-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 8px;
+  border: 1px solid color-mix(in srgb, var(--settings-border) 55%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--settings-field) 60%, transparent);
+  text-align: center;
+}
+.stat-value { color: var(--text); font-size: calc(21px * var(--ui-font-size-scale)); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat-label { color: var(--text-dim); font-size: calc(10.5px * var(--ui-font-size-scale)); line-height: 1.3; }
+
+.memory-list, .loops-list { display: grid; gap: 8px; margin-top: 12px; }
+.memory-empty { padding: 18px 12px; border: 1px dashed var(--settings-border); border-radius: 10px; color: var(--text-dim); text-align: center; font-size: calc(11.5px * var(--ui-font-size-scale)); }
+.memory-error { padding: 12px; border: 1px solid #9b4b55; border-radius: 10px; color: color-mix(in srgb, #d7566b 42%, var(--text)); background: rgba(155, 75, 85, 0.2); font-size: calc(11.5px * var(--ui-font-size-scale)); }
+.memory-item {
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--settings-field) 66%, transparent);
+}
+.memory-header { display: flex; align-items: center; gap: 6px; }
+.memory-label { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--text); font-size: calc(12.5px * var(--ui-font-size-scale)); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.memory-category {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--memory-chip, #8f97a5) 45%, transparent);
+  border-radius: 999px;
+  color: var(--memory-chip, #b9bec9);
+  background: color-mix(in srgb, var(--memory-chip, #8f97a5) 16%, transparent);
+  font-size: calc(10px * var(--ui-font-size-scale));
+  white-space: nowrap;
+}
+.memory-item[data-category="preference"] { --memory-chip: #e08fbb; }
+.memory-item[data-category="habit"] { --memory-chip: #86b8e6; }
+.memory-item[data-category="fact"] { --memory-chip: #7fd4a8; }
+.memory-item[data-category="relationship"] { --memory-chip: #e9b878; }
+.memory-item[data-category="goal"] { --memory-chip: #b79ce8; }
+.memory-value { margin-top: 6px; color: var(--text-muted); font-size: calc(11.5px * var(--ui-font-size-scale)); line-height: 1.55; word-break: break-word; }
+.memory-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--settings-border) 35%, transparent);
+  color: var(--text-dim);
+  font-size: calc(10px * var(--ui-font-size-scale));
+}
+/* 중요도는 숫자만 적어두면 눈에 안 들어와서 얇은 게이지로 같이 보여준다. */
+.memory-importance { display: flex; align-items: center; gap: 6px; flex: none; }
+/* box-shadow inset: 중요도가 90%처럼 높으면 채워진 부분이 트랙을 거의 다 덮어서
+   게이지가 아니라 그냥 짧은 선처럼 보였다. 테두리를 그려 남은 눈금이 항상 보이게 한다. */
+.memory-importance-track { width: 54px; height: 7px; border-radius: 999px; background: rgba(0,0,0,0.42); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); overflow: hidden; }
+/* display:block 필수 — 마크업이 <span>이라서 inline인 채로 두면 width/height가
+   적용되지 않아 게이지가 빈 트랙으로만 보인다. */
+.memory-importance-fill { display: block; height: 100%; border-radius: 999px; background: var(--settings-accent); }
+.memory-importance > span:last-child { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.memory-mention { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.memory-chip-button {
+  flex: none;
+  padding: 4px 9px;
+  border: 1px solid var(--settings-border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.07);
+  font: inherit;
+  font-size: calc(10px * var(--ui-font-size-scale));
+  white-space: nowrap;
+  cursor: pointer;
+}
+.memory-chip-button:hover { color: var(--text); border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); background: color-mix(in srgb, var(--text) 15%, transparent); }
+.memory-chip-button.danger { color: color-mix(in srgb, #d7566b 45%, var(--text)); }
+.memory-chip-button.danger:hover { border-color: color-mix(in srgb, #d7566b 55%, var(--settings-border)); background: rgba(215, 86, 107, 0.26); }
+.memory-chip-button.memory-verified { color: color-mix(in srgb, #2e9e5b 52%, var(--text)); border-color: color-mix(in srgb, #8fd6a8 45%, var(--settings-border)); background: rgba(143, 214, 168, 0.12); }
+.memory-chip-button.memory-verified:hover { color: var(--text); border-color: color-mix(in srgb, #d7566b 55%, var(--settings-border)); background: rgba(215, 86, 107, 0.26); }
+
+.loop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--settings-field) 66%, transparent);
+}
+.loop-topic { flex: 1 1 auto; min-width: 0; color: var(--text); font-size: calc(11.5px * var(--ui-font-size-scale)); line-height: 1.5; word-break: break-word; }
+.loop-meta { display: flex; align-items: center; gap: 7px; flex: none; }
+.loop-mention { color: var(--text-dim); font-size: calc(10px * var(--ui-font-size-scale)); white-space: nowrap; }
+
+/* 누를 때 살짝 눌리는 반응(2026-08-07). 저장소에 :active 규칙이 하나도 없었어서 충돌은 없다.
+   transform을 이미 쓰는 요소(파이 항목, 독 FAB 등)는 여기서 덮어쓰면 translate가 사라져
+   위치가 튀므로 해당 파일에서 따로 처리한다. */
+button { transition: transform 90ms ease; }
+button:active:not(:disabled) { transform: scale(0.94); }

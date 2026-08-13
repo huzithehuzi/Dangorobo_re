@@ -1,0 +1,46 @@
+/* React 창 공통 베이스 (2026-08-10).
+   Tailwind v4 진입점 + 테마 토큰 매핑 + 바닐라 창들과 동일한 루트 규칙.
+   색 원본은 여전히 src/shared/theme-vars.css의 --bg/--surface/--border/--accent/--text
+   계열 하나다 — 여기서는 그 변수를 Tailwind 색 토큰으로 "매핑"만 한다. */
+@import "tailwindcss";
+
+@theme {
+  --color-app: var(--bg);
+  --color-surface: var(--surface);
+  --color-soft: var(--surface-soft);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-ink: var(--text);
+}
+
+/* 글자 크기 설정(80~150%)을 따라가는 폰트 크기 유틸리티: fs-13 = 13px × 배율.
+   바닐라 창들의 calc(13px * var(--ui-font-size-scale)) 패턴과 동일하다. */
+@utility fs-* {
+  font-size: calc(--value(integer) * 1px * var(--ui-font-size-scale));
+}
+
+/* 바닐라 창들의 :root 규칙과 동일 (src/windows/ 각 창 CSS의 상단 블록 참고).
+   배경은 여기서 깔지 않는다 — 투명 창(pet-context-menu, favorites-dock)이 있어서
+   각 창의 index.html <body> 클래스(bg-app 또는 bg-transparent)가 정한다. */
+:root {
+  --ui-font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  --ui-font-size-scale: 1;
+  font-family: var(--ui-font-family);
+  color: var(--text);
+}
+:root[data-ui-font="malgun"] { --ui-font-family: "Malgun Gothic", "맑은 고딕", sans-serif; }
+:root[data-ui-font="gulim"] { --ui-font-family: "Gulim", "굴림", sans-serif; }
+:root[data-ui-font="batang"] { --ui-font-family: "Batang", "바탕", serif; }
+:root[data-ui-font="gungsuh"] { --ui-font-family: "Gungsuh", "궁서", serif; }
+:root[data-ui-font="monospace"] { --ui-font-family: "D2Coding", "NanumGothicCoding", "GulimChe", "굴림체", Consolas, monospace; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: inherit;
+}
+
+/* 버튼 누름 반응 — 바닐라 창들과 동일한 규칙(AGENTS.md의 :active 주의사항 참고) */
+button { transition: transform 90ms ease; }
+button:active:not(:disabled) { transform: scale(0.94); }

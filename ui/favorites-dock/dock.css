@@ -1,0 +1,201 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  /* 접힌 상태에서는 원형 버튼 말고는 아무것도 없어야 한다 — 창이 80px로 작아지므로
+     그 밖의 바탕화면은 정상적으로 클릭된다. */
+  user-select: none;
+  cursor: default;
+}
+/* 창 크기가 접힘(80) / 펼침(260)으로 바뀌므로, 모든 좌표는 창 중앙 기준이다.
+   버튼은 main이 항상 창 가운데에 오도록 창 위치를 계산한다. */
+.dock {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  /* 접힌 상태에선 아예 없는 것과 같아야 한다(창 밖 클릭이 통과되도록). */
+  display: none;
+}
+.dock.expanded .backdrop { display: block; }
+
+/* ── 가운데 버튼 ─────────────────────────────────────────────── */
+.fab {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, black);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 78%, white), var(--accent) 62%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition: box-shadow 140ms ease, filter 140ms ease, transform 90ms ease;
+}
+.fab:hover { filter: brightness(1.08); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.32); }
+/* 누름 반응. translate를 그대로 다시 써야 한다 — scale만 쓰면 가운데 정렬이 풀려 튄다. */
+.fab:active { transform: translate(-50%, -50%) scale(0.92); }
+.dock.dragging .fab { cursor: grabbing; }
+
+/* 3x3 점 그리드(런처 느낌). 펼치면 45도 돌면서 살짝 오므라들어 "닫기"처럼 보인다. */
+.fab-glyph {
+  display: grid;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  grid-template-columns: repeat(3, 4px);
+  gap: 3px;
+  transform: translate(-50%, -50%);
+  transition: transform 220ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.fab-glyph i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.92;
+  transition: transform 220ms cubic-bezier(0.34, 1.4, 0.64, 1), opacity 160ms ease;
+}
+.dock.expanded .fab-glyph { transform: translate(-50%, -50%) rotate(45deg) scale(0.82); }
+.dock.expanded .fab-glyph i:nth-child(2n) { opacity: 0.35; }
+
+/* 커서 방식에서는 가운데 버튼이 런처가 아니라 "닫기"라서, 강조색 대신 눈에 덜 띄는
+   중립 색으로 두고 크기도 줄인다(커서 바로 아래라 실수로 누르기 쉬운 자리다). */
+.dock.cursor-mode .fab {
+  width: 40px;
+  height: 40px;
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.36);
+}
+.dock.cursor-mode .fab:hover { border-color: var(--accent); filter: none; }
+.dock.cursor-mode .fab-glyph i { background: var(--muted); }
+
+/* ── 파이 메뉴 항목 ──────────────────────────────────────────── */
+.ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.dock.expanded .ring { pointer-events: none; }
+
+.pie-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: inherit;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  pointer-events: none;
+  opacity: 0;
+  /* 접힌 상태: 가운데 버튼 뒤에 숨어 있다. */
+  transform: translate(-50%, -50%) scale(0.35);
+  transition: transform 260ms cubic-bezier(0.32, 1.42, 0.6, 1), opacity 180ms ease, border-color 140ms ease;
+}
+.dock.expanded .pie-item {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1);
+}
+.pie-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.dock.expanded .pie-item:hover {
+  transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.12);
+}
+/* 누름 반응 — hover와 명시도가 같으므로 반드시 hover 뒤에 와야 이긴다. 파이 항목은
+   --x/--y로 자리를 잡으므로 translate를 그대로 다시 쓴다. */
+.dock.expanded .pie-item:active {
+  transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0.97);
+}
+.pie-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 27px;
+  height: 27px;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  pointer-events: none;
+}
+.pie-icon-template { display: flex; align-items: center; justify-content: center; }
+.pie-icon-template svg { width: 100%; height: 100%; }
+.pie-fallback {
+  display: flex;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* 이름은 호버한 하나만 보여준다 — 8개를 동시에 띄우면 원 주위가 글자로 뒤덮인다.
+   위치는 JS가 항목 각도에 맞춰 바깥쪽으로 밀고, 창 밖으로 나가지 않게 clamp한다. */
+.pie-label {
+  position: absolute;
+  max-width: 132px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  font-size: calc(11px * var(--ui-font-size-scale));
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.pie-label.visible { opacity: 1; }
+
+/* 등록된 항목이 하나도 없을 때. */
+.pie-empty {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: 200px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  font-size: calc(11px * var(--ui-font-size-scale));
+  line-height: 1.5;
+  text-align: center;
+  transform: translate(-50%, calc(-50% - 84px));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.dock.expanded .pie-empty { opacity: 1; }

@@ -1,0 +1,33 @@
+{
+  // TS 전환(.js → .ts 파일 단위 rename)용 emit 설정 (2026-08-10 도입).
+  //
+  // **제자리 emit**: .ts 소스를 같은 폴더에 같은 이름의 .js로 내보낸다. outDir를 따로 두면
+  // package.json의 main·__dirname 상대 경로 11곳·electron-builder 레이아웃을 전부 다시
+  // 검증해야 하는데(macOS에서는 Windows 포터블 패키징을 검증할 수도 없다), 제자리 emit은
+  // 경로를 하나도 바꾸지 않는다. `src/main/**/*.js`, 루트 `src/main.js`·`src/preload.js`,
+  // `src/shared/theme-catalog.js`는 산출물이므로 Git·lint·검사에서 제외한다.
+  //
+  // **낡은 산출물 함정 차단은 세 겹**: prestart/predist/pretest 훅이 빌드를 돌리고,
+  // 훅을 타지 않는 실행(`npx electron .` QA 캡처)은 emit된 main.js의 dev-build-guard가
+  // .ts가 .js보다 새로우면 즉시 종료시킨다.
+  //
+  // src/pet은 모듈 체계가 달라(ESM) 여기서 emit하지 않고 src/pet/tsconfig.build.json이 담당한다.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": true,
+    "rootDir": "src",
+    "outDir": "src"
+  },
+  "include": ["src/**/*.ts", "types/**/*.d.ts"],
+  "exclude": ["src/vendor/**", "src/pet/**", "node_modules"]
+}

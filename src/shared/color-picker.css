@@ -1,0 +1,120 @@
+/* 공용 색 선택기 스타일 — color-picker.js의 짝(2026-08-08 신설).
+   펫 창과 설정창이 같이 쓰므로, 색은 두 창의 변수 체계를 모두 폴백으로 건다:
+     - 설정창·독립 창: theme-vars.css의 --surface/--border/--text/--accent
+     - 펫 말풍선: styles.css의 --bubble-bg/--bubble-border/--bubble-text
+   ui-motion.css와 같은 이유로 `:root`에 변수 하나로 묶지 않는다(커스텀 속성은 선언된
+   요소에서 값이 정해져 내려오므로, 펫 창에서는 :root에 --bubble-*이 없어 폴백이 굳는다). */
+
+/* ── 패널 ──────────────────────────────────────────────────────────────── */
+.pcp-panel {
+  width: 172px;
+  padding: 7px;
+  border: 1px solid var(--border, var(--bubble-border, rgba(255, 255, 255, 0.2)));
+  border-radius: 10px;
+  background: var(--surface, var(--bubble-bg, #171920));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  -webkit-app-region: no-drag;
+}
+
+/* 채도(가로) × 명도(세로) 영역. 배경 그라디언트는 JS가 현재 색조로 갱신한다. */
+.pcp-sv {
+  position: relative;
+  width: 158px;
+  height: 108px;
+  border-radius: 7px;
+  cursor: crosshair;
+  touch-action: none;
+}
+/* 색조 슬라이더 */
+.pcp-hue {
+  position: relative;
+  width: 158px;
+  height: 14px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.pcp-handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* 채도·명도 영역의 핸들은 세로 위치도 JS가 정하므로 top 기본값을 0으로 되돌린다. */
+.pcp-sv .pcp-handle { top: 0; }
+
+.pcp-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.pcp-preview {
+  flex: none;
+  width: 24px;
+  height: 22px;
+  border: 1px solid var(--border, var(--bubble-border, rgba(255, 255, 255, 0.28)));
+  border-radius: 6px;
+}
+.pcp-hex {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 3px 4px;
+  border: 1px solid var(--border, var(--bubble-border, rgba(255, 255, 255, 0.2)));
+  border-radius: 6px;
+  color: var(--text, var(--bubble-text, #fff));
+  background: rgba(0, 0, 0, 0.34);
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.pcp-hex:focus { outline: none; border-color: var(--accent, var(--bubble-button, rgba(255, 255, 255, 0.55))); }
+
+/* ── 설정창 필드(스와치 + hex + 눌러서 펼치는 패널) ────────────────────── */
+.pcp-field { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+.pcp-field-controls { display: flex; align-items: center; gap: 7px; }
+
+/* width/margin/padding은 창마다 있는 전역 button 규칙(펫 창의 width:100%, margin-top:9px 등)을
+   되돌리는 것이다 — 이 스와치는 어느 창에 놓여도 같은 크기여야 한다. */
+.pcp-swatch {
+  flex: none;
+  width: 42px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border, var(--bubble-border, rgba(255, 255, 255, 0.28)));
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pcp-swatch:hover:not(:disabled) { border-color: var(--accent, var(--bubble-button, rgba(255, 255, 255, 0.7))); }
+.pcp-field.pcp-open .pcp-swatch { border-color: var(--accent, var(--bubble-button, #d75566)); }
+.pcp-swatch:disabled { cursor: default; opacity: 0.45; }
+
+.pcp-field-hex {
+  width: 82px;
+  padding: 6px 7px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  color: var(--text, #f7f7f9);
+  background: var(--surface-soft, rgba(0, 0, 0, 0.28));
+  font-family: Consolas, monospace;
+  font-size: calc(12px * var(--ui-font-size-scale, 1));
+  text-align: center;
+  text-transform: uppercase;
+}
+.pcp-field-hex:disabled { opacity: 0.45; }
+.pcp-field.pcp-disabled { pointer-events: none; }
+
+/* 행 아래로 펼쳐지는 패널. 팝오버가 아니라 인라인인 이유는 color-picker.js 파일 머리말 참고. */
+.pcp-field .pcp-panel[hidden] { display: none; }
+.pcp-field .pcp-panel { animation: pcp-panel-in 140ms ease-out; }
+@keyframes pcp-panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcp-field .pcp-panel { animation: none; }
+}

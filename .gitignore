@@ -1,0 +1,78 @@
+# 의존성
+/node_modules/
+
+# 빌드 및 검사 산출물
+/release/
+/dist/
+/out/
+
+# TypeScript의 제자리 emit 산출물
+/src/main/**/*.js
+/src/main.js
+/src/preload.js
+/src/pet/*.js
+/src/shared/theme-catalog.js
+/coverage/
+/.nyc_output/
+*.tsbuildinfo
+.eslintcache
+
+# 로그와 임시 파일
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+
+# 로컬 환경 변수와 비밀값
+.env
+.env.*
+!.env.example
+
+# 저장소 루트에 잘못 생성된 Dangorobo 사용자 데이터
+/pet-settings.json
+/pet-settings.json.*
+/settings-save-journal.json
+/settings-save-journal.json.*
+/pet-position.json
+/pet-position.json.*
+/assistant-keys.json
+/assistant-keys.json.*
+/assistant-logs.json
+/assistant-logs.json.*
+/assistant-memory.json
+/assistant-memory.json.*
+/assistant-episodes.json
+/assistant-episodes.json.*
+/assistant-memory.db
+/assistant-memory.db-*
+/assistant-memory.db.*
+/favorites-panels.json
+/favorites-panels.json.*
+/checklist.json
+/checklist.json.*
+/pet-settings-backup.json
+/pet-settings-backup.json.*
+/memories-*.json
+/memories-*.json.*
+/custom-face/
+/custom-body/
+/summaries/
+/user-data/
+/.dangorobo-user-data/
+
+# 원자 교체 도중 남을 수 있는 일반 rollback 슬롯
+*.rollback
+*.rollback-*
+
+# 운영체제와 편집기 메타데이터
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+.idea/
+*.swp
+*.swo
+*~

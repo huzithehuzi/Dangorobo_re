@@ -1,0 +1,82 @@
+{
+  "name": "dangorobo",
+  "version": "0.9.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "마우스를 바라보고 휴식을 알려주는 로우폴리 데스크톱 펫 Dangorobo",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/pet/renderer.js",
+    "precheck": "npm run build:runtime",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json && tsc -p src/pet/tsconfig.json && tsc -p ui/tsconfig.json",
+    "build:main": "tsc -p tsconfig.build.json",
+    "build:pet": "tsc -p src/pet/tsconfig.json && tsc -p src/pet/tsconfig.build.json",
+    "build:runtime": "npm run build:main && npm run build:pet",
+    "test": "node --test",
+    "pretest": "npm run build:runtime",
+    "ui:dev": "vite --config ui/vite.config.mts",
+    "ui:build": "vite build --config ui/vite.config.mts",
+    "prestart": "npm run ui:build && npm run build:runtime",
+    "source:verify": "node scripts/source-archive.js --verify",
+    "source:dist": "node scripts/source-archive.js",
+    "predist": "npm run source:verify && npm run ui:build && npm run build:runtime",
+    "dist": "electron-builder --win portable --x64",
+    "postdist": "npm run source:dist"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.0",
+    "jimp": "^1.6.1",
+    "sql.js": "^1.10.0",
+    "three": "^0.185.1",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
+    "mermaid": "^11.16.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  },
+  "build": {
+    "appId": "com.codex.dangorobo",
+    "productName": "Dangorobo",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "assets/app-icon.ico",
+      "artifactName": "Dangorobo-${version}-Windows.${ext}"
+    },
+    "mac": {
+      "icon": "assets/app-icon.icns"
+    },
+    "npmRebuild": false,
+    "files": [
+      "src/**/*",
+      "!src/**/*.ts",
+      "dist/**/*",
+      "assets/**/*",
+      "package.json",
+      "README.md",
+      "README.en.md",
+      "README.ja.md",
+      "THIRD_PARTY_NOTICES.md"
+    ]
+  },
+  "author": "huzi"
+}

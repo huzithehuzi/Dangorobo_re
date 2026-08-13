@@ -1,0 +1,21 @@
+{
+  // React 창(ui/) 전용 타입 검사 설정. Vite(esbuild)가 변환하므로 검사만 한다(noEmit).
+  // 루트 tsconfig.json(CommonJS/NodeNext)과 모듈 체계가 달라 별도 파일로 둔다 —
+  // npm run typecheck가 둘 다 실행한다.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"]
+  },
+  "include": ["./**/*.ts", "./**/*.tsx", "./**/*.mts", "./**/*.d.ts"]
+}

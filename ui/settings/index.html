@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- data-ui-await-theme: 테마·배율이 IPC로 도착하기 전까지 본문을 숨긴다(ui-motion.css).
+     App이 테마를 적용한 뒤 PetUiMotion.markReady()로 연다 — 바닐라와 같은 핸드셰이크. -->
+<html lang="ko" data-ui-await-theme>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data:; font-src 'self' data:; connect-src 'self'; form-action 'none'" />
+    <title>펫 설정</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
