@@ -6,8 +6,11 @@
 const { t } = require("../../shared/i18n.js");
 import { extractAssistantExpression } from "./assistant-core.js";
 
-const PET_CHAT_HISTORY_TURNS = 2;
-const PET_CHAT_HISTORY_CHAR_BUDGET = 900;
+// 오프너는 "지난 대화를 소재로 삼는" 경로가 있어서 질문 답변보다 이력을 넉넉히 본다 —
+// 두 턴만 보면 모델이 참조할 대화가 사실상 직전 한 마디뿐이라 이어가기 화제를 줘도
+// 구체적으로 말할 재료가 없다.
+const PET_CHAT_HISTORY_TURNS = 6;
+const PET_CHAT_HISTORY_CHAR_BUDGET = 1800;
 const PET_CHAT_RECENT_OPENERS_MAX = 8;
 const PET_CHAT_RECENT_OPENER_MAX_CHARS = 240;
 const PET_CHAT_RECENT_TOPIC_KEYS_MAX = 3;
@@ -26,6 +29,20 @@ const PET_CHAT_TOPIC_HINT_KEYS = [
   "petChat.hint.miniGame",
   "petChat.hint.recommendation",
   "petChat.hint.curiosity"
+];
+
+// 여태 나눈 대화·기억을 소재로 삼는 화제. 위 랜덤 목록은 개수가 정해져 있어서 몇 번
+// 돌면 "아까 한 말을 또 한다"는 느낌이 나는데, 이쪽은 소재가 사용자와의 실제 이력이라
+// 쓸수록 늘어난다. 그래서 재료가 하나라도 있으면 이쪽을 먼저 높은 확률로 고른다
+// (2026-08-14 사용자 피드백. 그전에는 이어가기가 13개 중 하나라 약 8%였다).
+// 항목마다 재료가 따로라 available()로 있는 것만 후보에 넣는다 — 없는 걸 소재로 주면
+// 모델이 지난 대화를 지어낸다.
+const PET_CHAT_CONTINUITY_CHANCE = 0.6;
+const PET_CHAT_CONTINUITY_HINTS: Array<{ key: string; available: (deps: PetChatServiceDeps) => boolean }> = [
+  { key: "petChat.hint.continueTopic", available: (deps) => deps.hasConversationHistory() },
+  { key: "petChat.hint.pastEpisode", available: (deps) => deps.hasConversationHistory() },
+  { key: "petChat.hint.rememberedDetail", available: (deps) => deps.hasLongTermMemory() },
+  { key: "petChat.hint.openLoopFollowUp", available: (deps) => deps.hasOpenLoops() }
 ];
 
 type PetChatSettings = {
@@ -49,6 +66,8 @@ type PetChatServiceDeps = {
   hasApiKey: () => boolean;
   isAutoChatBlocked: () => boolean;
   hasConversationHistory: () => boolean;
+  hasLongTermMemory: () => boolean;
+  hasOpenLoops: () => boolean;
   openPanel: (message: string, expression: string | null) => void;
   logSession: (openingMessage: string, replyText: string, replyAnswer: string) => void;
   setTimeoutFn?: typeof setTimeout;
@@ -57,6 +76,7 @@ type PetChatServiceDeps = {
 };
 
 type PetChatOpener = { topicKey: string; prompt: string };
+type PetChatTopic = { key: string; hint: string; continuity: boolean };
 
 function createPetChatService(deps: PetChatServiceDeps) {
   const setTimeoutFn = deps.setTimeoutFn || setTimeout;
@@ -73,13 +93,22 @@ function createPetChatService(deps: PetChatServiceDeps) {
   let recentOpeners: string[] = [];
   let recentTopicKeys: string[] = [];
 
-  function pickTopicHint() {
-    const lang = deps.getSettings().language;
-    const keys = [...PET_CHAT_TOPIC_HINT_KEYS];
-    if (deps.hasConversationHistory()) keys.push("petChat.hint.continueTopic");
+  /** 최근에 쓴 화제를 뺀 뒤 하나를 고른다. 전부 최근에 썼으면 목록 전체에서 고른다. */
+  function pickUnusedKey(keys: string[]) {
     const unusedKeys = keys.filter((key) => !recentTopicKeys.includes(key));
-    const key = (unusedKeys.length ? unusedKeys : keys)[Math.floor(random() * (unusedKeys.length ? unusedKeys : keys).length)];
-    return { key, hint: t(lang, key) };
+    const pool = unusedKeys.length ? unusedKeys : keys;
+    return pool[Math.floor(random() * pool.length)];
+  }
+
+  function pickTopicHint(): PetChatTopic {
+    const lang = deps.getSettings().language;
+    const continuityKeys = PET_CHAT_CONTINUITY_HINTS
+      .filter((hint) => hint.available(deps))
+      .map((hint) => hint.key);
+    // 재료가 있을 때만 확률을 쓴다 — 첫 실행처럼 이력·기억이 비었으면 랜덤 소재밖에 없다.
+    const continuity = continuityKeys.length > 0 && random() < PET_CHAT_CONTINUITY_CHANCE;
+    const key = pickUnusedKey(continuity ? continuityKeys : PET_CHAT_TOPIC_HINT_KEYS);
+    return { key, hint: t(lang, key), continuity };
   }
 
   function recentOpenersNote() {
@@ -94,9 +123,12 @@ function createPetChatService(deps: PetChatServiceDeps) {
   function buildOpenerPrompt() {
     const lang = deps.getSettings().language;
     const topic = pickTopicHint();
+    // 이어가기 화제에는 다른 지시문을 쓴다. 랜덤 소재용 varietyInstruction은 "최근 문장과
+    // 같은 소재를 되풀이하지 말라"고 하는데, 지난 대화를 이어가라는 지시와 정면으로 부딪친다.
+    const instructionKey = topic.continuity ? "petChat.continuityInstruction" : "petChat.varietyInstruction";
     return {
       topicKey: topic.key,
-      prompt: `${t(lang, "petChat.intro")} ${t(lang, "petChat.varietyInstruction")} ${topic.hint})${recentOpenersNote()}`
+      prompt: `${t(lang, "petChat.intro")} ${t(lang, instructionKey)} ${topic.hint})${recentOpenersNote()}`
     };
   }
 

@@ -20,7 +20,9 @@ const BASE_SETTINGS = {
  *   hasApiKey?: boolean,
  *   blocked?: boolean,
  *   hasHistory?: boolean,
- *   random?: () => number
+ *   hasMemory?: boolean,
+ *   hasOpenLoops?: boolean,
+ *   random?: (() => number) | number[]
  * }} [options]
  */
 function createHarness(options = {}) {
@@ -47,6 +49,8 @@ function createHarness(options = {}) {
     hasApiKey: () => options.hasApiKey !== false,
     isAutoChatBlocked: () => options.blocked === true,
     hasConversationHistory: () => options.hasHistory === true,
+    hasLongTermMemory: () => options.hasMemory === true,
+    hasOpenLoops: () => options.hasOpenLoops === true,
     openPanel: (message, expression) => calls.openPanel.push({ message, expression }),
     logSession: (...args) => calls.logSession.push(args),
     setTimeoutFn: /** @type {any} */ ((/** @type {() => unknown} */ fn, /** @type {number} */ delay) => {
@@ -58,7 +62,15 @@ function createHarness(options = {}) {
       calls.clearCount += 1;
       if (handle) handle.cleared = true;
     }),
-    random: options.random || (() => 0)
+    random: Array.isArray(options.random)
+      // 배열이면 순서대로 소비한다 — 화제 선택이 "그룹 추첨 → 목록 안 추첨" 두 번 뽑으므로
+      // 어느 경로를 타는지 정하려면 호출 순서별로 값을 줘야 한다. 다 쓰면 마지막 값을 반복한다.
+      ? (() => {
+        const values = [...options.random];
+        let index = 0;
+        return () => values[Math.min(index++, values.length - 1)];
+      })()
+      : (options.random || (() => 0))
   });
   return { service, calls };
 }
@@ -99,8 +111,8 @@ test("주기 발동 성공: 고정 옵션으로 LLM을 부르고 말풍선을 �
 
   assert.equal(calls.ask.length, 1);
   assert.deepEqual(calls.ask[0].options, {
-    maxHistoryTurns: 2,
-    historyCharBudget: 900,
+    maxHistoryTurns: 6,
+    historyCharBudget: 1800,
     maxOutputTokens: 320
   });
   assert.deepEqual(calls.openPanel, [{ message: "안녕! 오늘 어때?", expression: "normal" }]);
@@ -148,16 +160,77 @@ test("최근 화제 3개는 다음 선택에서 제외된다", async () => {
   assert.equal(new Set(hints).size, 4);
 });
 
-test("대화 이력이 있으면 이어가기 화제가 후보에 들어간다", () => {
-  // continueTopic은 후보 목록 끝에 붙는다 — random이 마지막 요소를 고르게 해서 확인
-  const { service, calls } = createHarness({
+test("재료가 있으면 이어가기 화제를 정해진 확률로 먼저 고른다", async () => {
+  // 화제 선택은 random을 두 번 쓴다: 첫 번째가 그룹 추첨(0.6 미만이면 이어가기),
+  // 두 번째가 그 그룹 안 추첨이다.
+  const continuity = createHarness({
     askResponses: ["a"],
     hasHistory: true,
-    random: () => 0.999
+    random: [0.59, 0]
   });
-  service.schedule();
-  calls.timers[0].fn();
-  assert.ok(calls.ask.length === 0 || calls.ask[0].prompt.includes(t("ko", "petChat.hint.continueTopic")));
+  await continuity.service.callNow();
+  assert.ok(
+    continuity.calls.ask[0].prompt.includes(t("ko", "petChat.hint.continueTopic")),
+    "확률 안에 들면 지난 대화를 소재로 삼는다"
+  );
+  assert.ok(
+    continuity.calls.ask[0].prompt.includes(t("ko", "petChat.continuityInstruction")),
+    "이어가기에는 전용 지시문이 실린다"
+  );
+  assert.ok(
+    !continuity.calls.ask[0].prompt.includes(t("ko", "petChat.varietyInstruction")),
+    "'최근 소재를 되풀이하지 말라'는 랜덤용 지시문과 섞이지 않는다"
+  );
+
+  const randomTopic = createHarness({
+    askResponses: ["a"],
+    hasHistory: true,
+    random: [0.61, 0]
+  });
+  await randomTopic.service.callNow();
+  assert.ok(
+    randomTopic.calls.ask[0].prompt.includes(t("ko", "petChat.hint.joke")),
+    "확률을 벗어나면 랜덤 소재 목록에서 고른다"
+  );
+  assert.ok(randomTopic.calls.ask[0].prompt.includes(t("ko", "petChat.varietyInstruction")));
+});
+
+test("재료가 없는 이어가기 화제는 후보에 넣지 않는다", async () => {
+  // 이력만 있고 기억은 없는 상태 — 기억·미완료 주제를 소재로 주면 모델이 지어낸다.
+  const { service, calls } = createHarness({
+    askResponses: ["a", "b", "c", "d", "e"],
+    hasHistory: true,
+    random: [0]
+  });
+  for (let i = 0; i < 5; i += 1) {
+    await service.callNow();
+    service.endSession();
+  }
+  const prompts = calls.ask.map((call) => call.prompt).join("\n");
+  assert.ok(!prompts.includes(t("ko", "petChat.hint.rememberedDetail")), "기억이 없으면 안 쓴다");
+  assert.ok(!prompts.includes(t("ko", "petChat.hint.openLoopFollowUp")), "미완료 주제가 없으면 안 쓴다");
+});
+
+test("기억·미완료 주제만 있어도 이어가기 화제를 고른다", async () => {
+  const { service, calls } = createHarness({
+    askResponses: ["a"],
+    hasMemory: true,
+    hasOpenLoops: true,
+    random: [0, 0]
+  });
+  await service.callNow();
+  assert.ok(
+    calls.ask[0].prompt.includes(t("ko", "petChat.hint.rememberedDetail")),
+    "이력이 없어도 기억을 소재로 삼는다"
+  );
+});
+
+test("이력·기억이 모두 없으면 확률과 무관하게 랜덤 소재를 쓴다", async () => {
+  // 첫 실행 상태. 그룹 추첨을 아예 하지 않으므로 random 첫 값이 목록 추첨에 쓰인다.
+  const { service, calls } = createHarness({ askResponses: ["a"], random: [0] });
+  await service.callNow();
+  assert.ok(calls.ask[0].prompt.includes(t("ko", "petChat.hint.joke")));
+  assert.ok(!calls.ask[0].prompt.includes(t("ko", "petChat.continuityInstruction")));
 });
 
 test("callNow 성공은 기존 타이머를 지우고 다음 주기를 예약한다", async () => {

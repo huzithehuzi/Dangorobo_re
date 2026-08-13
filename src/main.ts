@@ -1214,6 +1214,10 @@ const petChatService = createPetChatService({
   isAutoChatBlocked: () => petInteraction.isRestActive() || bubblePanels.isAssistantActive() || bubblePanels.isFavoritesActive() ||
     bubblePanels.isImageResizeActive() || bubblePanels.isTranslateActive() || bubblePanels.isDocumentSummaryActive() || dndVisibility.isActive() || !petInteraction.isClickThrough(),
   hasConversationHistory: () => assistantHistory.getHistory().length > 0,
+  // 기억이 꺼져 있으면 relatedMemoryBlock이 아무것도 넣지 않으므로, 기억을 소재로 삼는
+  // 화제도 후보에서 빠져야 한다 — 재료 없이 지시만 주면 모델이 기억을 지어낸다.
+  hasLongTermMemory: () => settings.assistantMemoryEnabled && getMemoryCount() > 0,
+  hasOpenLoops: () => settings.assistantMemoryEnabled && getOpenLoopsCount() > 0,
   openPanel: (message, expression) => {
     bubblePanels.setAssistantActive(true);
     petWindow?.webContents.send("pet-chat:open", { message, expression });

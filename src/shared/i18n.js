@@ -893,9 +893,29 @@
       ja: "(今はユーザーが質問した状況ではなく、ユーザーが今あなたの頭を撫でてくれたので、それに反応して先に話しかける状況です。質問に答えているように振る舞わず、撫でられて嬉しい・くすぐったいなどの気持ちを自然で短い一言で表現してください。今何時か、時間帯(朝・夜など)への言及や、それに基づく小言・アドバイスは絶対にしないでください。"
     },
     "petChat.hint.continueTopic": {
-      ko: "최근에 나눈 대화 주제가 있다면, 그 주제를 자연스럽게 다시 꺼내며 궁금한 척 물어보세요.",
-      en: "If there's a recently discussed topic, bring it up again naturally as if you're curious about it.",
-      ja: "最近話した話題があれば、その話題を自然にまた持ち出して、気になっているふりをして尋ねてください。"
+      ko: "위에 주어진 지난 대화 중 하나를 골라, 그 이야기의 구체적인 내용을 언급하며 그 뒤로 어떻게 됐는지 물어보세요. \"요즘 어때?\" 같은 두루뭉실한 말이 아니라, 실제로 나눈 내용을 짚어야 합니다.",
+      en: "Pick one of the past conversations given above, mention something specific from it, and ask how it turned out since. Not a vague \"how have you been?\" — point to something actually discussed.",
+      ja: "上に与えられた過去の会話から一つ選び、その具体的な内容に触れて、その後どうなったか尋ねてください。「最近どう?」のような曖昧な言い方ではなく、実際に話した内容を挙げてください。"
+    },
+    "petChat.hint.pastEpisode": {
+      ko: "지난 대화에서 있었던 일을 문득 떠올린 것처럼 언급하며 말을 거세요. 그때 사용자가 했던 말이나 그때의 분위기를 구체적으로 짚으세요.",
+      en: "Bring up something from an earlier conversation as if you just remembered it. Point specifically to what the user said then or how it felt.",
+      ja: "以前の会話での出来事をふと思い出したように話しかけてください。そのときユーザーが言ったことや雰囲気を具体的に挙げてください。"
+    },
+    "petChat.hint.rememberedDetail": {
+      ko: "위에 주어진 기억 중 하나(사용자의 취향·습관 등)를 구체적으로 언급하며, 그와 관련해 궁금한 것을 물어보세요.",
+      en: "Mention one specific item from the memories given above (the user's tastes, habits, etc.) and ask something you're curious about around it.",
+      ja: "上に与えられた記憶の一つ(ユーザーの好み・習慣など)を具体的に挙げて、それに関して気になることを尋ねてください。"
+    },
+    "petChat.hint.openLoopFollowUp": {
+      ko: "위에 주어진 미완료 주제 중 하나를 골라, 그 뒤로 어떻게 됐는지 자연스럽게 물어보세요. 재촉하거나 잔소리하지 말고 궁금해하는 말투로 하세요.",
+      en: "Pick one of the unfinished topics given above and naturally ask how it went. Sound curious, not nagging or pushy.",
+      ja: "上に与えられた未完了の話題から一つ選び、その後どうなったか自然に尋ねてください。急かしたり小言を言ったりせず、気になっている口調で。"
+    },
+    "petChat.continuityInstruction": {
+      ko: "시작 방식, 질문의 형태, 문장 리듬은 매번 바꾸세요. 이번에는 위에 주어진 기억과 지난 대화에서 소재를 가져오되, 최근에 이미 꺼낸 소재는 피하고 아직 다시 이야기하지 않은 것을 고르세요. 위에 없는 대화나 기억을 절대 지어내지 말고, 주어진 내용이 부족하면 그 범위 안에서만 짧게 말하세요.",
+      en: "Vary how you open, the kind of question you ask, and the rhythm of the sentence every time. This time take your subject from the memories and past conversations given above, but avoid subjects you already brought up recently and pick one you haven't revisited. Never invent a conversation or memory that is not given above; if the given material is thin, keep it short and stay within it.",
+      ja: "切り出し方、質問の形、文のリズムは毎回変えてください。今回は上に与えられた記憶と過去の会話から話題を取り、最近すでに持ち出した話題は避けて、まだ再び話していないものを選んでください。上にない会話や記憶を絶対に作らず、与えられた内容が乏しい場合はその範囲内で短く話してください。"
     },
 
     "documentSummary.textLabel": { ko: "요약할 문서", en: "Document to summarize", ja: "要約する文書" },
