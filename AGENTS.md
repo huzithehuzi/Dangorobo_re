@@ -104,6 +104,10 @@ npm run dist
   공용 모션의 레이아웃 속성은 `:where()`로 명시도를 0으로 둔다.
 - transform을 이미 쓰는 버튼에 `button:active` scale을 추가할 때 기존 translate를 보존하고
   공용 선택자보다 높은 명시도로 뒤에 둔다. `prefers-reduced-motion`도 함께 처리한다.
+- **Tailwind 창에서 `font` 축약(`[font:inherit]`)으로 글자 크기를 덮지 않는다.** preflight가 이미
+  `button,input,select,optgroup,textarea`에 걸어 주고(base 레이어라 유틸리티에 항상 진다),
+  유틸리티로 쓰면 클래스에 적은 순서와 무관하게 `fs-*`보다 뒤에 정렬돼 크기를 루트 상속값으로
+  되돌린다. 글자 크기는 `fs-<px>` 유틸리티만 쓴다.
 - 앱의 색 선택은 `src/shared/color-picker.*`만 사용한다. 펫 창 위에 네이티브 팝업이나
   `<input type="color">` 대화상자를 띄우지 않는다.
 - 창 외형(말풍선 테마·UI 배율·글자 크기·폰트)을 `<html>`에 입히는 일은 `ui/lib/appearance.ts`의

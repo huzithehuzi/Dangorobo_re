@@ -136,7 +136,7 @@ export default function App() {
 
   const remaining = items.filter((item) => !item.done).length;
   const headerButton =
-    "h-[22px] border border-line rounded-md text-muted bg-transparent [font:inherit] leading-none cursor-pointer hover:text-ink hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)]";
+    "h-[22px] border border-line rounded-md text-muted bg-transparent leading-none cursor-pointer hover:text-ink hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)]";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden border border-line rounded-xl bg-[color-mix(in_srgb,var(--bg)_94%,transparent)] shadow-[0_10px_26px_rgba(0,0,0,0.34)] backdrop-blur-[10px]">
@@ -150,7 +150,7 @@ export default function App() {
               onClick={clearAll}
               className={
                 confirming
-                  ? "h-[22px] px-[7px] border rounded-md text-[10px] leading-none cursor-pointer [font:inherit] text-white border-accent bg-accent font-bold"
+                  ? "h-[22px] px-[7px] border rounded-md text-[10px] leading-none cursor-pointer text-white border-accent bg-accent font-bold"
                   : `${headerButton} px-[7px] text-[10px]`
               }
             >
@@ -218,7 +218,7 @@ export default function App() {
               type="button"
               title={tt("checklist.itemDelete")}
               onClick={async () => setItems(await window.desktopPet.deleteChecklistItem(item.id))}
-              className="flex-none w-5 h-5 p-0 border-0 rounded-[5px] text-muted bg-transparent [font:inherit] text-[13px] leading-none cursor-pointer opacity-0 group-hover:opacity-100 hover:text-[color-mix(in_srgb,#d7566b_42%,var(--text))] hover:bg-[color-mix(in_srgb,var(--accent)_32%,transparent)]"
+              className="flex-none w-5 h-5 p-0 border-0 rounded-[5px] text-muted bg-transparent text-[13px] leading-none cursor-pointer opacity-0 group-hover:opacity-100 hover:text-[color-mix(in_srgb,#d7566b_42%,var(--text))] hover:bg-[color-mix(in_srgb,var(--accent)_32%,transparent)]"
             >
               ×
             </button>
@@ -233,13 +233,13 @@ export default function App() {
           onChange={(event) => setDraft(event.target.value)}
           placeholder={tt("checklist.addPlaceholder")}
           aria-label={tt("checklist.addPlaceholder")}
-          className="flex-1 min-w-0 px-2 py-1.5 border border-line rounded-[7px] text-inherit bg-surface [font:inherit] fs-12 focus:border-accent focus:outline-none focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_30%,transparent)]"
+          className="flex-1 min-w-0 px-2 py-1.5 border border-line rounded-[7px] text-inherit bg-surface fs-12 focus:border-accent focus:outline-none focus:shadow-[0_0_0_2px_color-mix(in_srgb,var(--accent)_30%,transparent)]"
         />
         <button
           type="submit"
           title={tt("checklist.addButtonTitle")}
           aria-label={tt("checklist.addButtonTitle")}
-          className="flex-none w-[30px] p-0 border-0 rounded-[7px] text-white bg-accent [font:inherit] text-base leading-none cursor-pointer hover:bg-[color-mix(in_srgb,var(--accent)_82%,white)]"
+          className="flex-none w-[30px] p-0 border-0 rounded-[7px] text-white bg-accent text-base leading-none cursor-pointer hover:bg-[color-mix(in_srgb,var(--accent)_82%,white)]"
         >
           +
         </button>

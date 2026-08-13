@@ -86,7 +86,7 @@ export default function App() {
             title={tt("favorites.closeButtonTitle")}
             aria-label={tt("favorites.closeButtonTitle")}
             onClick={() => window.desktopPet.closeFavoritesWindow()}
-            className="w-[22px] h-[22px] p-0 border border-line rounded-md text-muted bg-transparent [font:inherit] text-sm leading-none cursor-pointer hover:text-ink hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
+            className="w-[22px] h-[22px] p-0 border border-line rounded-md text-muted bg-transparent text-sm leading-none cursor-pointer hover:text-ink hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
           >
             ×
           </button>
@@ -110,7 +110,7 @@ export default function App() {
               type="button"
               title={label}
               onClick={() => launch(item)}
-              className={`flex items-center w-full border border-transparent rounded-[9px] text-inherit bg-white/6 [font:inherit] cursor-pointer hover:border-[color-mix(in_srgb,var(--accent)_55%,transparent)] hover:bg-white/14 ${
+              className={`flex items-center w-full border border-transparent rounded-[9px] text-inherit bg-white/6 cursor-pointer hover:border-[color-mix(in_srgb,var(--accent)_55%,transparent)] hover:bg-white/14 ${
                 isGrid ? "flex-col gap-1.5 px-1 py-2.5 text-center fs-12" : "gap-[9px] px-[9px] py-[7px] text-left fs-12"
               }`}
             >

@@ -10,7 +10,7 @@ import { FavoriteIcon } from "../lib/FavoriteIcon";
 const itemsFeed = createIpcFeed<ContextMenuItem[]>((callback) => window.desktopPet.onContextMenuItems(callback));
 
 const itemButtonBase =
-  "flex-none flex items-center gap-1.5 w-full h-7 px-2 border-0 rounded-md text-inherit bg-transparent [font:inherit] fs-12 text-left cursor-pointer hover:enabled:bg-soft disabled:text-muted disabled:cursor-default";
+  "flex-none flex items-center gap-1.5 w-full h-7 px-2 border-0 rounded-md text-inherit bg-transparent fs-12 text-left cursor-pointer hover:enabled:bg-soft disabled:text-muted disabled:cursor-default";
 
 export default function App() {
   const [items, setItems] = useState<ContextMenuItem[]>([]);
@@ -44,7 +44,7 @@ export default function App() {
                     disabled={favorite.enabled === false}
                     title={favorite.label}
                     onClick={() => window.desktopPet.sendContextMenuAction(favorite.id!)}
-                    className={`flex flex-col items-center justify-center gap-1 min-w-0 px-[3px] py-[5px] border-0 rounded-[7px] text-inherit bg-transparent [font:inherit] cursor-pointer hover:enabled:bg-soft disabled:text-muted disabled:cursor-default ${
+                    className={`flex flex-col items-center justify-center gap-1 min-w-0 px-[3px] py-[5px] border-0 rounded-[7px] text-inherit bg-transparent cursor-pointer hover:enabled:bg-soft disabled:text-muted disabled:cursor-default ${
                       hideLabels ? "h-[46px]" : "h-14"
                     }`}
                   >
