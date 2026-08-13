@@ -6,6 +6,18 @@ const { t } = require("../../shared/i18n.js");
 import { isShortAssistantQuestion } from "./assistant-core.js";
 import { extractResponseText } from "./gemini-transport.js";
 
+// 2026-08-14부터 질문·펫대화도 안전 필터를 끈다(그전에는 안 보내서 API 기본 차단 수준이었다).
+// 번역 경로와 같은 4종이지만 **상수를 공유하지 않는다** — 경로마다 정책이 다른 것이 이 코드의
+// 전제라서(AGENTS.md), 한 곳을 고치면 다른 경로가 같이 바뀌는 배선을 만들지 않는다.
+// 이 배열을 바꿀 때 번역·문서 요약 경로를 따라 바꿀 이유는 없다.
+// 문서 요약은 여전히 안 보낸다.
+const ASSISTANT_SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+];
+
 const ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS = 1024;
 const ASSISTANT_SHORT_MAX_OUTPUT_TOKENS = 480;
 const ASSISTANT_PRIMARY_TIMEOUT_MS = 22000;
@@ -70,7 +82,8 @@ function createAskGemini(deps: AskGeminiDeps) {
               )
             ),
             thinkingConfig: { thinkingLevel: "minimal" }
-          }
+          },
+          safetySettings: ASSISTANT_SAFETY_SETTINGS
         },
         { timeoutMs: Number(options.timeoutMs) || ASSISTANT_PRIMARY_TIMEOUT_MS }
       );

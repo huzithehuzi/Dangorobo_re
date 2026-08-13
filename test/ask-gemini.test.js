@@ -72,6 +72,28 @@ test("프롬프트는 지시문·에피소드·기억·이력·원오프·리마
   assert.deepEqual(requests[0].options, { timeoutMs: 22000 });
 });
 
+test("질문·펫대화 요청은 안전 필터 4종을 BLOCK_NONE으로 보낸다", async () => {
+  // 2026-08-14 이전에는 safetySettings를 안 보내 API 기본 차단 수준이 걸렸다.
+  // 번역 경로와 같은 값이지만 상수는 공유하지 않는다(경로별 정책 분리, AGENTS.md).
+  const timeoutError = /** @type {Error & { code?: string }} */ (new Error("타임아웃"));
+  timeoutError.code = "REQUEST_TIMEOUT";
+  const { ask, requests } = createHarness({
+    responses: [timeoutError, responseWith("짧은 답변")]
+  });
+  await ask("이것은 스물네 글자를 확실히 넘기는 긴 질문 문장입니다");
+
+  const expected = [
+    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+  ];
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[0].body.safetySettings, expected, "첫 요청");
+  // 강등 재시도도 같은 설정으로 나가야 한다 — 여기서 빠지면 타임아웃 뒤 답만 조용히 차단된다.
+  assert.deepEqual(requests[1].body.safetySettings, expected, "강등 재시도");
+});
+
 test("짧은 질문은 자동으로 short 모드 — 날짜 제외, 토큰 480", async () => {
   const { ask, requests, blockCalls } = createHarness();
   await ask("안녕");

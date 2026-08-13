@@ -36,7 +36,9 @@ test("번역 프롬프트와 요청 본문은 분리 전 모양 그대로다", a
     "Hello world"
   ].join("\n");
   assert.deepEqual(body.contents, [{ role: "user", parts: [{ text: expectedPrompt }] }]);
-  // 번역만의 의도된 비대칭: 토큰 4096 + safetySettings 4종 BLOCK_NONE (질문·요약에는 없다)
+  // 번역 경로의 값: 토큰 4096 + safetySettings 4종 BLOCK_NONE.
+  // 질문 경로도 2026-08-14부터 같은 4종을 보내지만 상수는 각자 갖는다(경로별 정책 분리).
+  // 문서 요약에는 여전히 없고, blockReason 검사는 번역에만 있다.
   assert.deepEqual(body.generationConfig, {
     maxOutputTokens: 4096,
     thinkingConfig: { thinkingLevel: "minimal" }

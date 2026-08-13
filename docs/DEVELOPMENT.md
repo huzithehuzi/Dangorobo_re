@@ -315,7 +315,7 @@ Gemini의 세 호출 경로는 의도적으로 다르다.
 
 | 경로 | 현재 정책 | 구현 |
 |---|---|---|
-| 질문 | 짧은 응답, 최소 thinking, 제한 시간 뒤 강등 재시도 | `ask-gemini.ts` |
+| 질문(펫대화 포함) | 짧은 응답, 최소 thinking, 제한 시간 뒤 강등 재시도, 안전 필터 4종 `BLOCK_NONE` | `ask-gemini.ts` |
 | 번역 | 긴 출력, 최소 thinking, 명시적 안전 설정과 block reason 검사 | `translate.ts` |
 | 문서 요약 | 긴 출력, low thinking, Markdown·Mermaid HTML 생성 | `document-summary.ts` |
 
@@ -524,6 +524,11 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
 
 ## 백로그
 
+- 질문·펫대화의 차단 이유 표시: 이 경로는 `promptFeedback.blockReason`을 보지 않아, 안전 필터에
+  걸리면 응답이 빈 문자열이 되고 사용자에게는 "AI 모델이 빈 답변을 보냈습니다"로만 뜬다.
+  번역 경로처럼 이유를 붙여 보여줄지 검토한다(`translate.blockedError`가 선례). 필터 수준과는
+  무관한 진단 개선이다 — 2026-08-14에 안전 필터를 `BLOCK_NONE`으로 내렸으므로 걸리는 빈도
+  자체는 줄었지만, 남은 차단은 여전히 원인 없는 실패로 보인다.
 - CI: 현재 정적 검사만 실행한다. `npm run dist`, portable EXE·소스 ZIP 구성 검사, 패키징
   artifact 업로드와 Electron QA 캡처·실행 smoke를 자동화할지 결정한다.
 - 문서 요약: 문서 유형별 Mermaid, 정량 차트, 이미지 생성 지원 검토
