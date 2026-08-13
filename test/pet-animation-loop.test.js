@@ -430,8 +430,8 @@ test("몸통은 좌우 시선의 일부만 나눠 맡고 총 시선 방향은 �
   h.step();
   // 몸통이 각도를 "더하는" 방식이면 총합이 0.62배를 넘어 목이 모델 한계까지 비틀린다.
   closeTo(h.gazeY(), 62, 1e-6, "총 시선은 몸통 도입 전과 같다");
-  closeTo(h.modelRoot.rotation.y, 62 * 0.18, 1e-6, "몸통이 정해진 비율만 맡는다");
-  closeTo(h.headPivot.rotation.y, 62 * 0.82, 1e-6, "머리에는 나머지가 남는다");
+  closeTo(h.modelRoot.rotation.y, 62 * 0.25, 1e-6, "몸통이 정해진 비율만 맡는다");
+  closeTo(h.headPivot.rotation.y, 62 * 0.75, 1e-6, "머리에는 나머지가 남는다");
   assert.ok(
     Math.abs(h.modelRoot.rotation.y) < Math.abs(h.headPivot.rotation.y),
     "몸통은 머리보다 덜 돌아간다"

@@ -141,9 +141,9 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
   let sleepAmount = 0;
   // 좌우 시선 중 몸통(modelRoot)이 나눠 맡는 비율. 나머지는 머리에 남는다 —
   // 자세한 이유는 updateHeadRotation() 끝의 주석 참고. 평상시 추종의 최대 좌우 각도가
-  // 0.62rad(약 35도)이므로 몸통은 최대 약 6도만 돌아간다("머리만큼은 아니고 살짝").
+  // 0.62rad(약 35도)이므로 몸통은 최대 약 9도만 돌아간다("머리만큼은 아니고 살짝").
   // 더 올릴 거라면 몸 무늬·데칼이 옆으로 밀려 보이지 않는지 실제 창에서 함께 확인할 것.
-  const BODY_FOLLOW_RATIO = 0.18;
+  const BODY_FOLLOW_RATIO = 0.25;
   // 숨쉬기 위상. 속도(breatheSpeed)가 sleepAmount에 따라 변하므로 `elapsed * speed`로
   // 계산하면 안 된다 — 잠들거나 깨는 동안 속도가 바뀌는 순간 sin의 인자가
   // `Δspeed * elapsed`만큼 통째로 점프해서(유휴 5분이면 elapsed가 300초 이상이라 180라디안,
