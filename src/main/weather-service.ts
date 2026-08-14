@@ -16,6 +16,32 @@ type WeatherServiceDeps = {
 
 type GeocodeResult = { latitude: number; longitude: number; countryCode: string };
 
+// Open-Meteo 지오코딩(GeoNames 기반)은 한국 행정구역 이름 색인이 들쭉날쭉하다(실측, 2026-08).
+// "경기도 성남시"처럼 도+시를 붙이면 통째로 못 찾지만 "성남시"만 넣으면 바로 찾고, 광역시는
+// "서울" 같은 축약형은 없고 "서울특별시" 정식 명칭만 있다. 도 이름 자체는 지역마다 색인
+// 상태가 달라(경기도는 되는데 충청남도는 안 됨) 일반화하지 않는다.
+const METRO_CITY_FORMAL_NAMES: Record<string, string> = {
+  "서울": "서울특별시",
+  "부산": "부산광역시",
+  "대구": "대구광역시",
+  "인천": "인천광역시",
+  "광주": "광주광역시",
+  "대전": "대전광역시",
+  "울산": "울산광역시"
+};
+const PROVINCE_PREFIX_SUFFIXES = ["특별자치도", "특별자치시", "광역시", "특별시", "도"];
+
+// "OO도 OO시" 두 토큰 형태만 다룬다 — "서울특별시 강남구"처럼 구 단위까지 오면 손대지 않는다.
+// "강남구"만 떼어 재검색하면 전혀 다른 동명 지명("강남구렁고개" 등)에 조용히 잘못 걸릴 수 있어,
+// 차라리 못 찾았다고 알리는 편이 낫다.
+function stripLeadingProvince(city: string): string | null {
+  const parts = city.split(/\s+/);
+  if (parts.length !== 2) return null;
+  const [province, place] = parts;
+  if (!PROVINCE_PREFIX_SUFFIXES.some((suffix) => province.endsWith(suffix))) return null;
+  return place.endsWith("시") ? place : null;
+}
+
 type DailyForecast = {
   weathercode: Array<number | null>;
   max: Array<number | null>;
@@ -67,10 +93,8 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     }
   }
 
-  async function geocodeCity(city: string): Promise<GeocodeResult | null> {
-    const trimmed = city.trim();
-    if (!trimmed) return null;
-    const url = `${GEOCODING_URL}?name=${encodeURIComponent(trimmed)}&count=1&language=ko&format=json`;
+  async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
+    const url = `${GEOCODING_URL}?name=${encodeURIComponent(query)}&count=1&language=ko&format=json`;
     const data = await fetchJson(url) as { results?: Array<Record<string, unknown>> } | null;
     const result = data?.results?.[0];
     if (!result || typeof result.latitude !== "number" || typeof result.longitude !== "number") return null;
@@ -79,6 +103,21 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
       longitude: result.longitude,
       countryCode: typeof result.country_code === "string" ? result.country_code : ""
     };
+  }
+
+  async function geocodeCity(city: string): Promise<GeocodeResult | null> {
+    const trimmed = city.trim();
+    if (!trimmed) return null;
+    const direct = await geocodeQuery(trimmed);
+    if (direct) return direct;
+    const metroFormalName = METRO_CITY_FORMAL_NAMES[trimmed];
+    if (metroFormalName) {
+      const metro = await geocodeQuery(metroFormalName);
+      if (metro) return metro;
+    }
+    const strippedCity = stripLeadingProvince(trimmed);
+    if (strippedCity) return geocodeQuery(strippedCity);
+    return null;
   }
 
   async function fetchDailyForecastFromUrl(url: string): Promise<DailyForecast | null> {

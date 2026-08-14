@@ -125,6 +125,35 @@ test("kma_seamless가 전부 null이면(모델 미제공 시각) 기본 모델�
   assert.equal(message, "오늘 ⛅ 최고 26°/최저 21° (강수 40%)\n내일 ⛅ 최고 27°/최저 22° (강수 50%)");
 });
 
+test("'도 시' 형태는 그대로 못 찾으면 도를 뗀 시 이름으로 재시도한다", async () => {
+  const { service, calledUrls } = createService((url) => {
+    if (url.includes(encodeURIComponent("경기도 성남시"))) return jsonResponse({ results: [] });
+    if (url.includes(encodeURIComponent("성남시"))) return jsonResponse(GEOCODE_KR);
+    return jsonResponse({ results: [] });
+  });
+  const geo = await service.geocodeCity("경기도 성남시");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+  assert.equal(calledUrls.length, 2);
+});
+
+test("광역시 축약형(서울 등)은 못 찾으면 정식 명칭으로 재시도한다", async () => {
+  const { service, calledUrls } = createService((url) => {
+    if (url.includes(encodeURIComponent("서울특별시"))) return jsonResponse(GEOCODE_KR);
+    return jsonResponse({ results: [] });
+  });
+  const geo = await service.geocodeCity("서울");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+  assert.equal(calledUrls.length, 2);
+});
+
+test("'시/도 구' 형태는 구를 떼어 재시도하지 않는다(동명 지역 오검색 방지)", async () => {
+  const { service, calledUrls } = createService(() => jsonResponse({ results: [] }));
+  const geo = await service.geocodeCity("서울특별시 강남구");
+  assert.equal(geo, null);
+  // 직접 조회 한 번뿐 — "강남구"만 떼어 다시 부르지 않는다.
+  assert.equal(calledUrls.length, 1);
+});
+
 test("weatherCodeToIcon은 WMO 코드를 이모지 카테고리로 매핑한다", () => {
   assert.equal(weatherCodeToIcon(0), "☀️");
   assert.equal(weatherCodeToIcon(2), "⛅");
