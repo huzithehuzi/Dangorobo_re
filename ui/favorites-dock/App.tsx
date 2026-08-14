@@ -167,8 +167,10 @@ export default function App() {
   // 구현하며, 창이 드래그 중 같이 움직이니 처음 누른 지점과의 절대 화면 좌표 차이를 보낸다.
   const onFabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
-    event.preventDefault();
+    // cursor 방식에는 드래그가 없다. 여기서 preventDefault까지 하면 눌림-뗌 쌍이 어긋났을 때
+    // 닫기가 통째로 씹히므로 기본 동작을 그대로 두고 onClick에 맡긴다(아래 주석 참고).
     if (cursorMode) return;
+    event.preventDefault();
     dragOriginRef.current = { x: event.screenX, y: event.screenY };
     draggingRef.current = false;
     try {
@@ -193,10 +195,7 @@ export default function App() {
   };
 
   const onFabPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (cursorMode) {
-      window.desktopPet.setFavoritesDockExpanded(false);
-      return;
-    }
+    if (cursorMode) return;
     if (!dragOriginRef.current) return;
     dragOriginRef.current = null;
     try {
@@ -221,6 +220,16 @@ export default function App() {
       setDragging(false);
       window.desktopPet.favoritesDockDragEnd();
     }
+  };
+
+  // cursor 방식의 닫기는 파이 항목과 **같은 이벤트(click)** 로 받는다.
+  // 파이는 포그라운드가 아닌 always-on-top 창에 뜰 수 있는데, 그때 첫 누름은 창 활성화에
+  // 쓰여 pointerdown/pointerup 쌍이 어긋날 수 있다. 항목(onClick)은 멀쩡한데 가운데
+  // 버튼만 안 먹는다는 리포트가 그 모양이었다. click은 누름-뗌이 같은 요소에서 끝났을 때
+  // 브라우저가 직접 만들어 주므로 쌍이 어긋나도 살아남는다. 드래그가 있는 dock 방식만
+  // pointer 이벤트를 계속 쓴다.
+  const onFabClick = () => {
+    if (cursorMode) window.desktopPet.setFavoritesDockExpanded(false);
   };
 
   const onFabContextMenu = (event: React.MouseEvent) => {
@@ -265,6 +274,7 @@ export default function App() {
         onPointerMove={onFabPointerMove}
         onPointerUp={onFabPointerUp}
         onPointerCancel={onFabPointerCancel}
+        onClick={onFabClick}
         onContextMenu={onFabContextMenu}
       >
         <span className="fab-glyph" aria-hidden="true">
