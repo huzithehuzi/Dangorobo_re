@@ -16,6 +16,7 @@ type InteractiveWindow = {
   isDestroyed(): boolean;
   setFocusable(focusable: boolean): void;
   setIgnoreMouseEvents(ignore: boolean, options?: { forward?: boolean }): void;
+  setSkipTaskbar(skip: boolean): void;
   webContents: { send(channel: string, payload: unknown): void };
 };
 
@@ -57,6 +58,11 @@ function createPetInteractionMode(deps: PetInteractionModeDependencies) {
     });
     win.setFocusable(focusable);
     win.setIgnoreMouseEvents(!interactive, { forward: true });
+    // Windows는 focusable을 켜는 순간(특히 휴식 알림처럼 포커스까지 받을 때) 생성 시
+    // 설정한 skipTaskbar를 가끔 잊어버려 작업 표시줄에 아이콘이 다시 생긴다(피드백,
+    // 2026-08) — 그 아이콘의 우클릭 메뉴(작업 표시줄 점프 목록)는 Windows 셸이 직접
+    // 그려서 이 앱의 어떤 이벤트 훅으로도 못 막으므로, 아예 안 생기게 매번 다시 건다.
+    win.setSkipTaskbar(true);
   }
 
   /** 이동 모드 토글. 펫 창에도 알려 커서 모양과 모드 카드를 맞춘다. */

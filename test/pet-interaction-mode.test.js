@@ -18,6 +18,8 @@ function setup(overrides = {}) {
   const sent = [];
   /** @type {any[]} */
   const logs = [];
+  /** @type {boolean[]} */
+  const skipTaskbar = [];
   const win = {
     destroyed: false,
     isDestroyed: () => win.destroyed,
@@ -25,6 +27,8 @@ function setup(overrides = {}) {
     setFocusable: (value) => focusable.push(value),
     /** @param {boolean} ignore @param {any} options */
     setIgnoreMouseEvents: (ignore, options) => ignoreMouse.push({ ignore, options }),
+    /** @param {boolean} skip */
+    setSkipTaskbar: (skip) => skipTaskbar.push(skip),
     webContents: {
       /** @param {string} channel @param {any} payload */
       send: (channel, payload) => sent.push({ channel, payload })
@@ -51,7 +55,7 @@ function setup(overrides = {}) {
   };
   return {
     mode: createPetInteractionMode(/** @type {any} */ (deps)),
-    win, state, focusable, ignoreMouse, sent, logs,
+    win, state, focusable, ignoreMouse, sent, logs, skipTaskbar,
     /** 마지막 apply() 결과 */
     last: () => ({
       focusable: focusable[focusable.length - 1],
@@ -59,6 +63,19 @@ function setup(overrides = {}) {
     })
   };
 }
+
+test("apply()마다 skipTaskbar를 다시 건다", () => {
+  // Windows가 focusable을 켤 때 생성 시 설정한 skipTaskbar를 가끔 잊어버려(피드백,
+  // 2026-08) 작업 표시줄에 아이콘이 생기고, 그 우클릭 메뉴는 Windows 셸이 직접 그려서
+  // 이 앱의 어떤 이벤트로도 못 막는다 — 아예 안 생기게 매번 다시 건다.
+  const { mode, state, skipTaskbar } = setup();
+  mode.apply();
+  assert.deepEqual(skipTaskbar, [true]);
+
+  state.panelActive = true;
+  mode.apply();
+  assert.deepEqual(skipTaskbar, [true, true]);
+});
 
 test("아무 일도 없으면 클릭이 통과한다", () => {
   const { mode, last } = setup();
