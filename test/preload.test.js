@@ -125,6 +125,7 @@ const EVENT_CHANNELS = Object.freeze({
   onCapsLock: { channel: "pet:caps-lock", forwardsPayload: true },
   onIdle: { channel: "pet:idle", forwardsPayload: true },
   onDragState: { channel: "pet:drag-state", forwardsPayload: true },
+  onDragMove: { channel: "pet:drag-move", forwardsPayload: true },
   onSettingsUpdated: { channel: "pet:settings-updated", forwardsPayload: true },
   onRestStart: { channel: "pet:rest-start", forwardsPayload: true },
   onRestEnd: { channel: "pet:rest-end", forwardsPayload: false },

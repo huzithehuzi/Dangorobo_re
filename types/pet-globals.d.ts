@@ -156,6 +156,8 @@ interface PetDesktopApi {
   onCapsLock(callback: (state: { active: boolean }) => void): void;
   onIdle(callback: (state: { idle: boolean }) => void): void;
   onDragState(callback: (state: { dragging: boolean }) => void): void;
+  /** 드래그 중 논리 좌표계 기준 가로 이동량(px). 진자 기울임 계산용이라 드래그 중일 때만 온다. */
+  onDragMove(callback: (payload: { dx: number }) => void): void;
   closeTranslate(): void;
   onTranslateClose(callback: () => void): void;
   onOpenTranslate(callback: (payload: PetTranslateOpenPayload) => void): void;

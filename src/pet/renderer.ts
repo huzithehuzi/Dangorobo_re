@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { createPetAudio } from "./pet-audio.js";
 import { createIdleRoutineScheduler } from "./idle-routine.js";
 import { createSquishMotion } from "./squish-motion.js";
+import { createDragLeanMotion } from "./drag-lean-motion.js";
 import { createPetInteractionState } from "./pet-interaction-state.js";
 import { createPetRenderSettings } from "./pet-render-settings.js";
 import { TAIL_REST_ANGLE } from "./tail-motion.js";
@@ -542,6 +543,7 @@ let paletteEnabled = false;
 let outlineEnabled = false;
 let lineWobbleEnabled = false;
 const squishMotion = createSquishMotion();
+const dragLeanMotion = createDragLeanMotion();
 // 번역 대상 언어 목록. main.js의 TRANSLATE_LANGUAGES와 키를 맞춰야 한다.
 // 라벨은 앱 UI 언어에 따라 바뀌므로(예: 영어 UI에선 "Translate to Korean"),
 // 상수 배열이 아니라 매번 tt()로 계산하는 함수로 둔다.
@@ -1532,6 +1534,7 @@ const animationLoop = createAnimationLoop({
   model,
   renderSettings,
   squishMotion,
+  dragLeanMotion,
   interactionState,
   assistantPanels,
   customizeLabels,

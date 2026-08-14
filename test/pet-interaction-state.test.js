@@ -25,7 +25,8 @@ function setup(context) {
       onCelebrate: capture("celebrate"),
       onCapsLock: capture("capsLock"),
       onIdle: capture("idle"),
-      onDragState: capture("drag")
+      onDragState: capture("drag"),
+      onDragMove: capture("dragMove")
     }
   };
   context.after(() => { /** @type {any} */ (globalThis).window = previousWindow; });
@@ -47,11 +48,11 @@ function setup(context) {
   };
 }
 
-test("브리지 이벤트 여섯 개를 모두 등록한다", (context) => {
+test("브리지 이벤트 일곱 개를 모두 등록한다", (context) => {
   const { handlers } = setup(context);
   assert.deepEqual(
     Object.keys(handlers).sort(),
-    ["capsLock", "celebrate", "drag", "idle", "petting", "typing"]
+    ["capsLock", "celebrate", "drag", "dragMove", "idle", "petting", "typing"]
   );
 });
 
@@ -155,4 +156,23 @@ test("서로 다른 상태는 간섭하지 않는다", (context) => {
   assert.equal(state.isIdle(), false);
   assert.equal(state.isCapsLockActive(), false);
   assert.equal(state.isCelebrating(), false);
+});
+
+test("드래그 가로 이동량은 소비할 때만 비워지고, 드래그가 끝나면 즉시 비워진다", (context) => {
+  const { state, handlers } = setup(context);
+
+  handlers.drag({ dragging: true });
+  handlers.dragMove({ dx: 5 });
+  handlers.dragMove({ dx: 3 });
+  assert.equal(state.consumeDragDeltaX(), 8, "소비 전까지는 누적된다");
+  assert.equal(state.consumeDragDeltaX(), 0, "한 번 소비하면 비워진다");
+
+  handlers.dragMove({ dx: 10 });
+  handlers.drag({ dragging: false });
+  assert.equal(state.consumeDragDeltaX(), 0, "드래그가 끝나면 잔여값도 즉시 비워진다");
+
+  // 값이 아예 없어도 조용히 0으로 취급한다.
+  handlers.drag({ dragging: true });
+  handlers.dragMove(/** @type {any} */ ({}));
+  assert.equal(state.consumeDragDeltaX(), 0);
 });

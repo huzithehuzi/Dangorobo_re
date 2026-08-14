@@ -280,13 +280,17 @@ function createHarness(options = {}) {
         return { squishAmount: control.squishAmount, wobbleAmount: control.wobbleAmount };
       }
     },
+    dragLeanMotion: {
+      advance: () => { log.push("dragLean"); return control.dragLeanAngle ?? 0; }
+    },
     interactionState: {
       getTargetTypingIntensity: () => control.targetTyping,
       isPetting: () => control.petting,
       isCelebrating: () => control.celebrating,
       isCapsLockActive: () => control.capsLock,
       isIdle: () => control.idle,
-      isDragging: () => control.dragging
+      isDragging: () => control.dragging,
+      consumeDragDeltaX: () => 0
     },
     assistantPanels: {
       isAssistantActive: () => control.assistantActive,
@@ -372,11 +376,11 @@ test("start()가 첫 프레임을 예약하고 매 프레임 다음 프레임을
   assert.ok(h.isScheduled());
 });
 
-test("한 프레임의 갱신 순서는 드래그 펄스 → 몸통 → 표정 → 렌더 → 라벨이다", () => {
+test("한 프레임의 갱신 순서는 드래그 펄스 → 드래그 기울임 → 몸통 → 표정 → 렌더 → 라벨이다", () => {
   const h = createHarness();
 
   h.step();
-  assert.deepEqual(h.log, ["dragPulse", "bodyDeform", "expression", "render", "labels"]);
+  assert.deepEqual(h.log, ["dragPulse", "dragLean", "bodyDeform", "expression", "render", "labels"]);
 });
 
 test("델타는 0.05로 잘려 오래 멈췄다 돌아와도 한 프레임에 몰아 적용하지 않는다", () => {

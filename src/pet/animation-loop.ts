@@ -55,9 +55,10 @@ type AnimationLoopDependencies = {
     idleRoutineEnabled: boolean; mediaNodEnabled: boolean };
   squishMotion: { advanceDragPulse: (delta: number, dragReacting: boolean) => void;
     advance: (delta: number, strengthPercent: number) => { squishAmount: number; wobbleAmount: number } };
+  dragLeanMotion: { advance: (delta: number, dragDeltaX: number, dragReacting: boolean) => number };
   interactionState: { getTargetTypingIntensity: () => number; isPetting: () => boolean;
     isCelebrating: () => boolean; isCapsLockActive: () => boolean; isIdle: () => boolean;
-    isDragging: () => boolean };
+    isDragging: () => boolean; consumeDragDeltaX: () => number };
   assistantPanels: { isAssistantActive: () => boolean; isFavoritesActive: () => boolean;
     answerExpressionKey: () => string | null };
   customizeLabels: { updateLayout: () => void };
@@ -84,7 +85,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     pet, modelRoot, frontCorrection, postProcessUniforms, pointer, clock,
     BASE_PET_Y, PET_BOTTOM_ANCHOR_Y,
     assistantAnswerBubble, petChatBubble, mediaPlayer,
-    model, renderSettings, squishMotion, interactionState, assistantPanels,
+    model, renderSettings, squishMotion, dragLeanMotion, interactionState, assistantPanels,
     customizeLabels, idleRoutineScheduler, debugOverlay,
     renderPetScene, setFaceExpressionKey, updateMediaPlayerPosition
   } = deps;
@@ -382,7 +383,11 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     if (sleepAmount < 0.004 && !sleeping) sleepAmount = 0;
     const dragReacting = interactionState.isDragging() && renderSettings.dragReactionEnabled;
     squishMotion.advanceDragPulse(delta, dragReacting);
-    return { sleeping, dragReacting };
+    // 진자 기울임은 dragReacting이 꺼지는 프레임에도 반드시 advance를 불러야 즉시 0으로
+    // 복귀한다 — 이 함수는 매 프레임 무조건 호출된다(consumeDragDeltaX도 그래야 누적이
+    // 다음 드래그로 새지 않는다).
+    const dragLeanAngle = dragLeanMotion.advance(delta, interactionState.consumeDragDeltaX(), dragReacting);
+    return { sleeping, dragReacting, dragLeanAngle };
   }
 
   /** 몸통 변형: 입력 스퀴시 + 그 뒤에 남는 출렁임 + 숨쉬기. */
@@ -418,7 +423,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
    * 아이들 루틴 진행과 alarmAmount 추종도 여기서 한 번만 처리한다(부위마다 하면 어긋난다).
    */
   function updateFrameState(delta: number, elapsed: number, base: ReturnType<typeof advanceSmoothedInputs>) {
-    const { sleeping, dragReacting } = base;
+    const { sleeping, dragReacting, dragLeanAngle } = base;
     // petChat은 답장 전(펫이 먼저 말 거는 중)에도 assistantAnswerBubble과 같은 취급(끄덕임/표정)을 받는다.
     const assistantAnswerShown = assistantPanels.isAssistantActive() && (!assistantAnswerBubble.hidden || !petChatBubble.hidden);
     // 체크리스트 항목을 체크하면 잠깐(CELEBRATE_DURATION_MS) 알림 때와 같은 만세 동작으로
@@ -438,7 +443,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     // 부위별 갱신에서는 "평상시 포즈"를 먼저 계산한 뒤 alarmAmount 비율만큼 알람 포즈와 섞는다.
     alarmAmount = smoothStep(alarmAmount, alarmPose ? 1 : 0, SMOOTH_RATE_ALARM, delta);
     if (alarmAmount < 0.004 && !alarmPose) alarmAmount = 0;
-    return { sleeping, dragReacting, assistantAnswerShown, celebrating, routineMotion, answerMotion };
+    return { sleeping, dragReacting, dragLeanAngle, assistantAnswerShown, celebrating, routineMotion, answerMotion };
   }
 
   /**
@@ -448,7 +453,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
   function updateHeadRotation(elapsed: number, state: ReturnType<typeof updateFrameState>) {
     // 수면은 boolean(sleeping)이 아니라 sleepAmount로 판정한다 — 잠들고 깨는 사이에도
     // 추종 성분이 서서히 줄어야 해서다.
-    const { dragReacting, assistantAnswerShown, routineMotion, answerMotion } = state;
+    const { dragReacting, dragLeanAngle, assistantAnswerShown, routineMotion, answerMotion } = state;
     let headRotY, headRotX, headRotZ;
     if (dragReacting) {
       // 들어올려지면 놀라서 고개를 빠르게 흔든다(알람보다는 잘고 빠른 진동).
@@ -550,6 +555,10 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     // 보이거나 몸이 넘어가는 것처럼 보인다.
     const bodyYaw = headRotY * BODY_FOLLOW_RATIO;
     modelRoot.rotation.y = bodyYaw;
+    // 드래그 진자 기울임은 몸통 전체(modelRoot)에 준다 — 머리만 기울이면 끌려가는 느낌보다
+    // "고개만 갸웃"으로 보인다. dragLeanMotion이 드래그가 아닐 땐 항상 0을 돌려주므로
+    // 평상시엔 이 줄이 그냥 0을 대입하는 것과 같다.
+    modelRoot.rotation.z = dragLeanAngle;
     deps.headPivot().rotation.y = headRotY - bodyYaw;
     deps.headPivot().rotation.x = headRotX;
     deps.headPivot().rotation.z = headRotZ;

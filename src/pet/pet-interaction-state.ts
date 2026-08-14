@@ -26,6 +26,9 @@ function createPetInteractionState(deps: PetInteractionStateDependencies) {
   let capsLockActive = false;
   let idleActive = false;
   let dragActive = false;
+  // 드래그 중 가로 이동량 누적 — 진자 기울임(drag-lean-motion.ts)이 매 프레임 소비하고
+  // 비운다. 드래그가 끝나면 다음 드래그에 이전 잔여값이 섞이지 않도록 즉시 비운다.
+  let dragDeltaXAccum = 0;
 
   window.desktopPet.onTypingIntensity((intensity) => {
     targetTypingIntensity = intensity;
@@ -48,6 +51,10 @@ function createPetInteractionState(deps: PetInteractionStateDependencies) {
   });
   window.desktopPet.onDragState((state) => {
     dragActive = state?.dragging === true;
+    if (!dragActive) dragDeltaXAccum = 0;
+  });
+  window.desktopPet.onDragMove((payload) => {
+    dragDeltaXAccum += payload?.dx ?? 0;
   });
 
   return {
@@ -58,7 +65,13 @@ function createPetInteractionState(deps: PetInteractionStateDependencies) {
     isCelebrating: () => deps.now() < celebrateUntil,
     isCapsLockActive: () => capsLockActive,
     isIdle: () => idleActive,
-    isDragging: () => dragActive
+    isDragging: () => dragActive,
+    /** 누적된 드래그 가로 이동량을 꺼내고 비운다. 한 프레임에 한 번만 부를 것. */
+    consumeDragDeltaX: () => {
+      const value = dragDeltaXAccum;
+      dragDeltaXAccum = 0;
+      return value;
+    }
   };
 }
 

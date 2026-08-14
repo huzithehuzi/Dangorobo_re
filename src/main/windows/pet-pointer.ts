@@ -85,6 +85,9 @@ function createPetPointer(deps: PetPointerDependencies) {
 
   let petDragging = false;
   let petDragOffset: { dx: number; dy: number } | null = null;
+  // 렌더러의 진자 기울임(가로 관성) 계산용 — 직전 이벤트의 논리 x. startPetDrag에서 잡고
+  // updatePetDrag마다 갱신하며, 그 차이만 "pet:drag-move"로 흘려보낸다.
+  let petDragLastLogicalX = 0;
 
   function startPetDrag(x: number, y: number): void {
     const win = petWindow();
@@ -94,6 +97,7 @@ function createPetPointer(deps: PetPointerDependencies) {
     // dx는 updatePetDrag가 setPetBounds에 그대로 넘길 수 있도록 "논리 위치" 기준으로 잡는다.
     petDragOffset = { dx: dip.x - petWindowLogicalX(bounds.x), dy: dip.y - bounds.y };
     petDragging = true;
+    petDragLastLogicalX = dip.x;
     pettingTracker.reset();
     win.webContents.send("pet:drag-state", { dragging: true });
   }
@@ -107,6 +111,9 @@ function createPetPointer(deps: PetPointerDependencies) {
       x: Math.round(dip.x - petDragOffset.dx),
       y: Math.round(dip.y - petDragOffset.dy) + REST_WINDOW_EXTRA_TOP
     });
+    const dx = dip.x - petDragLastLogicalX;
+    petDragLastLogicalX = dip.x;
+    if (dx !== 0) win.webContents.send("pet:drag-move", { dx });
   }
 
   function endPetDrag() {

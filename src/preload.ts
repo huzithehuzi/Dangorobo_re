@@ -126,6 +126,9 @@ contextBridge.exposeInMainWorld("desktopPet", {
   onDragState: (callback: BridgeCallback) => {
     ipcRenderer.on("pet:drag-state", (_event, state) => callback(state));
   },
+  onDragMove: (callback: BridgeCallback) => {
+    ipcRenderer.on("pet:drag-move", (_event, payload) => callback(payload));
+  },
   getChecklist: () => ipcRenderer.invoke("checklist:get"),
   addChecklistItem: (text: unknown) => ipcRenderer.invoke("checklist:add", text),
   toggleChecklistItem: (id: unknown) => ipcRenderer.invoke("checklist:toggle", id),
