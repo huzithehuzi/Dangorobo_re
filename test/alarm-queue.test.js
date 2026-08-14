@@ -8,7 +8,8 @@ const { createAlarmQueue } = require("../src/main/alarm-queue.js");
  *   alarms?: Array<Record<string, unknown>>,
  *   restActive?: boolean,
  *   dndActive?: boolean,
- *   soonestFireAt?: number | null
+ *   soonestFireAt?: number | null,
+ *   resolveAlarmForDisplay?: (alarm: Record<string, unknown>) => Record<string, unknown> | Promise<Record<string, unknown>>
  * }} [options]
  */
 function createHarness(options = {}) {
@@ -39,7 +40,8 @@ function createHarness(options = {}) {
     },
     isRestActive: () => state.restActive,
     isDndActive: () => state.dndActive,
-    showAlert: (alarm) => calls.shown.push(/** @type {Record<string, unknown>} */ (alarm))
+    showAlert: (alarm) => calls.shown.push(/** @type {Record<string, unknown>} */ (alarm)),
+    resolveAlarmForDisplay: options.resolveAlarmForDisplay
   });
   return { queue, calls, state };
 }
@@ -110,6 +112,20 @@ test("휴식 중에도 마찬가지로 밀어둔다", () => {
   state.restActive = false;
   queue.tryShowNext();
   assert.equal(calls.shown.length, 1);
+});
+
+test("resolveAlarmForDisplay가 있으면 그 결과로(원본 대신) 보여준다", async () => {
+  const DAILY_WEATHER_ALARM = { id: "a4", type: "daily", title: "출근", message: "원본", weatherBriefingEnabled: true };
+  const { queue, calls, state } = createHarness({
+    alarms: [DAILY_WEATHER_ALARM],
+    resolveAlarmForDisplay: async (alarm) => ({ ...alarm, message: "날씨로 바뀐 문구" })
+  });
+  queue.fireAlarm("a4");
+  // resolveAlarmForDisplay가 비동기라 fireAlarm 직후엔 아직 안 보인다 — 원본이 새는지도 함께 확인.
+  assert.deepEqual(calls.shown, []);
+  await Promise.resolve().then(() => Promise.resolve());
+  assert.deepEqual(calls.shown, [{ ...DAILY_WEATHER_ALARM, message: "날씨로 바뀐 문구" }]);
+  assert.equal(state.settings.alarms[0].message, "원본");
 });
 
 test("카운트다운 문구: 휴식 중 → 확인 대기, 예약 없음 → 없음, 예약 있음 → 남은 분", () => {

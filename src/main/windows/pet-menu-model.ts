@@ -48,6 +48,7 @@ type PetMenuActions = {
   openFavorites: () => unknown;
   activateFavorite: (id: string) => unknown;
   toggleAutoStart: () => unknown;
+  checkWeatherNow: () => unknown;
   quit: () => unknown;
 };
 type PetMenuFavorite = {
@@ -147,6 +148,14 @@ function buildPetMenuItems({
       iconTemplate: "document",
       label: `${checklistOpen ? t(lang, "menu.checklistClose") : t(lang, "menu.checklistOpen")} · ${checklistShortcutLabel(settings.checklistShortcut)}`,
       run: actions.toggleChecklist
+    });
+  }
+  if (trayItems.weather) {
+    items.push({
+      id: "check-weather",
+      iconTemplate: "cloud",
+      label: t(lang, "menu.checkWeather"),
+      run: actions.checkWeatherNow
     });
   }
   if (trayItems.assistant && settings.assistantEnabled && assistantKeyConfigured) {

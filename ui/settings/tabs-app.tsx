@@ -82,6 +82,17 @@ export function GeneralTab() {
         <Note html={tt("settings.general.apiKeyGetLink")} />
       </div>
       <div className="settings-group">
+        <h2>{tt("settings.general.weatherHeading")}</h2>
+        <TextField
+          label={tt("settings.general.weatherCityLabel")}
+          value={d.weatherCity}
+          maxLength={60}
+          placeholder={tt("settings.general.weatherCityPlaceholder")}
+          onChange={(value) => set("weatherCity", value)}
+        />
+        <Note>{tt("settings.general.weatherCityNote")}</Note>
+      </div>
+      <div className="settings-group">
         <h2>{tt("settings.general.dndHeading")}</h2>
         <ToggleRow checked={d.fullscreenDndEnabled} onChange={(checked) => set("fullscreenDndEnabled", checked)} label={tt("settings.general.dndToggle")} />
         <Note>{tt("settings.general.dndNote")}</Note>
@@ -279,7 +290,8 @@ const TRAY_ITEMS = [
   { key: "checklist", labelKey: "settings.tray.item.checklist" },
   { key: "assistant", labelKey: "settings.tray.item.assistant" },
   { key: "favorites", labelKey: "settings.tray.item.favorites" },
-  { key: "autoStart", labelKey: "settings.tray.item.autoStart" }
+  { key: "autoStart", labelKey: "settings.tray.item.autoStart" },
+  { key: "weather", labelKey: "settings.tray.item.weather" }
 ];
 
 export function TrayTab() {

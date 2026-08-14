@@ -21,6 +21,7 @@ export function AlertsTab() {
   const [dailyValue, setDailyValue] = useState("15:00");
   const [onceValue, setOnceValue] = useState("30");
   const [selectedDays, setSelectedDays] = useState<Set<number>>(() => new Set([0, 1, 2, 3, 4, 5, 6]));
+  const [weatherBriefingEnabled, setWeatherBriefingEnabled] = useState(false);
   const [pendingSoundFile, setPendingSoundFile] = useState("");
   const [editingAlarmId, setEditingAlarmId] = useState<string | null>(null);
 
@@ -34,6 +35,7 @@ export function AlertsTab() {
     setDailyValue("15:00");
     setOnceValue("30");
     setSelectedDays(new Set([0, 1, 2, 3, 4, 5, 6]));
+    setWeatherBriefingEnabled(false);
     setPendingSoundFile("");
   };
 
@@ -42,12 +44,14 @@ export function AlertsTab() {
     setTitle(alarm.title || "");
     setMessage(alarm.message || "");
     setType(alarm.type);
+    setWeatherBriefingEnabled(false);
     if (alarm.type === "interval") setIntervalValue(String(alarm.intervalMinutes ?? 60));
     if (alarm.type === "hourly") setHourlyValue(String(alarm.hourlyInterval ?? 1));
     if (alarm.type === "daily") {
       setDailyValue(alarm.dailyTime || "15:00");
       const days = Array.isArray(alarm.daysOfWeek) && alarm.daysOfWeek.length ? alarm.daysOfWeek : [0, 1, 2, 3, 4, 5, 6];
       setSelectedDays(new Set(days));
+      setWeatherBriefingEnabled(alarm.weatherBriefingEnabled === true);
     }
     if (alarm.type === "once") {
       const remainMs = new Date(alarm.fireAt || 0).getTime() - Date.now();
@@ -95,6 +99,7 @@ export function AlertsTab() {
     } else if (type === "daily") {
       alarm.dailyTime = /^\d{2}:\d{2}$/.test(dailyValue) ? dailyValue : "15:00";
       alarm.daysOfWeek = selectedDays.size ? [...selectedDays].sort((a, b) => a - b) : [0, 1, 2, 3, 4, 5, 6];
+      alarm.weatherBriefingEnabled = weatherBriefingEnabled;
     } else {
       const delayMinutes = Math.min(1440, Math.max(1, Number(onceValue) || 30));
       alarm.fireAt = new Date(Date.now() + delayMinutes * 60000).toISOString();
@@ -119,6 +124,7 @@ export function AlertsTab() {
         {s.alarms.map((alarm, index) => {
           const soundBadge = alarm.soundFile ? ` · ${tt("settings.alerts.customSoundBadge")}` : "";
           const disabledBadge = alarm.type !== "once" && alarm.enabled === false ? ` · ${tt("settings.alerts.disabledBadge")}` : "";
+          const weatherBadge = alarm.type === "daily" && alarm.weatherBriefingEnabled ? ` · ${tt("settings.alerts.weatherBriefingBadge")}` : "";
           return (
             <div key={alarm.id} className="favorite-item">
               <div className="favorite-item-row alarm-item-row">
@@ -156,7 +162,7 @@ export function AlertsTab() {
                 </div>
               </div>
               <div className="favorite-target" title={alarm.message || ""}>
-                {`${scheduleLabel(alarm)} · ${alarm.message || ""}${soundBadge}${disabledBadge}`}
+                {`${scheduleLabel(alarm)} · ${alarm.message || ""}${soundBadge}${disabledBadge}${weatherBadge}`}
               </div>
             </div>
           );
@@ -169,7 +175,14 @@ export function AlertsTab() {
         </label>
         <label className="text-field">
           <span>{tt("settings.alerts.messageLabel")}</span>
-          <textarea maxLength={80} rows={2} placeholder={tt("alarm.defaultMessage")} value={message} onChange={(event) => setMessage(event.target.value)} />
+          <textarea
+            maxLength={80}
+            rows={2}
+            placeholder={tt("alarm.defaultMessage")}
+            value={message}
+            disabled={type === "daily" && weatherBriefingEnabled}
+            onChange={(event) => setMessage(event.target.value)}
+          />
         </label>
         <SelectRow
           label={tt("settings.alerts.repeatLabel")}
@@ -231,6 +244,12 @@ export function AlertsTab() {
                 ))}
               </div>
             </div>
+            <ToggleRow
+              checked={weatherBriefingEnabled}
+              onChange={setWeatherBriefingEnabled}
+              label={tt("settings.alerts.weatherBriefingToggle")}
+            />
+            <Note>{tt("settings.alerts.weatherBriefingNote")}</Note>
           </>
         )}
         {type === "once" && (

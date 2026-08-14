@@ -260,6 +260,7 @@ main·preload·pet 산출물을 감지해 종료한다.
 | 말풍선 다섯 패널 열림 상태 | `windows/pet-bubble-panels.ts` |
 | 머리 쓰다듬기 제스처 | `petting-tracker.ts`, `windows/pet-pointer.ts` |
 | 알람 예약·DND 보류 큐 | `alarm-scheduler.ts`, `alarm-queue.ts`, `dnd-monitor.ts` |
+| 날씨(Open-Meteo, API 키 불필요) | `weather-service.ts`, `alarm-queue.ts`의 `resolveAlarmForDisplay`, `windows/pet-menu-model.ts`의 `check-weather` 항목 |
 | 체크리스트 | `windows/checklist.ts`, `checklist-ipc.ts`, `ui/checklist/` |
 | 즐겨찾기와 아이콘 | `windows/favorites-panels.ts`, `favorites-layout.ts`, `favorite-icon-service.ts`, `favorites-ipc.ts`, `ui/favorites-*/` |
 | 시스템 트레이·펫 우클릭 메뉴 | `windows/pet-menu-controller.ts`, `pet-menu-model.ts`, `ui/pet-context-menu/` |

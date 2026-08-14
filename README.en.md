@@ -100,6 +100,11 @@ Register as many as you like from the **Alarms** tab in settings.
 - Choose from 5 built-in alert sounds, or set **your own mp3/wav file per alarm**.
 - Use the "Test alarm now" button to preview how it looks.
 - Time remaining until the next alarm is visible in the right-click menu.
+- **Weather briefing**: turn on "Include weather briefing" on a `daily` alarm and its message is
+  auto-filled with today's and tomorrow's weather when it rings (set your location in the General
+  tab first). Fetched via Open-Meteo, no sign-up required — locations in South Korea prefer Korea
+  Meteorological Administration (KMA) data. You can also check anytime via **Check Weather** in the
+  tray menu (toggle it on/off in the Tray tab).
 
 ## Today's checklist
 

@@ -92,6 +92,9 @@ type DailyAlarm = AlarmCommon & {
   dailyTime: string;
   enabled: boolean;
   daysOfWeek: number[];
+  // 켜면 발동 시각에 message를 오늘·내일 날씨 문장으로 바꿔치기한다(weather-service.ts).
+  // 저장되는 message 자체는 건드리지 않는다 — main.ts가 발동 직전에만 사본에 얹는다.
+  weatherBriefingEnabled: boolean;
 };
 // 정시 알람. interval과 달리 등록 시각이 아니라 시계의 정각(분·초 0)에 맞춰 울린다.
 type HourlyAlarm = AlarmCommon & {
@@ -179,6 +182,9 @@ const DEFAULT_SETTINGS = {
   uiFontPreset: "gulim",
   soundEnabled: true,
   autoStartEnabled: false,
+  // 도시 이름 텍스트. Open-Meteo 지오코딩·예보 조회에 쓴다(API 키 불필요). 비어 있으면
+  // 날씨 브리핑·트레이 "현재 날씨" 모두 위치 미설정 메시지로 대체된다.
+  weatherCity: "",
   trayMenuItems: {
     showHidePet: true,
     moveMode: true,
@@ -187,7 +193,8 @@ const DEFAULT_SETTINGS = {
     checklist: true,
     assistant: true,
     favorites: true,
-    autoStart: true
+    autoStart: true,
+    weather: true
   },
   assistantEnabled: false,
   animaleseEnabled: false,
@@ -1024,7 +1031,8 @@ function normalizeAlarm(entryValue: unknown, language: string): NormalizedAlarm 
       soundFile,
       dailyTime: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(entry.dailyTime || "")) ? entry.dailyTime as string : "15:00",
       enabled: entry.enabled !== false,
-      daysOfWeek: days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6]
+      daysOfWeek: days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6],
+      weatherBriefingEnabled: entry.weatherBriefingEnabled === true
     };
   }
   const fireAt = new Date(entry.fireAt as string | number | Date);
@@ -1203,6 +1211,7 @@ function normalizeSettings(sourceValue: unknown, options: NormalizeSettingsOptio
     autoStartEnabled: fallback && source.autoStartEnabled === undefined && fallback.autoStartEnabled !== undefined
       ? fallback.autoStartEnabled
       : source.autoStartEnabled === true,
+    weatherCity: normalizeOptionalLine(source.weatherCity, 60),
     trayMenuItems: normalizeTrayMenuItems(source.trayMenuItems),
     assistantEnabled: source.assistantEnabled === true && assistantKeyConfigured,
     animaleseEnabled: source.animaleseEnabled === true,

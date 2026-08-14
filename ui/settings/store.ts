@@ -50,6 +50,7 @@ export interface LightingState {
 /** 폼 스칼라 상태 — 숫자 입력은 문자열(input.value), 체크박스는 boolean, 셀렉트는 문자열 */
 export interface Draft {
   language: string;
+  weatherCity: string;
   soundEnabled: boolean;
   petScalePercent: string;
   tailSpeedPercent: string;
@@ -155,7 +156,7 @@ export interface Draft {
   customBodyEnabled: boolean;
 }
 
-const TRAY_MENU_KEYS = ["showHidePet", "moveMode", "alarmCountdown", "qaLogs", "checklist", "assistant", "favorites", "autoStart"];
+const TRAY_MENU_KEYS = ["showHidePet", "moveMode", "alarmCountdown", "qaLogs", "checklist", "assistant", "favorites", "autoStart", "weather"];
 
 type AnySettings = Record<string, unknown>;
 
@@ -228,6 +229,7 @@ export function draftFromSettings(s: AnySettings): Draft {
   const keyConfigured = s.assistantKeyConfigured === true;
   return {
     language: window.PetI18n.normalizeLanguage(s.language),
+    weatherCity: str(s.weatherCity, ""),
     soundEnabled: Boolean(s.soundEnabled),
     petScalePercent: str(s.petScalePercent, ""),
     tailSpeedPercent: str(s.tailSpeedPercent, ""),
@@ -360,6 +362,7 @@ export function faceCustomizationPayload(d: Draft): Record<string, unknown> {
 export function buildPayload(d: Draft, c: ComplexState, defaultFavoriteName: string): Record<string, unknown> {
   return {
     language: d.language,
+    weatherCity: d.weatherCity,
     alarms: c.alarms,
     soundEnabled: d.soundEnabled,
     petScalePercent: Number(d.petScalePercent),

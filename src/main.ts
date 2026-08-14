@@ -51,6 +51,7 @@ import {
 } from "./main/custom-body.js";
 import { resizeClipboardImage } from "./main/image-resize.js";
 import { createAlarmScheduler } from "./main/alarm-scheduler.js";
+import { createWeatherService } from "./main/weather-service.js";
 import { createMediaMonitor } from "./main/media-monitor.js";
 import type { MediaUpdate } from "./main/media-monitor.js";
 import { createCapsLockStateReader } from "./main/caps-lock-state.js";
@@ -339,13 +340,21 @@ let mediaPlayerVisible = false;
 let mediaPlayerRect: MediaPlayerRect | null = null;
 let trayCountdownTimer: Timer;
 const alarmScheduler = createAlarmScheduler((id) => alarmQueue.fireAlarm(id));
+const weatherService = createWeatherService();
 const alarmQueue = createAlarmQueue({
   scheduler: alarmScheduler,
   getSettings: () => settings,
   saveSettings: () => saveSettings(),
   isRestActive: () => petInteraction.isRestActive(),
   isDndActive: () => dndVisibility.isActive(),
-  showAlert: (alarm) => startRestAlert(alarm)
+  showAlert: (alarm) => startRestAlert(alarm),
+  // daily 알람에 날씨 브리핑이 켜져 있으면 발동 직전에만 메시지를 오늘·내일 날씨로 바꿔
+  // 보여준다 — settings.alarms에 저장된 원본 message는 그대로 둔다(alarm-queue.ts 참고).
+  resolveAlarmForDisplay: async (alarm) => {
+    if (alarm.type !== "daily" || !alarm.weatherBriefingEnabled) return alarm;
+    const message = await weatherService.getWeatherBriefing(settings.weatherCity, settings.language);
+    return { ...alarm, message };
+  }
 });
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let geminiApiKey = "";
@@ -1273,6 +1282,15 @@ const petMenuActions: PetMenuActions = {
     applyAutoStart(settings.autoStartEnabled);
     rebuildTrayMenu();
     petMenu.refresh();
+  },
+  checkWeatherNow: () => {
+    weatherService.getWeatherBriefing(settings.weatherCity, settings.language).then((message) => {
+      alarmQueue.enqueue({
+        id: `weather-check-${Date.now()}`,
+        title: t(settings.language, "weather.alertTitle"),
+        message
+      });
+    });
   },
   quit: () => app.quit()
 };

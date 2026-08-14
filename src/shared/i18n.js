@@ -89,11 +89,21 @@
     "menu.openAssistant": { ko: "펫과의 대화 열기 · {{shortcut}}", en: "Chat with Pet · {{shortcut}}", ja: "ペットと会話 · {{shortcut}}" },
     "menu.openFavorites": { ko: "즐겨찾기 열기 · {{shortcut}}", en: "Open Favorites · {{shortcut}}", ja: "お気に入りを開く · {{shortcut}}" },
     "menu.autoStart": { ko: "Windows 시작 시 자동 실행", en: "Start automatically with Windows", ja: "Windows起動時に自動実行" },
+    "menu.checkWeather": { ko: "현재 날씨", en: "Check Weather", ja: "現在の天気" },
     "menu.quit": { ko: "종료", en: "Quit", ja: "終了" },
     "tray.tooltip": { ko: "Dangorobo · 다음 휴식 {{countdown}}", en: "Dangorobo · Next break {{countdown}}", ja: "Dangorobo · 次の休憩 {{countdown}}" },
     "tray.tooltipIdle": { ko: "Dangorobo", en: "Dangorobo", ja: "Dangorobo" },
     "restAlert.waitingConfirm": { ko: "확인 대기 중", en: "Waiting for confirm", ja: "確認待ち" },
     "menu.remainingMinutes": { ko: "{{minutes}}분 남음", en: "{{minutes}} min left", ja: "残り{{minutes}}分" },
+
+    // ---- 날씨(Open-Meteo, API 키 불필요 — 대한민국은 기상청 기반 kma_seamless 모델을 쓴다) ----
+    "weather.alertTitle": { ko: "오늘의 날씨", en: "Today's Weather", ja: "今日の天気" },
+    "weather.todayLabel": { ko: "오늘", en: "Today", ja: "今日" },
+    "weather.tomorrowLabel": { ko: "내일", en: "Tomorrow", ja: "明日" },
+    "weather.dayLine": { ko: "{{label}} {{icon}} 최고 {{max}}°/최저 {{min}}°", en: "{{label}} {{icon}} High {{max}}°/Low {{min}}°", ja: "{{label}} {{icon}} 最高{{max}}°/最低{{min}}°" },
+    "weather.precipSuffix": { ko: " (강수 {{percent}}%)", en: " (precip {{percent}}%)", ja: " (降水 {{percent}}%)" },
+    "weather.locationMissing": { ko: "날씨 지역이 설정되지 않았어요. '일반' 탭에서 지역을 입력해주세요.", en: "No weather location is set. Enter one in the General tab.", ja: "天気の地域が設定されていません。「一般」タブで地域を入力してください。" },
+    "weather.fetchFailed": { ko: "날씨 정보를 불러오지 못했어요.", en: "Couldn't fetch the weather.", ja: "天気情報を取得できませんでした。" },
 
     // ---- 알람 기본값 ----
     "alarm.defaultTitle": { ko: "잠깐 쉬어갈 시간이에요!", en: "Time for a short break!", ja: "ちょっと休憩の時間です!" },
@@ -182,6 +192,10 @@
     "settings.general.dragModeAlways": { ko: "상시 드래그", en: "Always draggable", ja: "常時ドラッグ" },
     "settings.general.dragModeToggle": { ko: "이동 모드 전환", en: "Toggle move mode", ja: "移動モード切替" },
     "settings.general.dragModeNote": { ko: "상시 드래그: 펫을 아무 때나 좌클릭으로 끌어 옮길 수 있습니다. 이동 모드 전환: 트레이 메뉴나 <code>Ctrl + Shift + P</code>로 이동 모드를 켠 동안만 옮길 수 있습니다(예전 방식).", en: "Always draggable: drag the pet with the left mouse button anytime. Toggle move mode: you can only move it while move mode is on via the tray menu or <code>Ctrl + Shift + P</code> (the old behavior).", ja: "常時ドラッグ: いつでも左クリックでペットをドラッグして動かせます。移動モード切替: トレイメニューまたは<code>Ctrl + Shift + P</code>で移動モードをオンにしている間だけ動かせます(以前の方式)。" },
+    "settings.general.weatherHeading": { ko: "날씨", en: "Weather", ja: "天気" },
+    "settings.general.weatherCityLabel": { ko: "날씨 지역(도시)", en: "Weather location (city)", ja: "天気の地域(都市)" },
+    "settings.general.weatherCityPlaceholder": { ko: "예: 서울, Tokyo, New York", en: "e.g. Seoul, Tokyo, New York", ja: "例: ソウル、東京、New York" },
+    "settings.general.weatherCityNote": { ko: "알람의 날씨 브리핑과 트레이의 '현재 날씨'에 쓰입니다. 회원가입이 필요 없는 Open-Meteo로 조회하며, 대한민국 지역은 기상청(KMA) 기반 데이터를 우선 사용합니다.", en: "Used by alarm weather briefings and the tray's 'Check Weather'. Fetched via Open-Meteo, which needs no sign-up — locations in South Korea prefer Korea Meteorological Administration (KMA) data.", ja: "アラームの天気ブリーフィングとトレイの「現在の天気」に使われます。登録不要のOpen-Meteoで取得し、韓国国内の地域は気象庁(KMA)ベースのデータを優先的に使用します。" },
     "settings.general.backupHeading": { ko: "설정 백업", en: "Settings Backup", ja: "設定バックアップ" },
     "settings.general.backupExportButton": { ko: "설정 전체 내보내기", en: "Export All Settings", ja: "設定全体をエクスポート" },
     "settings.general.backupImportButton": { ko: "설정 전체 가져오기", en: "Import All Settings", ja: "設定全体をインポート" },
@@ -210,6 +224,7 @@
     "settings.tray.item.assistant": { ko: "펫과의 대화 열기", en: "Open pet chat", ja: "ペットとの会話を開く" },
     "settings.tray.item.favorites": { ko: "즐겨찾기 열기", en: "Open favorites", ja: "お気に入りを開く" },
     "settings.tray.item.autoStart": { ko: "Windows 시작 시 자동 실행", en: "Start automatically with Windows", ja: "Windows起動時に自動実行" },
+    "settings.tray.item.weather": { ko: "'현재 날씨' 메뉴 표시", en: "Show 'Check Weather' menu item", ja: "「現在の天気」メニューを表示" },
 
     "settings.appearance.resetDefaultsButton": { ko: "외형 기본값으로 초기화", en: "Reset appearance to defaults", ja: "外見を初期値にリセット" },
     "settings.appearance.resetDefaultsNote": { ko: "모델 크기·조명·팔레트·외곽선·입력 반응 등 이 탭의 모든 항목이 기본값으로 채워집니다. 저장 버튼을 눌러야 실제로 적용됩니다.", en: "All fields in this tab (model size, lighting, palette, outline, input reactions, etc.) will be filled with their default values. You still need to click Save to apply them.", ja: "モデルサイズ・ライティング・パレット・輪郭線・入力反応など、このタブのすべての項目が初期値になります。実際に適用するには保存ボタンを押す必要があります。" },
@@ -374,6 +389,9 @@
       ja: "登録した時刻に関係なく、時計の正時(分・秒が0)に鳴ります。"
     },
     "settings.alerts.dailyLabel": { ko: "매일 시각", en: "Daily time", ja: "毎日の時刻" },
+    "settings.alerts.weatherBriefingToggle": { ko: "날씨 브리핑 포함", en: "Include weather briefing", ja: "天気ブリーフィングを含める" },
+    "settings.alerts.weatherBriefingNote": { ko: "이 알람이 울릴 때 내용을 오늘·내일 날씨로 자동 채웁니다. 지역은 '일반' 탭에서 설정합니다.", en: "When this alarm rings, its message is auto-filled with today's and tomorrow's weather. Set the location in the General tab.", ja: "このアラームが鳴るとき、内容を今日・明日の天気で自動的に埋めます。地域は「一般」タブで設定します。" },
+    "settings.alerts.weatherBriefingBadge": { ko: "날씨 브리핑", en: "Weather briefing", ja: "天気ブリーフィング" },
     "settings.alerts.onceLabel": { ko: "몇 분 뒤", en: "Minutes from now", ja: "何分後" },
     "settings.alerts.soundFileLabel": { ko: "알람 소리(선택)", en: "Alarm sound (optional)", ja: "アラーム音(任意)" },
     "settings.alerts.soundFilePickButton": { ko: "파일 선택", en: "Choose file", ja: "ファイルを選択" },

@@ -9,7 +9,17 @@ const { t } = require("../shared/i18n.js");
 
 // 큐에 들어가는 것이 정식 알람만은 아니다 — 설정창의 "소리 시험"과 QA 캡처가
 // 종류(type) 없는 임시 알림을 넣는다. 휴식 알림이 실제로 읽는 필드만 요구한다.
-type RestAlert = { id?: string; title?: string; message?: string; soundFile?: string };
+// type·weatherBriefingEnabled는 스케줄링과 무관하지만(그래서 alarm-scheduler.ts의
+// ScheduledAlarm에는 없다) resolveAlarmForDisplay가 "날씨로 바꿔치기할 알람인가"를
+// 판단하는 데 필요해 여기 둔다.
+type RestAlert = {
+  id?: string;
+  title?: string;
+  message?: string;
+  soundFile?: string;
+  type?: string;
+  weatherBriefingEnabled?: boolean;
+};
 type AlarmQueueAlarm = ScheduledAlarm & RestAlert;
 
 type AlarmQueueDeps = {
@@ -23,6 +33,9 @@ type AlarmQueueDeps = {
   isRestActive: () => boolean;
   isDndActive: () => boolean;
   showAlert: (alarm: RestAlert) => void;
+  // 발동 직전에 알람을 보여줄 형태로 바꿀 훅(날씨 브리핑 문구 채우기 등). settings.alarms에
+  // 저장된 원본은 건드리지 않도록 새 객체를 돌려준다. 없으면(테스트 등) 원본을 그대로 보여준다.
+  resolveAlarmForDisplay?: (alarm: RestAlert) => RestAlert | Promise<RestAlert>;
 };
 
 function createAlarmQueue(deps: AlarmQueueDeps) {
@@ -39,6 +52,15 @@ function createAlarmQueue(deps: AlarmQueueDeps) {
       deps.saveSettings();
     } else {
       deps.scheduler.schedule(alarm);
+    }
+    // 대부분의 알람은 즉시(동기) 보여줄 수 있어 이 경로를 그대로 둔다 — resolveAlarmForDisplay가
+    // 없으면(단위 테스트 등) 마이크로태스크 한 틱도 안 거친다.
+    if (deps.resolveAlarmForDisplay) {
+      Promise.resolve(deps.resolveAlarmForDisplay(alarm)).then((resolved) => {
+        queue.push(resolved);
+        tryShowNext();
+      });
+      return;
     }
     queue.push(alarm);
     tryShowNext();

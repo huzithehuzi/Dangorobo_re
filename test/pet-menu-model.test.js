@@ -47,6 +47,7 @@ function makeActions(calls) {
     openFavorites: () => calls.push("openFavorites"),
     activateFavorite: (id) => calls.push(`activateFavorite:${id}`),
     toggleAutoStart: () => calls.push("toggleAutoStart"),
+    checkWeatherNow: () => calls.push("checkWeatherNow"),
     quit: () => calls.push("quit")
   };
 }
@@ -117,6 +118,7 @@ test("모든 기능이 켜진 목록의 ID·순서·레이블과 액션 연결�
     "open-settings",
     "open-logs",
     "toggle-checklist",
+    "check-weather",
     "open-assistant",
     "open-favorites",
     "sep-favorites",
@@ -141,6 +143,7 @@ test("모든 기능이 켜진 목록의 ID·순서·레이블과 액션 연결�
     "open-settings",
     "open-logs",
     "toggle-checklist",
+    "check-weather",
     "open-assistant",
     "open-favorites",
     "favorite:alpha",
@@ -156,6 +159,7 @@ test("모든 기능이 켜진 목록의 ID·순서·레이블과 액션 연결�
     "openSettings",
     "openLogs",
     "toggleChecklist",
+    "checkWeatherNow",
     "openAssistant",
     "openFavorites",
     "activateFavorite:alpha",
@@ -200,7 +204,8 @@ test("기능별 메뉴 표시 조건과 첫 구분선 조건을 보존한다", (
     checklist: false,
     assistant: false,
     favorites: false,
-    autoStart: false
+    autoStart: false,
+    weather: false
   };
   const settings = makeSettings({
     assistantEnabled: true,

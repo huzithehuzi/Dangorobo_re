@@ -174,6 +174,7 @@ function createHarness(overrides = {}) {
     openFavorites: noOp,
     activateFavorite: noOp,
     toggleAutoStart: noOp,
+    checkWeatherNow: noOp,
     quit: noOp
   };
   const controller = createPetMenuController({

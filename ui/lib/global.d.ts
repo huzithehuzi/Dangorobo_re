@@ -154,6 +154,7 @@ interface AlarmItem {
   dailyTime?: string;
   daysOfWeek?: number[];
   fireAt?: string;
+  weatherBriefingEnabled?: boolean;
 }
 
 /** 설정창 즐겨찾기 편집 항목 */
