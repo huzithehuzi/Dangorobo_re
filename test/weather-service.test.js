@@ -112,10 +112,10 @@ test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 
   });
   const briefing = await service.getWeatherBriefing("Tokyo", "ko");
   assert.deepEqual(briefing.lines, [
-    { icon: "☀️", text: "오늘 오전 ▲29° ▼24° (강수 10%)" },
-    { icon: "🌧️", text: "오늘 오후 ▲25° ▼20° (강수 80%)" },
-    { icon: "⛅", text: "내일 오전 ▲22° ▼17° (강수 5%)" },
-    { icon: "☁️", text: "내일 오후 ▲20° ▼15° (강수 90%)" }
+    { icon: "☀️", category: "clear", text: "오늘 오전 ▲29° ▼24° (강수 10%)" },
+    { icon: "🌧️", category: "rain", text: "오늘 오후 ▲25° ▼20° (강수 80%)" },
+    { icon: "⛅", category: "partlyCloudy", text: "내일 오전 ▲22° ▼17° (강수 5%)" },
+    { icon: "☁️", category: "cloudy", text: "내일 오후 ▲20° ▼15° (강수 90%)" }
   ]);
   // message는 아이콘을 포함한 평문 버전(펫 창이 배지를 못 그리는 경우의 대비책)으로 유지한다.
   assert.equal(
@@ -156,6 +156,7 @@ test("구간 도중 날씨가 궂어지면 강수확률 최고치와 일치하�
   const todayMorning = briefing.lines?.[0];
   assert.ok(todayMorning, "오늘 오전 줄이 있어야 한다");
   assert.equal(todayMorning.icon, "🌧️");
+  assert.equal(todayMorning.category, "rain");
   assert.equal(todayMorning.text, "오늘 오전 ▲25° ▼20° (강수 100%)");
 });
 
@@ -182,10 +183,10 @@ test("대한민국은 kma_seamless 모델을 먼저 요청하고, 값이 있으�
   const briefing = await service.getWeatherBriefing("Seoul", "ko");
   // kma_seamless 값(20~28)을 썼는지, precip이 없어 강수 문구가 빠졌는지 함께 확인.
   assert.deepEqual(briefing.lines, [
-    { icon: "☁️", text: "오늘 오전 ▲25° ▼20°" },
-    { icon: "☁️", text: "오늘 오후 ▲26° ▼21°" },
-    { icon: "☁️", text: "내일 오전 ▲27° ▼22°" },
-    { icon: "☁️", text: "내일 오후 ▲28° ▼23°" }
+    { icon: "☁️", category: "cloudy", text: "오늘 오전 ▲25° ▼20°" },
+    { icon: "☁️", category: "cloudy", text: "오늘 오후 ▲26° ▼21°" },
+    { icon: "☁️", category: "cloudy", text: "내일 오전 ▲27° ▼22°" },
+    { icon: "☁️", category: "cloudy", text: "내일 오후 ▲28° ▼23°" }
   ]);
   assert.ok(calledUrls.some((url) => url.includes("models=kma_seamless")));
 });
@@ -203,10 +204,10 @@ test("kma_seamless가 전부 null이면(모델 미제공 시각) 기본 모델�
   });
   const briefing = await service.getWeatherBriefing("Seoul", "ko");
   assert.deepEqual(briefing.lines, [
-    { icon: "⛅", text: "오늘 오전 ▲26° ▼21° (강수 40%)" },
-    { icon: "⛅", text: "오늘 오후 ▲27° ▼22° (강수 45%)" },
-    { icon: "⛅", text: "내일 오전 ▲28° ▼23° (강수 50%)" },
-    { icon: "⛅", text: "내일 오후 ▲29° ▼24° (강수 55%)" }
+    { icon: "⛅", category: "partlyCloudy", text: "오늘 오전 ▲26° ▼21° (강수 40%)" },
+    { icon: "⛅", category: "partlyCloudy", text: "오늘 오후 ▲27° ▼22° (강수 45%)" },
+    { icon: "⛅", category: "partlyCloudy", text: "내일 오전 ▲28° ▼23° (강수 50%)" },
+    { icon: "⛅", category: "partlyCloudy", text: "내일 오후 ▲29° ▼24° (강수 55%)" }
   ]);
 });
 

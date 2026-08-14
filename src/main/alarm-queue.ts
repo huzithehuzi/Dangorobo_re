@@ -22,7 +22,7 @@ type RestAlert = {
   // 날씨 브리핑 성공 시 resolveAlarmForDisplay가 채운다 — 펫 창이 이모지를 배지로 크게
   // 그릴 수 있게 message 문자열과 별도로 둔다. 실패했을 때는 null/undefined이고 message만
   // 평문 안내로 보여준다.
-  weatherLines?: Array<{ icon: string; text: string }> | null;
+  weatherLines?: Array<{ icon: string; category: string; text: string }> | null;
 };
 type AlarmQueueAlarm = ScheduledAlarm & RestAlert;
 

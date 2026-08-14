@@ -84,6 +84,9 @@ interface PetMediaUpdate {
 
 interface PetWeatherLine {
   icon: string;
+  // main의 WeatherCategory 값 중 하나 — 펫 창이 이모지 대신 그릴 SVG 배지를 고른다.
+  // 모르는 값이면 렌더러가 icon(이모지)으로 되돌아간다.
+  category: string;
   text: string;
 }
 

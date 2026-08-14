@@ -53,8 +53,10 @@ type HourlyForecast = {
   precip: Array<number | null>;
 };
 
-// icon은 WEATHER_ICONS 값 중 하나(이모지 한 글자), text는 아이콘이 빠진 나머지 문구.
-type WeatherLine = { icon: string; text: string };
+// icon은 WEATHER_ICONS 값 중 하나(이모지 한 글자, 알림 평문에만 쓴다), category는 펫 창이
+// 이모지 대신 그릴 단색 SVG 배지를 고르는 키다(피드백, 2026-08 — 비 이모지가 파란 배지
+// 배경에서 잘 안 보임). text는 아이콘이 빠진 나머지 문구.
+type WeatherLine = { icon: string; category: WeatherCategory; text: string };
 // lines는 성공했을 때만 채워진다. 실패(위치 미설정·조회 실패)하면 null이고 message만 보여준다.
 type WeatherBriefing = { message: string; lines: WeatherLine[] | null };
 
@@ -230,7 +232,7 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     if (precips.length) {
       text += t(language, "weather.precipSuffix", { percent: Math.round(Math.max(...precips)) });
     }
-    return { icon: weatherCodeToIcon(code), text };
+    return { icon: weatherCodeToIcon(code), category: weatherCodeToCategory(code), text };
   }
 
   // 실패해도 예외를 던지지 않고 사용자에게 보여줄 안내 문구를 그대로 돌려준다 —
@@ -254,4 +256,4 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
 }
 
 export { createWeatherService, weatherCodeToIcon };
-export type { WeatherServiceDeps, WeatherLine, WeatherBriefing };
+export type { WeatherServiceDeps, WeatherLine, WeatherBriefing, WeatherCategory };

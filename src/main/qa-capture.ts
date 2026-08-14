@@ -330,10 +330,10 @@ function capturePetWindow(
       // 나와야 한다.
       if (argv.includes("--capture-rest-weather")) {
         const lines = [
-          { icon: "☀️", text: "오늘 오전 ▲27° ▼20° (강수 10%)" },
-          { icon: "🌦️", text: "오늘 오후 ▲28° ▼22° (강수 60%)" },
-          { icon: "⛅", text: "내일 오전 ▲25° ▼19° (강수 30%)" },
-          { icon: "🌧️", text: "내일 오후 ▲24° ▼21° (강수 80%)" }
+          { icon: "☀️", category: "clear", text: "오늘 오전 ▲27° ▼20° (강수 10%)" },
+          { icon: "🌦️", category: "drizzle", text: "오늘 오후 ▲28° ▼22° (강수 60%)" },
+          { icon: "⛅", category: "partlyCloudy", text: "내일 오전 ▲25° ▼19° (강수 30%)" },
+          { icon: "🌧️", category: "rain", text: "내일 오후 ▲24° ▼21° (강수 80%)" }
         ];
         ctx.startRestAlert({
           title: ctx.translate(language, "weather.alertTitle"),

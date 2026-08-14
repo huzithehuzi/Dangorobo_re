@@ -1337,10 +1337,42 @@ window.desktopPet.onMediaUpdate((data) => {
   if (wasHidden) requestAnimationFrame(updateMediaPlayerPosition);
 });
 
-// 날씨 브리핑처럼 줄마다 아이콘이 붙는 경우 배지로 그린다 — 이모지를 본문 글자 크기로
-// 섞으면 Windows 기본 이모지 폰트가 옅은 색이라 밝은 말풍선 배경에 잘 안 보인다(피드백,
-// 2026-08). 배지 배경색이 대비를 대신 보장하므로 이모지 자체 색과 무관하게 잘 보인다.
+// 날씨 브리핑처럼 줄마다 아이콘이 붙는 경우 배지로 그린다 — 이모지는 Windows 기본
+// 이모지 폰트가 자체 색(연한 파란 빗방울 등)을 갖고 있어 배지 배경색과 무관하게
+// 대비가 낮을 때가 있다(피드백, 2026-08 — 파란 배지 위 비 이모지가 잘 안 보임).
+// 카테고리별 단색 SVG 선화 아이콘을 currentColor로 그려 배지 글자색(흰색)을 그대로
+// 물려받게 한다. 모르는 카테고리만 이모지로 되돌아간다.
 // 시계 아이콘(#rest-icon)은 날씨 브리핑일 때 자리를 넉넉히 쓰도록 뺀다.
+const WEATHER_ICON_SVG: Record<string, string> = {
+  clear:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.2 12H1.6M22.4 12h-2.6M6 6l1.8 1.8M18 6l-1.8 1.8M6 18l1.8-1.8M18 18l-1.8-1.8"/></svg>',
+  partlyCloudy:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="8.2" cy="7.6" r="2.8"/><path d="M8.2 3v1.6M13.4 7.6h-1.6M3 7.6h1.6M5.1 4.5l1.2 1.2M11.3 4.5l-1.2 1.2"/>' +
+    '<path d="M6.5 20a3.8 3.8 0 0 1 .2-7.6 5.4 5.4 0 0 1 10.3 1.6 3.6 3.6 0 0 1-.6 6z"/></svg>',
+  cloudy:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6 18a4 4 0 0 1 .3-8 5.5 5.5 0 0 1 10.6 1.7A3.6 3.6 0 0 1 17 18.5H6.4z"/></svg>',
+  fog:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6.5 13a3.6 3.6 0 0 1 .3-6.4A5 5 0 0 1 16.6 8a3.2 3.2 0 0 1-.5 6.3H6.8z"/><path d="M4 17.3h16M6 20.6h12"/></svg>',
+  drizzle:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6 14.6a3.6 3.6 0 0 1 .3-7A5.3 5.3 0 0 1 16.4 9a3.4 3.4 0 0 1-.6 6.5H6.4z"/><path d="M9 18.6v1.8M15 18.6v1.8"/></svg>',
+  rain:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6 14a3.6 3.6 0 0 1 .3-7.2A5.3 5.3 0 0 1 16.4 8.4 3.4 3.4 0 0 1 15.8 15H6.4z"/><path d="M7.5 18v3M12 18v3M16.5 18v3"/></svg>',
+  snow:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6 14a3.6 3.6 0 0 1 .3-7.2A5.3 5.3 0 0 1 16.4 8.4 3.4 3.4 0 0 1 15.8 15H6.4z"/>' +
+    '<path d="M8.5 18v3M7.1 19.5h2.8M15.5 18v3M14.1 19.5h2.8"/></svg>',
+  thunderstorm:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M6.5 13a3.6 3.6 0 0 1 .3-7.2A5.3 5.3 0 0 1 16.6 7.2 3.4 3.4 0 0 1 16 13.4H6.7z"/>' +
+    '<path d="M12.5 12.5 9.5 17h3l-1 4 4.5-5.5h-3z" fill="currentColor" stroke="none"/></svg>'
+};
+
 function renderRestMessage(payload: PetRestStartPayload | undefined): void {
   const lines = payload?.weatherLines;
   restMessage.textContent = "";
@@ -1352,7 +1384,9 @@ function renderRestMessage(payload: PetRestStartPayload | undefined): void {
       row.className = "weather-line";
       const badge = document.createElement("span");
       badge.className = "weather-icon-badge";
-      badge.textContent = line.icon;
+      const svg = WEATHER_ICON_SVG[line.category];
+      if (svg) badge.innerHTML = svg;
+      else badge.textContent = line.icon;
       const text = document.createElement("span");
       text.className = "weather-line-text";
       text.textContent = line.text;
