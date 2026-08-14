@@ -175,10 +175,59 @@ export default function App() {
 
   // 버튼 하나가 클릭과 드래그를 겸한다. -webkit-app-region: drag는 클릭을 삼키므로 직접
   // 구현하며, 창이 드래그 중 같이 움직이니 처음 누른 지점과의 절대 화면 좌표 차이를 보낸다.
+  //
+  // ⚠ 드래그의 **끝**은 버튼이 아니라 window에서 받는다. 창이 포인터 밑에서 움직이기
+  // 시작하면 `pointerup`·`click`이 버튼이 아니라 조상(`.dock`)으로 간다(2026-08-14 실측:
+  // 누른 채 6px만 움직여도 그렇다). 버튼에만 걸어두면 그 순간 드래그가 끝나지 않아
+  // `dragOrigin`이 남고, **이후 마우스가 움직일 때마다 창이 계속 따라다니며**("눌렀더니
+  // 오른쪽 아래로 미끄러진다") 버튼의 토글도 영영 실행되지 않는다("버튼이 동작을 안 함").
+  const endFabDrag = (toggle: boolean) => {
+    if (!dragOriginRef.current) return;
+    dragOriginRef.current = null;
+    if (draggingRef.current) {
+      draggingRef.current = false;
+      setDragging(false);
+      window.desktopPet.favoritesDockDragEnd();
+      return;
+    }
+    // 문턱을 못 넘었으면 그냥 누른 것이다 — 파이를 여닫는다.
+    if (toggle) window.desktopPet.setFavoritesDockExpanded(!expandedRef.current);
+  };
+
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const origin = dragOriginRef.current;
+      if (!origin) return;
+      // 버튼을 뗀 사실을 놓친 경우의 안전망 — 안 그러면 드래그가 영원히 살아 있다.
+      if (event.buttons === 0) {
+        endFabDrag(false);
+        return;
+      }
+      const dx = event.screenX - origin.x;
+      const dy = event.screenY - origin.y;
+      if (!draggingRef.current) {
+        if (Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return;
+        draggingRef.current = true;
+        setDragging(true);
+        window.desktopPet.favoritesDockDragStart();
+      }
+      window.desktopPet.favoritesDockDragMove({ dx, dy });
+    };
+    const onUp = () => endFabDrag(true);
+    const onCancel = () => endFabDrag(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  });
+
   const onFabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
-    // cursor 방식에는 드래그가 없다. 여기서 preventDefault까지 하면 눌림-뗌 쌍이 어긋났을 때
-    // 닫기가 통째로 씹히므로 기본 동작을 그대로 두고 onClick에 맡긴다(아래 주석 참고).
+    // cursor 방식에는 드래그가 없다. 기본 동작을 그대로 두고 닫기는 click으로 받는다.
     if (cursorMode) return;
     event.preventDefault();
     dragOriginRef.current = { x: event.screenX, y: event.screenY };
@@ -186,60 +235,17 @@ export default function App() {
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
-      // 캡처 확보에 실패해도 드래그가 죽지 않게 자체 플래그로만 판정한다.
+      // 캡처 확보에 실패해도 window 리스너가 받으므로 드래그는 죽지 않는다.
     }
   };
 
-  const onFabPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const origin = dragOriginRef.current;
-    if (!origin) return;
-    const dx = event.screenX - origin.x;
-    const dy = event.screenY - origin.y;
-    if (!draggingRef.current) {
-      if (Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return;
-      draggingRef.current = true;
-      setDragging(true);
-      window.desktopPet.favoritesDockDragStart();
-    }
-    window.desktopPet.favoritesDockDragMove({ dx, dy });
-  };
-
-  const onFabPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (cursorMode) return;
-    if (!dragOriginRef.current) return;
-    dragOriginRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // 이미 해제된 경우
-    }
-    if (draggingRef.current) {
-      draggingRef.current = false;
-      setDragging(false);
-      window.desktopPet.favoritesDockDragEnd();
-      return;
-    }
-    window.desktopPet.setFavoritesDockExpanded(!expanded);
-  };
-
-  const onFabPointerCancel = () => {
-    if (!dragOriginRef.current) return;
-    dragOriginRef.current = null;
-    if (draggingRef.current) {
-      draggingRef.current = false;
-      setDragging(false);
-      window.desktopPet.favoritesDockDragEnd();
-    }
-  };
-
-  // cursor 방식의 닫기는 파이 항목과 **같은 이벤트(click)** 로 받는다.
-  // 파이는 포그라운드가 아닌 always-on-top 창에 뜰 수 있는데, 그때 첫 누름은 창 활성화에
-  // 쓰여 pointerdown/pointerup 쌍이 어긋날 수 있다. 항목(onClick)은 멀쩡한데 가운데
-  // 버튼만 안 먹는다는 리포트가 그 모양이었다. click은 누름-뗌이 같은 요소에서 끝났을 때
-  // 브라우저가 직접 만들어 주므로 쌍이 어긋나도 살아남는다. 드래그가 있는 dock 방식만
-  // pointer 이벤트를 계속 쓴다.
-  const onFabClick = () => {
-    if (cursorMode) window.desktopPet.setFavoritesDockExpanded(false);
+  // cursor 방식의 닫기는 버튼이 아니라 **컨테이너**에서 받는다. 위와 같은 이유로 클릭
+  // 대상이 버튼이 아니라 `.dock`으로 바뀔 수 있어, 버튼에만 걸면 그때 놓친다.
+  // 항목 클릭은 실행 경로(favorites:activate)가 알아서 닫으므로 건너뛴다.
+  const onDockClick = (event: React.MouseEvent) => {
+    if (!cursorMode) return;
+    if ((event.target as HTMLElement)?.closest?.(".pie-item")) return;
+    window.desktopPet.setFavoritesDockExpanded(false);
   };
 
   const onFabContextMenu = (event: React.MouseEvent) => {
@@ -253,6 +259,7 @@ export default function App() {
   return (
     <div
       className={`dock${expanded ? " expanded" : ""}${cursorMode ? " cursor-mode" : ""}${dragging ? " dragging" : ""}`}
+      onClick={onDockClick}
     >
       <div className="backdrop" onClick={() => window.desktopPet.setFavoritesDockExpanded(false)} />
       <div ref={ringRef} className="ring">
@@ -281,10 +288,6 @@ export default function App() {
         title={fabTitle}
         aria-label={fabTitle}
         onPointerDown={onFabPointerDown}
-        onPointerMove={onFabPointerMove}
-        onPointerUp={onFabPointerUp}
-        onPointerCancel={onFabPointerCancel}
-        onClick={onFabClick}
         onContextMenu={onFabContextMenu}
       >
         <span className="fab-glyph" aria-hidden="true">

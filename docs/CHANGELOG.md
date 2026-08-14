@@ -5,6 +5,22 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-14
 
+- **가운데 버튼이 안 먹고 창이 오른쪽 아래로 미끄러지던 것 수정 (진짜 원인)**: 가운데 버튼은
+  클릭과 드래그를 겸하는데, 드래그의 **끝**을 버튼 자신의 `pointerup`으로만 받고 있었다.
+  드래그가 시작되면 창이 포인터 밑에서 움직이고, **그 순간 `pointerup`·`click`이 버튼이 아니라
+  조상(`.dock`)으로 간다** — 누른 채 6px만 움직여도 그렇다(완전 합성 입력으로 재현: pointerdown
+  target=`I`, pointermove target=`fab`, **pointerup/click target=`dock dragging`**).
+  그래서 `onFabPointerUp`이 영영 실행되지 않아 (1) `dragOrigin`이 남은 채 드래그가 안 끝나
+  **이후 마우스가 움직일 때마다 창이 계속 따라다니고**, (2) 버튼의 토글·닫기도 실행되지 않았다.
+  dock·cursor 두 방식에서 같은 증상이 난 이유가 이것이다.
+  드래그 수명주기를 **window 리스너로 옮겼다**(`pointermove`/`pointerup`/`pointercancel`).
+  버튼에는 드래그를 시작하는 `pointerdown`만 남긴다. 뗀 것을 놓친 경우를 대비해
+  `event.buttons === 0`이면 드래그를 끝내는 안전망도 뒀다 — 없으면 드래그가 영원히 창을 끌고
+  다닌다. cursor 방식의 닫기도 같은 이유로 버튼이 아니라 **컨테이너(`.dock`)** 에서 받는다
+  (항목 클릭은 실행 경로가 알아서 닫으므로 건너뛴다).
+  실기 검증: 누르고 6px 이동 후 뗐을 때 `dragging` 해제·뗀 뒤 마우스 이동에 창이 따라오지
+  않음·깨끗한 클릭으로 파이 펼침, cursor 방식은 창을 옮긴 뒤에도 가운데 클릭으로 닫힘.
+  `test/favorites-dock-ui-contract.test.js` 5개 추가, 변이 4종 확인.
 - **커서 파이의 닫기가 통째로 죽을 수 있던 상태 제거**: `closeCursorPie()`가 `dockExpanded`
   플래그를 보고 `if (!dockExpanded) return;`으로 먼저 빠져나갔다. 그 플래그가 화면과 한 번
   어긋나면(창은 떠 있는데 flag는 false — blur 경합, 렌더러가 못 받은 `favoritesDock:expanded`,
