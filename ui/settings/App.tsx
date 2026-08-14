@@ -1,6 +1,6 @@
 // 설정창 셸 — src/windows/settings/settings.js의 React 포팅 (2026-08-10).
 // 탭 11개 · 저장 payload는 store.ts의 buildPayload()가 바닐라 submit과 1:1로 대응한다.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Draft, ComplexState, GradientStop, LightingState,
   draftFromSettings, buildPayload, faceCustomizationPayload,
@@ -10,6 +10,7 @@ import { AppearanceTab, CustomizationTab } from "./tabs-pet";
 import { ConversationTab, MemoryTab } from "./tabs-talk";
 import { AlertsTab, ShortcutsTab, FavoritesTab, PlayerTab } from "./tabs-interaction";
 import { GeneralTab, UiTab, TrayTab } from "./tabs-app";
+import { DevTab } from "./tabs-dev";
 import { useCustomizationState } from "./use-customization-state";
 import { useSettingsLifecycle } from "./use-settings-lifecycle";
 // 창 외형을 <html>에 입히는 법은 창 공용 모듈이 갖는다. 설정창만 폼 값이 바뀔 때마다
@@ -89,13 +90,34 @@ export default function App() {
   } = useCustomizationState();
   const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem("settings-active-tab") || "appearance");
   const [refreshMemoryTick, setRefreshMemoryTick] = useState(0);
-  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이 켜져 있을 때만 목록에 넣는다.
+  // 개발자 모드(2026-08-15): 창 제목을 1.5초 안에 5번 눌러야 숨김 탭이 나타난다. 설정으로
+  // 저장하지 않는 세션 전용 상태라 창을 새로 열면 다시 잠긴다.
+  const devUnlockClicks = useRef({ count: 0, lastClickAt: 0 });
+  const [devModeUnlocked, setDevModeUnlocked] = useState(false);
+  const handleTitleClick = useCallback(() => {
+    if (devModeUnlocked) return;
+    const state = devUnlockClicks.current;
+    const now = Date.now();
+    state.count = now - state.lastClickAt > 1500 ? 1 : state.count + 1;
+    state.lastClickAt = now;
+    if (state.count >= 5) setDevModeUnlocked(true);
+  }, [devModeUnlocked]);
+  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이 켜져 있을 때만 목록에 넣고,
+  // "개발자" 탭은 위 숨김 제스처로 풀렸을 때만 넣는다.
   const tabGroups = useMemo(() => {
-    if (!d?.memoryTabVisible) return TAB_GROUPS;
-    return TAB_GROUPS.map((group) => group.labelKey !== "settings.tabGroup.talk"
-      ? group
-      : { ...group, tabs: [...group.tabs, { id: "memory", labelKey: "settings.tab.memory" }] });
-  }, [d?.memoryTabVisible]);
+    let groups = TAB_GROUPS;
+    if (d?.memoryTabVisible) {
+      groups = groups.map((group) => group.labelKey !== "settings.tabGroup.talk"
+        ? group
+        : { ...group, tabs: [...group.tabs, { id: "memory", labelKey: "settings.tab.memory" }] });
+    }
+    if (devModeUnlocked) {
+      groups = groups.map((group) => group.labelKey !== "settings.tabGroup.app"
+        ? group
+        : { ...group, tabs: [...group.tabs, { id: "dev", labelKey: "settings.tab.dev" }] });
+    }
+    return groups;
+  }, [d?.memoryTabVisible, devModeUnlocked]);
   // 로드·수정·저장 수명주기는 use-settings-lifecycle.ts가 소유한다(dirty를 셋이 공유한다).
   const {
     loadStatus, saveError, saveSuccess,
@@ -180,6 +202,12 @@ export default function App() {
   useEffect(() => {
     if (activeTab === "memory" && d && !d.memoryTabVisible) activateTab("conversation");
   }, [activeTab, d?.memoryTabVisible]);
+
+  // 이전 세션에서 개발자 탭에 머물러 있던 채로 창을 다시 열면(sessionStorage에 "dev"가
+  // 남아 있음) 아직 잠금을 안 풀었어도 그 탭 내용이 그대로 보이는 걸 막는다.
+  useEffect(() => {
+    if (activeTab === "dev" && !devModeUnlocked) activateTab("general");
+  }, [activeTab, devModeUnlocked]);
 
   // 프리셋 목록이 처음 로드되면 썸네일을 요청한다(펫 창이 그려주므로 비동기).
   useEffect(() => {
@@ -318,7 +346,7 @@ export default function App() {
       <form id="settings-form" onSubmit={submit}>
         <aside className="settings-sidebar">
           <header className="settings-header">
-            <h1>{tt("window.settingsTitle")}</h1>
+            <h1 onClick={handleTitleClick}>{tt("window.settingsTitle")}</h1>
             <p>{tt("settings.subtitle")}</p>
           </header>
           <nav className="settings-tabs" role="tablist" aria-label={tt("settings.tabsAriaLabel")}>
@@ -354,6 +382,7 @@ export default function App() {
           <section className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
           <section className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
           <section className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
+          <section className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
         </div>
         <footer className="settings-footer">
           {saveError && <div className="save-error">{saveError}</div>}

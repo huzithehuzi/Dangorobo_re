@@ -32,6 +32,24 @@ html, body, #pet-stage {
 }
 #pet-canvas.move-mode { -webkit-app-region: drag; }
 
+/* 개발자 모드 렌더링 디버그 오버레이(2026-08-15) */
+#dev-debug-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  margin: 0;
+  padding: 4px 6px;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #7CFC00;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  white-space: pre;
+}
+body.dev-debug-bounds { outline: 1px dashed #7CFC00; outline-offset: -1px; }
+
 .mode-card,
 .speech-bubble {
   position: absolute;

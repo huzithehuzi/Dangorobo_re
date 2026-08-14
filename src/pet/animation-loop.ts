@@ -69,6 +69,10 @@ type AnimationLoopDependencies = {
   restActive: () => boolean;
   clickThrough: () => boolean;
   mediaState: () => { status: string };
+  // 개발자 모드: 설정창 숨김 탭에서 표정을 강제 고정했을 때만 값이 있다. 다른 상태보다
+  // 우선해야 해서 updateFaceExpression 우선순위 사다리의 맨 앞에서 확인한다.
+  forcedExpressionKey: () => string | null;
+  debugOverlay: { isEnabled: () => boolean; update: (info: { fps: number }) => void };
   // 렌더러가 계속 갖는 동작들.
   renderPetScene: () => void;
   setFaceExpressionKey: (key: string | null | undefined) => void;
@@ -81,9 +85,24 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
     BASE_PET_Y, PET_BOTTOM_ANCHOR_Y,
     assistantAnswerBubble, petChatBubble, mediaPlayer,
     model, renderSettings, squishMotion, interactionState, assistantPanels,
-    customizeLabels, idleRoutineScheduler,
+    customizeLabels, idleRoutineScheduler, debugOverlay,
     renderPetScene, setFaceExpressionKey, updateMediaPlayerPosition
   } = deps;
+
+  // 개발자 모드 FPS 계산: 매 프레임 재는 순간값은 튀므로, 0.5초마다 그 구간의
+  // 평균으로 갱신한다(오버레이가 꺼져 있을 때도 누적만 하고 표시는 하지 않는다).
+  let fpsFrameCount = 0;
+  let fpsAccumulatedTime = 0;
+  function trackFps(delta: number) {
+    fpsFrameCount += 1;
+    fpsAccumulatedTime += delta;
+    if (fpsAccumulatedTime < 0.5) return;
+    if (debugOverlay.isEnabled()) {
+      debugOverlay.update({ fps: fpsFrameCount / fpsAccumulatedTime });
+    }
+    fpsFrameCount = 0;
+    fpsAccumulatedTime = 0;
+  }
 
   // 손은 frontCorrection(Y축 -90도)이 이미 걸려 있어 rotation.z를 직접 건드리면
   // 회전축이 뒤틀려 거의 안 보인다. 흔드는 각도는 항상 월드 Z축(화면상 좌우 기울임) 기준으로
@@ -548,7 +567,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
       !dragReacting && !sleeping;
     applyFaceTremble(elapsed, capsAlert);
 
-    const expressionKeyOverride = deps.restActive()
+    const expressionKeyOverride = deps.forcedExpressionKey() || (deps.restActive()
       ? "alarm"
       : celebrating
         ? "happy"
@@ -566,7 +585,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
               : null) ||
             // 자는 동안엔 눈을 감고 있는다(깜박임 텍스처를 그대로 재활용).
             (sleeping ? "normal_blink" : null) ||
-            (capsAlert ? "shocked" : null);
+            (capsAlert ? "shocked" : null));
 
     if (expressionKeyOverride) {
       blinkTimer.suppress();
@@ -720,6 +739,7 @@ function createAnimationLoop(deps: AnimationLoopDependencies) {
   function animate() {
     const delta = Math.min(clock.getDelta(), 0.05);
     const elapsed = clock.elapsedTime;
+    trackFps(delta);
 
     const base = advanceSmoothedInputs(delta);
     updateBodyDeform(delta);

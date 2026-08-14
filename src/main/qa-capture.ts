@@ -283,15 +283,19 @@ function captureSettingsWindow(
       }
       // --capture-settings-click=<CSS 선택자>로 찍기 직전에 아무 요소나 한 번 클릭할 수 있다.
       // 팝오버·아코디언처럼 펼쳐야만 보이는 UI를 확인하려고 2026-08-07에 추가.
+      // "|"로 여러 선택자를 이으면 순서대로 짧은 간격을 두고 클릭한다(같은 선택자를 여러 번
+      // 반복해도 된다) — 설정창 제목 5연타 같은 숨김 제스처를 확인하려고 2026-08-15 추가.
       const selector = argValue(argv, "--capture-settings-click=");
       if (selector !== null) {
-        // 화면 밖 요소를 클릭하면 스크린샷에는 안 찍혀 확인이 안 되므로 먼저 보이는 곳까지
-        // 스크롤한다(패널 중간에 있는 그룹을 찍는 용도로도 쓴다).
-        await settingsCaptureWindow.webContents.executeJavaScript(
-          `(() => { const el = document.querySelector(${JSON.stringify(selector)});`
-          + ` el?.scrollIntoView({ block: "center" }); el?.click(); })()`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 160));
+        for (const step of selector.split("|")) {
+          // 화면 밖 요소를 클릭하면 스크린샷에는 안 찍혀 확인이 안 되므로 먼저 보이는 곳까지
+          // 스크롤한다(패널 중간에 있는 그룹을 찍는 용도로도 쓴다).
+          await settingsCaptureWindow.webContents.executeJavaScript(
+            `(() => { const el = document.querySelector(${JSON.stringify(step)});`
+            + ` el?.scrollIntoView({ block: "center" }); el?.click(); })()`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 160));
+        }
       }
       // 프리셋 썸네일은 펫 창이 GLB를 다 로드한 뒤에야 그려지므로 좀 더 기다린다.
       if (presetSamples) await new Promise((resolve) => setTimeout(resolve, 2500));

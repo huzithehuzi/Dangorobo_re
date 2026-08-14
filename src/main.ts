@@ -1679,6 +1679,27 @@ ipcMain.on("settings:test-alarm", (event, soundFile: unknown) => {
     soundFile: normalizeAlarmSoundFilePath(soundFile)
   });
 });
+// 개발자 모드(2026-08-15): 설정창 숨김 탭에서만 보내는 채널이라 다른 단축키·설정과
+// 이름이 겹치지 않게 dev- 접두어를 붙인다. 셋 다 설정창 sender만 받는다(test-alarm과 동일).
+ipcMain.on("settings:dev-test-weather-briefing", (event) => {
+  if (!settingsWindow || settingsWindow.isDestroyed() || event.sender !== settingsWindow.webContents) return;
+  weatherService.getWeatherBriefing(settings.weatherCity, settings.language).then(({ message, lines }) => {
+    alarmQueue.enqueue({
+      id: `dev-weather-test-${Date.now()}`,
+      title: t(settings.language, "weather.alertTitle"),
+      message,
+      weatherLines: lines
+    });
+  });
+});
+ipcMain.on("settings:dev-force-expression", (event, expressionKey: unknown) => {
+  if (!settingsWindow || settingsWindow.isDestroyed() || event.sender !== settingsWindow.webContents) return;
+  petWindow?.webContents.send("pet:dev-force-expression", typeof expressionKey === "string" ? expressionKey : null);
+});
+ipcMain.on("settings:dev-set-debug-overlay", (event, enabled: unknown) => {
+  if (!settingsWindow || settingsWindow.isDestroyed() || event.sender !== settingsWindow.webContents) return;
+  petWindow?.webContents.send("pet:dev-debug-overlay", enabled === true);
+});
 // ── 커스터마이징 프리셋 썸네일 (2026-08-06) ────────────────────────────────
 // 설정창에는 Three.js 씬이 없어서 직접 그릴 수 없다. 모델·조명·후처리가 이미 살아
 // 있는 펫 창에 "이 프리셋들의 머리를 그려서 PNG로 달라"고 위임하고, 그 답을

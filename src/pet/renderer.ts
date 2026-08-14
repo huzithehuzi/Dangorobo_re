@@ -92,6 +92,7 @@ const mediaPreviousButton = requireElement("#media-previous");
 const mediaPlayButton = requireElement("#media-play");
 const mediaPauseButton = requireElement("#media-pause");
 const mediaNextButton = requireElement("#media-next");
+const devDebugOverlayEl = requireElement("#dev-debug-overlay");
 function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -243,6 +244,12 @@ for (let i = 1; i <= FACE_MOUTH_STYLE_COUNT; i++) model.mouthTextureSets[i] = lo
 let eyeStyleIndex = 1;
 let mouthStyleIndex = 1;
 let currentFaceExpressionKey: FaceExpressionKey = "normal";
+// 개발자 모드(2026-08-15): 설정창 숨김 탭에서 표정을 강제로 고정해 볼 때만 채워진다.
+// 다른 상태(알람/쓰다듬기 등)보다 먼저 확인해야 해서 animation-loop에 getter로 넘긴다.
+let devForcedExpressionKey: FaceExpressionKey | null = null;
+window.desktopPet.onForceExpression((expressionKey) => {
+  devForcedExpressionKey = isFaceExpressionKey(expressionKey) ? expressionKey : null;
+});
 // 커스텀 얼굴: 사용자가 zip으로 불러온 표정별 이미지(data URL)를 THREE.Texture로
 // 바꿔서 들고 있는다. main이 앱 시작 시(getCustomFaceTextures)와 새로 불러올 때마다
 // (onCustomFaceTexturesUpdated) 이 값을 채워준다. 키가 없는 표정은 setFaceExpressionKey()에서
@@ -511,6 +518,24 @@ const idleRoutineScheduler = createIdleRoutineScheduler({
 idleRoutineScheduler.scheduleFirst(performance.now());
 // 들어올리기(드래그) 반응
 let clickThrough = true;
+// 개발자 모드(2026-08-15): FPS·창 크기·클릭 통과 여부를 좌상단에 표시한다.
+let devDebugOverlayEnabled = false;
+const devDebugOverlay = {
+  isEnabled: () => devDebugOverlayEnabled,
+  update: ({ fps }: { fps: number }) => {
+    devDebugOverlayEl.textContent =
+      `FPS: ${fps.toFixed(0)}\n` +
+      `Window: ${window.innerWidth}x${window.innerHeight}\n` +
+      `ClickThrough: ${clickThrough}\n` +
+      `RestActive: ${restActive}`;
+  }
+};
+window.desktopPet.onDebugOverlay((enabled) => {
+  devDebugOverlayEnabled = enabled === true;
+  devDebugOverlayEl.hidden = !devDebugOverlayEnabled;
+  document.body.classList.toggle("dev-debug-bounds", devDebugOverlayEnabled);
+  if (!devDebugOverlayEnabled) devDebugOverlayEl.textContent = "";
+});
 let shadingEnabled = true;
 let pixelArtPercent = 0;
 let paletteEnabled = false;
@@ -1483,6 +1508,8 @@ const animationLoop = createAnimationLoop({
   restActive: () => restActive,
   clickThrough: () => clickThrough,
   mediaState: () => mediaState,
+  forcedExpressionKey: () => devForcedExpressionKey,
+  debugOverlay: devDebugOverlay,
   renderPetScene,
   setFaceExpressionKey,
   updateMediaPlayerPosition

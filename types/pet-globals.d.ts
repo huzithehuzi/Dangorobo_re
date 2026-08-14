@@ -171,6 +171,8 @@ interface PetDesktopApi {
   onMediaUpdate(callback: (data: PetMediaUpdate) => void): void;
   onRestStart(callback: (payload: PetRestStartPayload) => void): void;
   onRestEnd(callback: () => void): void;
+  onForceExpression(callback: (expressionKey: string | null) => void): void;
+  onDebugOverlay(callback: (enabled: boolean) => void): void;
   closePetChat(): void;
   closeAssistant(): void;
   askAssistant(question: string): Promise<PetAssistantResult>;

@@ -3,6 +3,27 @@
 Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·기능 계약·제약과 향후 과제는
 [`DEVELOPMENT.md`](./DEVELOPMENT.md)를 기준으로 삼고, 세부 작업 과정은 Git 이력에서 확인한다.
 
+## 2026-08-15
+
+- **설정창에 숨김 "개발자" 탭 추가**: 표정·알림·렌더링을 저장하지 않고 바로 테스트해 볼
+  수 있는 기능이 필요하다는 요청 — F12 같은 키 단축키는 이미 `--pet-devtools` CLI 인자와
+  겹쳐서, 대신 설정창 사이드바 제목("설정")을 1.5초 안에 5번 클릭하면 나타나는 세션 전용
+  탭으로 만들었다(`App.tsx`의 `devModeUnlocked`, `pet-settings.json`에는 안 남고 창을
+  새로 열면 다시 잠김). 탭 안 기능 세 가지: (1) **표정 강제 전환** —
+  `settings:dev-force-expression` → `pet:dev-force-expression` IPC로 펫 창에 표정 키를
+  보내고, `animation-loop.ts`의 `updateFaceExpression()` 우선순위 사다리 맨 앞에
+  `forcedExpressionKey()`를 끼워 넣어 알람/쓰다듬기 등 다른 표정 오버라이드보다 항상
+  이기게 했다. (2) **알림 즉시 트리거** — 휴식 알림은 기존 `testAlarm` IPC를 그대로
+  재사용하고, 날씨 브리핑은 트레이의 "지금 날씨 확인"과 같은 로직을 설정창에서도 부를 수
+  있게 `settings:dev-test-weather-briefing`을 새로 추가했다. (3) **렌더링 디버그
+  오버레이** — `settings:dev-set-debug-overlay` → `pet:dev-debug-overlay`로 펫 창 좌상단에
+  FPS(0.5초 평균)·창 크기·클릭 통과 여부를 표시하고, 창 바깥 경계를 점선 아웃라인으로
+  보여준다. `pet-animation-loop.test.js`에 forcedExpressionKey 우선순위 mock을 추가하고
+  `preload.test.js`의 API/채널 화이트리스트도 같이 갱신했다. QA 캡처 하네스의
+  `--capture-settings-click`은 `|`로 여러 선택자를 이어 순서대로 클릭할 수 있게 넓혀서
+  5연타 제스처를 스크린샷으로 직접 확인했다(pet-default.png/settings-general.png/
+  settings-dev.png).
+
 ## 2026-08-14
 
 - **휴식 알림이 뜰 때 작업 표시줄에 펫 아이콘이 다시 생기던 것 수정**: 앞선 수정(시스템

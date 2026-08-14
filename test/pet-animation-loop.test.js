@@ -185,6 +185,8 @@ function createHarness(options = {}) {
     favoritesActive: false,
     /** @type {string | null} */
     answerExpressionKey: null,
+    /** @type {string | null} */
+    forcedExpressionKey: null,
     answerBubbleHidden: true,
     petChatBubbleHidden: true,
     mediaPlayerHidden: true,
@@ -304,6 +306,8 @@ function createHarness(options = {}) {
     restActive: () => control.restActive,
     clickThrough: () => control.clickThrough,
     mediaState: () => ({ status: control.mediaStatus }),
+    forcedExpressionKey: () => control.forcedExpressionKey ?? null,
+    debugOverlay: { isEnabled: () => false, update: () => {} },
     renderPetScene: () => { log.push("render"); },
     setFaceExpressionKey: (/** @type {string | null | undefined} */ key) => {
       expressions.push(key);

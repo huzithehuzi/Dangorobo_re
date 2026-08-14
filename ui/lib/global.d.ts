@@ -242,6 +242,10 @@ interface DesktopPetSettingsApi {
   openSummaryFolder(): Promise<void>;
   testAlarm(soundFile?: string): void;
   pickAlarmSound(): Promise<(OkResult & { filePath?: string }) | undefined>;
+  // 개발자 모드(2026-08-15): 설정창 숨김 탭 전용.
+  testWeatherBriefing(): void;
+  forceExpression(expressionKey: string | null): void;
+  setDebugOverlay(enabled: boolean): void;
   shortcutRecordingStart(): void;
   shortcutRecordingEnd(): void;
   onQueryUnsaved(callback: () => void): void;

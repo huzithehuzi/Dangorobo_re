@@ -413,6 +413,7 @@ h3 { margin: 0 0 10px; color: var(--text-muted); font-size: calc(12px * var(--ui
 .button-row .secondary-action { flex: 1 1 140px; width: auto; margin-top: 0; }
 .secondary-action.danger { border-color: color-mix(in srgb, #d7566b 45%, var(--settings-border)); color: color-mix(in srgb, #d7566b 45%, var(--text)); background: rgba(215, 86, 107, 0.14); }
 .secondary-action.danger:hover { background: rgba(215, 86, 107, 0.28); }
+.secondary-action.active { border-color: var(--settings-accent); background: color-mix(in srgb, var(--settings-accent) 25%, transparent); }
 
 .memory-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
 .stat-item {

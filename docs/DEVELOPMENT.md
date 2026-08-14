@@ -276,6 +276,7 @@ main·preload·pet 산출물을 감지해 종료한다.
 | 화면 로그·대화 이력·에피소드 소유 | `assistant/assistant-history.ts` |
 | 대화 이력·장기 기억 | `memory/`, `ui/settings/tabs-talk.tsx` |
 | 공용 언어·테마·모션 | `src/shared/i18n.js`, `theme-*`, `ui-motion.*` |
+| 설정창 숨김 "개발자" 탭(표정 강제·알림 즉시 트리거·렌더링 디버그 오버레이) | `ui/settings/tabs-dev.tsx`, `App.tsx`의 `devModeUnlocked`, `main.ts`의 `settings:dev-*` 핸들러 |
 
 ## 설정과 로컬 데이터
 

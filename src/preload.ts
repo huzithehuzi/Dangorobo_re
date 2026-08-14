@@ -59,6 +59,10 @@ contextBridge.exposeInMainWorld("desktopPet", {
   },
   testAlarm: (soundFile: unknown) => ipcRenderer.send("settings:test-alarm", soundFile),
   pickAlarmSound: () => ipcRenderer.invoke("alarm:pick-sound"),
+  // 개발자 모드(2026-08-15): 설정창 숨김 탭에서만 쓴다.
+  testWeatherBriefing: () => ipcRenderer.send("settings:dev-test-weather-briefing"),
+  forceExpression: (expressionKey: unknown) => ipcRenderer.send("settings:dev-force-expression", expressionKey),
+  setDebugOverlay: (enabled: unknown) => ipcRenderer.send("settings:dev-set-debug-overlay", enabled),
   // 커스터마이징 프리셋 썸네일: 설정창이 요청 → main이 펫 창에 위임 → 펫 창이 결과 반환
   renderPresetThumbnails: (presets: unknown) => ipcRenderer.invoke("preset:render-thumbnails", presets),
   onRenderPresetThumbnails: (callback: BridgeCallback) => {
@@ -134,6 +138,12 @@ contextBridge.exposeInMainWorld("desktopPet", {
   },
   onRestStart: (callback: BridgeCallback) => {
     ipcRenderer.on("pet:rest-start", (_event, payload) => callback(payload));
+  },
+  onForceExpression: (callback: BridgeCallback) => {
+    ipcRenderer.on("pet:dev-force-expression", (_event, expressionKey) => callback(expressionKey));
+  },
+  onDebugOverlay: (callback: BridgeCallback) => {
+    ipcRenderer.on("pet:dev-debug-overlay", (_event, enabled) => callback(enabled));
   },
   onRestEnd: (callback: BridgeCallback) => {
     ipcRenderer.on("pet:rest-end", (_event) => callback());
