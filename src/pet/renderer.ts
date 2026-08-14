@@ -1312,9 +1312,36 @@ window.desktopPet.onMediaUpdate((data) => {
   if (wasHidden) requestAnimationFrame(updateMediaPlayerPosition);
 });
 
+// 날씨 브리핑처럼 줄마다 아이콘이 붙는 경우 배지로 그린다 — 이모지를 본문 글자 크기로
+// 섞으면 Windows 기본 이모지 폰트가 옅은 색이라 밝은 말풍선 배경에 잘 안 보인다(피드백,
+// 2026-08). 배지 배경색이 대비를 대신 보장하므로 이모지 자체 색과 무관하게 잘 보인다.
+// 시계 아이콘(#rest-icon)은 날씨 브리핑일 때 자리를 넉넉히 쓰도록 뺀다.
+function renderRestMessage(payload: PetRestStartPayload | undefined): void {
+  const lines = payload?.weatherLines;
+  restMessage.textContent = "";
+  if (lines && lines.length > 0) {
+    restIcon.hidden = true;
+    for (const line of lines) {
+      const row = document.createElement("span");
+      row.className = "weather-line";
+      const badge = document.createElement("span");
+      badge.className = "weather-icon-badge";
+      badge.textContent = line.icon;
+      const text = document.createElement("span");
+      text.className = "weather-line-text";
+      text.textContent = line.text;
+      row.append(badge, text);
+      restMessage.append(row);
+    }
+  } else {
+    restIcon.hidden = false;
+    restMessage.textContent = payload?.message || tt("alarm.defaultMessage");
+  }
+}
+
 window.desktopPet.onRestStart((payload) => {
   restTitle.textContent = payload?.title || tt("alarm.defaultTitle");
-  restMessage.textContent = payload?.message || tt("alarm.defaultMessage");
+  renderRestMessage(payload);
   // 알람마다 고른 커스텀 소리(soundDataUrl)가 있으면 그걸 쓰고, 없으면 항상 현재
   // 전역 알람 사운드 설정으로 되돌린다 — 안 그러면 커스텀 소리 알람 다음에 울리는
   // 기본 알람이 이전 알람의 소리를 그대로 이어받는다.

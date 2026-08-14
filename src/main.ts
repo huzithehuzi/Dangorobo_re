@@ -352,8 +352,8 @@ const alarmQueue = createAlarmQueue({
   // 보여준다 — settings.alarms에 저장된 원본 message는 그대로 둔다(alarm-queue.ts 참고).
   resolveAlarmForDisplay: async (alarm) => {
     if (alarm.type !== "daily" || !alarm.weatherBriefingEnabled) return alarm;
-    const message = await weatherService.getWeatherBriefing(settings.weatherCity, settings.language);
-    return { ...alarm, message };
+    const { message, lines } = await weatherService.getWeatherBriefing(settings.weatherCity, settings.language);
+    return { ...alarm, message, weatherLines: lines };
   }
 });
 let settings: Settings = { ...DEFAULT_SETTINGS };
@@ -1193,7 +1193,12 @@ function startRestAlert(alarm: RestAlert): void {
   restWindow.setFocusable(true);
   restWindow.show();
   petInteraction.setClickThrough(false);
-  restWindow.webContents.send("pet:rest-start", { title: alarm.title, message: alarm.message, soundDataUrl: alarmSoundDataUrl(alarm) });
+  restWindow.webContents.send("pet:rest-start", {
+    title: alarm.title,
+    message: alarm.message,
+    soundDataUrl: alarmSoundDataUrl(alarm),
+    weatherLines: alarm.weatherLines ?? null
+  });
   rebuildTrayMenu();
 }
 
@@ -1284,11 +1289,12 @@ const petMenuActions: PetMenuActions = {
     petMenu.refresh();
   },
   checkWeatherNow: () => {
-    weatherService.getWeatherBriefing(settings.weatherCity, settings.language).then((message) => {
+    weatherService.getWeatherBriefing(settings.weatherCity, settings.language).then(({ message, lines }) => {
       alarmQueue.enqueue({
         id: `weather-check-${Date.now()}`,
         title: t(settings.language, "weather.alertTitle"),
-        message
+        message,
+        weatherLines: lines
       });
     });
   },

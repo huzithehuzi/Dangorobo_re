@@ -49,6 +49,11 @@ type DailyForecast = {
   precip: Array<number | null>;
 };
 
+// icon은 WEATHER_ICONS 값 중 하나(이모지 한 글자), text는 아이콘이 빠진 나머지 문구.
+type WeatherLine = { icon: string; text: string };
+// lines는 성공했을 때만 채워진다. 실패(위치 미설정·조회 실패)하면 null이고 message만 보여준다.
+type WeatherBriefing = { message: string; lines: WeatherLine[] | null };
+
 const WEATHER_ICONS = {
   clear: "☀️",
   partlyCloudy: "⛅",
@@ -159,38 +164,42 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     return fetchDailyForecastFromUrl(baseUrl);
   }
 
-  function formatDayLine(language: string, labelKey: string, index: number, forecast: DailyForecast): string {
+  // 아이콘은 텍스트 문구에 섞지 않고 따로 돌려준다 — 호출부(펫 창)가 이모지를 배지 안에
+  // 크게 그려서 흰 배경에 묻히는 문제를 UI 쪽에서 해결할 수 있게 하기 위함이다.
+  function buildDayLine(language: string, labelKey: string, index: number, forecast: DailyForecast): WeatherLine {
     const code = forecast.weathercode?.[index] ?? null;
     const max = forecast.max?.[index];
     const min = forecast.min?.[index];
     const precip = forecast.precip?.[index];
-    let line = t(language, "weather.dayLine", {
+    let text = t(language, "weather.dayLine", {
       label: t(language, labelKey),
-      icon: weatherCodeToIcon(typeof code === "number" ? code : null),
       max: typeof max === "number" ? Math.round(max) : "?",
       min: typeof min === "number" ? Math.round(min) : "?"
     });
     if (typeof precip === "number") {
-      line += t(language, "weather.precipSuffix", { percent: Math.round(precip) });
+      text += t(language, "weather.precipSuffix", { percent: Math.round(precip) });
     }
-    return line;
+    return { icon: weatherCodeToIcon(typeof code === "number" ? code : null), text };
   }
 
   // 실패해도 예외를 던지지 않고 사용자에게 보여줄 안내 문구를 그대로 돌려준다 —
   // 호출부(알람 발동, 트레이 클릭)가 실패 케이스를 따로 처리할 필요가 없게 하기 위함.
-  async function getWeatherBriefing(city: string, language: string): Promise<string> {
-    if (!city.trim()) return t(language, "weather.locationMissing");
+  // lines가 null이면 실패(위치 미설정·조회 실패)라 message만 평문으로 보여주면 된다.
+  async function getWeatherBriefing(city: string, language: string): Promise<WeatherBriefing> {
+    if (!city.trim()) return { message: t(language, "weather.locationMissing"), lines: null };
     const geo = await geocodeCity(city, language);
-    if (!geo) return t(language, "weather.fetchFailed");
+    if (!geo) return { message: t(language, "weather.fetchFailed"), lines: null };
     const forecast = await fetchDailyForecast(geo);
-    if (!forecast) return t(language, "weather.fetchFailed");
-    const today = formatDayLine(language, "weather.todayLabel", 0, forecast);
-    const tomorrow = formatDayLine(language, "weather.tomorrowLabel", 1, forecast);
-    return `${today}\n${tomorrow}`;
+    if (!forecast) return { message: t(language, "weather.fetchFailed"), lines: null };
+    const lines = [
+      buildDayLine(language, "weather.todayLabel", 0, forecast),
+      buildDayLine(language, "weather.tomorrowLabel", 1, forecast)
+    ];
+    return { message: lines.map((line) => `${line.icon} ${line.text}`).join("\n"), lines };
   }
 
   return { getWeatherBriefing, geocodeCity, fetchDailyForecast };
 }
 
 export { createWeatherService, weatherCodeToIcon };
-export type { WeatherServiceDeps };
+export type { WeatherServiceDeps, WeatherLine, WeatherBriefing };

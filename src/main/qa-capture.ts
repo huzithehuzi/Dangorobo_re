@@ -321,10 +321,23 @@ function capturePetWindow(
   petCaptureWindow.webContents.once("did-finish-load", () => {
     if (flags.rest) {
       const language = ctx.getSettings().language;
-      ctx.startRestAlert({
-        title: ctx.translate(language, "alarm.defaultTitle"),
-        message: ctx.translate(language, "alarm.defaultMessage")
-      });
+      // --capture-rest-weather를 같이 주면 날씨 배지 레이아웃(weatherLines)을 찍는다 —
+      // 실제 API 호출 없이 고정 샘플로, 시계 아이콘이 빠지고 배지 두 줄이 나와야 한다.
+      if (argv.includes("--capture-rest-weather")) {
+        ctx.startRestAlert({
+          title: ctx.translate(language, "weather.alertTitle"),
+          message: "☀️ 오늘 최고 27°/최저 22°\n🌦️ 내일 최고 28°/최저 22°",
+          weatherLines: [
+            { icon: "☀️", text: "오늘 최고 27°/최저 22° (강수 20%)" },
+            { icon: "🌦️", text: "내일 최고 28°/최저 22° (강수 78%)" }
+          ]
+        });
+      } else {
+        ctx.startRestAlert({
+          title: ctx.translate(language, "alarm.defaultTitle"),
+          message: ctx.translate(language, "alarm.defaultMessage")
+        });
+      }
     }
     if (flags.favorites) {
       ctx.setFavoritesPanelActive(true);

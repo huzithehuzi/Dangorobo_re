@@ -52,8 +52,36 @@ html, body, #pet-stage {
 .mode-card strong { margin-bottom: 3px; font-size: calc(12px * var(--ui-font-size-scale)); }
 .mode-card span { color: var(--bubble-subtext); font-size: calc(10px * var(--ui-font-size-scale)); }
 /* 날씨 브리핑처럼 메시지 안에 실제 줄바꿈(\n)이 들어있는 경우를 위함 — 기본값(normal)은
-   \n을 공백으로 뭉개서 폭 기준으로만 줄바꿈해, "오늘"/"내일" 줄이 뒤섞여 보인다. */
+   \n을 공백으로 뭉개서 폭 기준으로만 줄바꿈해, "오늘"/"내일" 줄이 뒤섞여 보인다.
+   날씨 배지 렌더링(.weather-line)을 쓸 때는 텍스트 노드가 없어 이 값이 그냥 무시된다. */
 #rest-message { white-space: pre-line; }
+/* 날씨 브리핑 배지 — 이모지를 본문 크기로 섞으면 Windows 기본 이모지 폰트가 옅은 색이라
+   밝은 말풍선 배경에 잘 안 보인다(피드백, 2026-08). 배지 배경이 대비를 대신 보장한다.
+   .speech-bubble span의 display:block(위)보다 명시도가 높아야 해서 .speech-bubble을
+   같이 붙인다(클래스 2개 vs 클래스+태그 1개씩). */
+.speech-bubble .weather-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.speech-bubble .weather-line + .weather-line { margin-top: 8px; }
+.speech-bubble .weather-icon-badge {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bubble-button);
+  font-size: 22px;
+  line-height: 1;
+}
+.speech-bubble .weather-line-text {
+  flex: 1;
+  font-size: calc(12px * var(--ui-font-size-scale));
+}
 
 .speech-bubble {
   /* 차콜 = 마스코트 기본 프리셋("미로")의 배색(2026-08-09). --bubble-border는 다른 테마들처럼

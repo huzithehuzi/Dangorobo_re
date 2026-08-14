@@ -31,8 +31,8 @@ function createService(respond) {
 
 test("지역이 비어 있으면 fetch 없이 위치 미설정 안내를 돌려준다", async () => {
   const { service, calledUrls } = createService(() => null);
-  const message = await service.getWeatherBriefing("   ", "ko");
-  assert.equal(message, "날씨 지역이 설정되지 않았어요. '일반' 탭에서 지역을 입력해주세요.");
+  const briefing = await service.getWeatherBriefing("   ", "ko");
+  assert.deepEqual(briefing, { message: "날씨 지역이 설정되지 않았어요. '일반' 탭에서 지역을 입력해주세요.", lines: null });
   assert.deepEqual(calledUrls, []);
 });
 
@@ -40,15 +40,17 @@ test("지오코딩 결과가 없으면(오타 등) 실패 안내를 돌려준다
   const { service } = createService((url) => (
     url.includes("geocoding-api") ? jsonResponse({ results: [] }) : jsonResponse({})
   ));
-  assert.equal(await service.getWeatherBriefing("asdkjqwhekjqhwe", "ko"), "날씨 정보를 불러오지 못했어요.");
+  const briefing = await service.getWeatherBriefing("asdkjqwhekjqhwe", "ko");
+  assert.deepEqual(briefing, { message: "날씨 정보를 불러오지 못했어요.", lines: null });
 });
 
 test("네트워크 요청이 실패해도(예외) 실패 안내로 조용히 처리한다", async () => {
   const { service } = createService(() => null);
-  assert.equal(await service.getWeatherBriefing("Seoul", "en"), "Couldn't fetch the weather.");
+  const briefing = await service.getWeatherBriefing("Seoul", "en");
+  assert.deepEqual(briefing, { message: "Couldn't fetch the weather.", lines: null });
 });
 
-test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 문장을 만든다", async () => {
+test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 줄을 아이콘·텍스트로 나눠 만든다", async () => {
   const { service, calledUrls } = createService((url) => {
     if (url.includes("geocoding-api")) return jsonResponse(GEOCODE_JP);
     return jsonResponse({
@@ -61,8 +63,13 @@ test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 
       }
     });
   });
-  const message = await service.getWeatherBriefing("Tokyo", "ko");
-  assert.equal(message, "오늘 ☀️ 최고 29°/최저 23° (강수 10%)\n내일 🌧️ 최고 25°/최저 21° (강수 80%)");
+  const briefing = await service.getWeatherBriefing("Tokyo", "ko");
+  assert.deepEqual(briefing.lines, [
+    { icon: "☀️", text: "오늘 최고 29°/최저 23° (강수 10%)" },
+    { icon: "🌧️", text: "내일 최고 25°/최저 21° (강수 80%)" }
+  ]);
+  // message는 아이콘을 포함한 평문 버전(펫 창이 배지를 못 그리는 경우의 대비책)으로 유지한다.
+  assert.equal(briefing.message, "☀️ 오늘 최고 29°/최저 23° (강수 10%)\n🌧️ 내일 최고 25°/최저 21° (강수 80%)");
   assert.ok(calledUrls.every((url) => !url.includes("models=")));
 });
 
@@ -91,9 +98,12 @@ test("대한민국은 kma_seamless 모델을 먼저 요청하고, 값이 있으�
       }
     });
   });
-  const message = await service.getWeatherBriefing("Seoul", "ko");
+  const briefing = await service.getWeatherBriefing("Seoul", "ko");
   // kma_seamless 값(27/22)을 썼는지, precip이 null이라 강수 문구가 빠졌는지 함께 확인.
-  assert.equal(message, "오늘 ☁️ 최고 27°/최저 22°\n내일 ☁️ 최고 28°/최저 23°");
+  assert.deepEqual(briefing.lines, [
+    { icon: "☁️", text: "오늘 최고 27°/최저 22°" },
+    { icon: "☁️", text: "내일 최고 28°/최저 23°" }
+  ]);
   assert.ok(calledUrls.some((url) => url.includes("models=kma_seamless")));
 });
 
@@ -121,8 +131,11 @@ test("kma_seamless가 전부 null이면(모델 미제공 시각) 기본 모델�
       }
     });
   });
-  const message = await service.getWeatherBriefing("Seoul", "ko");
-  assert.equal(message, "오늘 ⛅ 최고 26°/최저 21° (강수 40%)\n내일 ⛅ 최고 27°/최저 22° (강수 50%)");
+  const briefing = await service.getWeatherBriefing("Seoul", "ko");
+  assert.deepEqual(briefing.lines, [
+    { icon: "⛅", text: "오늘 최고 26°/최저 21° (강수 40%)" },
+    { icon: "⛅", text: "내일 최고 27°/최저 22° (강수 50%)" }
+  ]);
 });
 
 test("'도 시' 형태는 그대로 못 찾으면 도를 뗀 시 이름으로 재시도한다", async () => {

@@ -82,10 +82,16 @@ interface PetMediaUpdate {
   status: string;
 }
 
+interface PetWeatherLine {
+  icon: string;
+  text: string;
+}
+
 interface PetRestStartPayload {
   title: string;
   message: string;
   soundDataUrl: string | null;
+  weatherLines?: PetWeatherLine[] | null;
 }
 
 type PetAssistantResult =
