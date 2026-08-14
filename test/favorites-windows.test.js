@@ -372,9 +372,10 @@ test("드래그를 시작하지 않았거나 끝낸 뒤에는 움직이지 않�
   const h = createHarness({ settings: { favoritesDisplayMode: "dock" } });
   h.controller.createDockWindow();
   const dock = /** @type {any} */ (h.controller.dockWindow());
+  const boundsBefore = dock.boundsCalls.length;
 
   h.controller.moveDockBy(50, 50);
-  assert.equal(dock.operations.includes("setPosition"), false, "시작 전에는 무시한다");
+  assert.equal(dock.boundsCalls.length, boundsBefore, "시작 전에는 무시한다");
 
   h.controller.beginDockDrag();
   h.controller.moveDockBy(50, 50);
@@ -384,6 +385,27 @@ test("드래그를 시작하지 않았거나 끝낸 뒤에는 움직이지 않�
   const before = { ...dock.bounds };
   h.controller.moveDockBy(200, 200);
   assert.deepEqual({ x: dock.bounds.x, y: dock.bounds.y }, { x: before.x, y: before.y });
+});
+
+// 배율이 섞인 다중 모니터에서 setPosition()은 부를 때마다 창을 1~2px씩 키운다(실측).
+// 드래그는 포인터가 움직일 때마다 이걸 부르므로, 크기를 다시 못 박지 않으면 창이 계속
+// 부풀고 CSS로 중앙에 놓인 가운데 버튼이 오른쪽 아래로 밀려난다.
+test("드래그 중에는 매번 접힌 크기를 다시 못 박는다", () => {
+  const h = createHarness({ settings: { favoritesDisplayMode: "dock" } });
+  h.controller.createDockWindow();
+  const dock = /** @type {any} */ (h.controller.dockWindow());
+
+  h.controller.beginDockDrag();
+  for (const step of [10, 20, 30]) h.controller.moveDockBy(step, step);
+
+  const moves = dock.boundsCalls.slice(-3);
+  assert.equal(moves.length, 3, "이동마다 bounds를 건다");
+  for (const move of moves) {
+    assert.equal(move.width, DOCK_COLLAPSED, "폭을 다시 못 박지 않으면 누적해서 커진다");
+    assert.equal(move.height, DOCK_COLLAPSED, "높이를 다시 못 박지 않으면 누적해서 커진다");
+  }
+  // 위치는 눌린 지점 기준으로 따라와야 한다.
+  assert.equal(moves.at(-1)?.x, dock.bounds.x);
 });
 
 test("펼쳐진 독을 잡으면 먼저 접고 나서 끈다", () => {

@@ -215,7 +215,13 @@ function createFavoritesWindowController(deps: FavoritesWindowDependencies) {
       { width: FAVORITES_DOCK_COLLAPSED, height: FAVORITES_DOCK_COLLAPSED },
       workArea
     );
-    dockWindow.setPosition(clamped.x, clamped.y);
+    // ⚠ setPosition()이 아니라 크기를 명시한 setBounds를 쓴다.
+    // 배율이 섞인 다중 모니터에서 setPosition()은 **부를 때마다 창을 1~2px씩 키운다**
+    // (2026-08-14 실측: 86px 창에 6번 부르면 94px). 드래그는 포인터가 움직일 때마다 이걸
+    // 부르므로 한 번 끌면 수십 px이 불어나고, 가운데 버튼은 CSS로 창 중앙에 있으니 창이
+    // 왼쪽 위를 고정한 채 커지는 만큼 **오른쪽 아래로 밀려난다**("버튼을 누르면 오른쪽
+    // 아래로 미끄러진다" 리포트). 매번 의도한 크기를 다시 못 박으면 누적되지 않는다.
+    setDockBounds(favoritesDockCollapsedBounds(clamped));
     deps.getPanelsState().dock.position = clamped;
   }
 
