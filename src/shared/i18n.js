@@ -98,9 +98,11 @@
 
     // ---- 날씨(Open-Meteo, API 키 불필요 — 대한민국은 기상청 기반 kma_seamless 모델을 쓴다) ----
     "weather.alertTitle": { ko: "오늘의 날씨", en: "Today's Weather", ja: "今日の天気" },
-    "weather.todayLabel": { ko: "오늘", en: "Today", ja: "今日" },
-    "weather.tomorrowLabel": { ko: "내일", en: "Tomorrow", ja: "明日" },
-    "weather.dayLine": { ko: "{{label}} 최고 {{max}}°/최저 {{min}}°", en: "{{label}} High {{max}}°/Low {{min}}°", ja: "{{label}} 最高{{max}}°/最低{{min}}°" },
+    "weather.todayMorningLabel": { ko: "오늘 오전", en: "This morning", ja: "今日の午前" },
+    "weather.todayAfternoonLabel": { ko: "오늘 오후", en: "This afternoon", ja: "今日の午後" },
+    "weather.tomorrowMorningLabel": { ko: "내일 오전", en: "Tomorrow morning", ja: "明日の午前" },
+    "weather.tomorrowAfternoonLabel": { ko: "내일 오후", en: "Tomorrow afternoon", ja: "明日の午後" },
+    "weather.dayLine": { ko: "{{label}} ▲{{max}}° ▼{{min}}°", en: "{{label}} ▲{{max}}° ▼{{min}}°", ja: "{{label}} ▲{{max}}° ▼{{min}}°" },
     "weather.precipSuffix": { ko: " (강수 {{percent}}%)", en: " (precip {{percent}}%)", ja: " (降水 {{percent}}%)" },
     "weather.locationMissing": { ko: "날씨 지역이 설정되지 않았어요. '일반' 탭에서 지역을 입력해주세요.", en: "No weather location is set. Enter one in the General tab.", ja: "天気の地域が設定されていません。「一般」タブで地域を入力してください。" },
     "weather.fetchFailed": { ko: "날씨 정보를 불러오지 못했어요.", en: "Couldn't fetch the weather.", ja: "天気情報を取得できませんでした。" },

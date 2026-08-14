@@ -82,6 +82,11 @@ html, body, #pet-stage {
   flex: 1;
   font-size: calc(12px * var(--ui-font-size-scale));
 }
+/* 오전·오후 4줄이 들어가면 기본 272px 폭에서 "(강수 10%)" 같은 꼬리가 다음 줄로
+   넘어가 배지 옆에서 어중간하게 잘려 보인다 — 폭을 살짝 늘린다. 펫 창 자체가 300px
+   고정(pet-window-layout.ts의 WINDOW_WIDTH)이고 말풍선은 left:14px에서 시작하므로
+   286px을 넘기면 창 오른쪽 밖으로 잘린다 — 여유를 두고 282px까지만 늘린다. */
+.speech-bubble.weather-briefing { width: 282px; }
 
 .speech-bubble {
   /* 차콜 = 마스코트 기본 프리셋("미로")의 배색(2026-08-09). --bubble-border는 다른 테마들처럼

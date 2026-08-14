@@ -1,7 +1,9 @@
-// Open-Meteo(무료, API 키·회원가입 불필요)로 오늘·내일 날씨 문장을 만든다. 지오코딩도 같은
-// 서비스의 키 없는 엔드포인트를 쓴다. 대한민국(country_code === "KR")은 예보에
-// models=kma_seamless를 붙여 기상청 기반 데이터를 우선 쓴다 — 다만 이 모델은 강수확률을
-// 안 주는 경우가 있어(2026-08 커뮤니티 보고) 그 값이 없으면 강수 문구만 조용히 뺀다.
+// Open-Meteo(무료, API 키·회원가입 불필요)로 오늘/내일의 오전·오후 날씨 문장 4줄을 만든다.
+// 하루 평균(daily)이 아니라 시간별(hourly) 데이터를 받아 오전(6~11시)·오후(12~17시)
+// 구간별로 최고/최저·강수확률을 다시 계산한다. 지오코딩도 같은 서비스의 키 없는 엔드포인트를
+// 쓴다. 대한민국(country_code === "KR")은 예보에 models=kma_seamless를 붙여 기상청 기반
+// 데이터를 우선 쓴다 — 다만 이 모델은 특정 시각에 값을 통째로 안 주는 경우가 있어(실측,
+// 2026-08) 그럴 때는 기본 모델(best_match)로 물러난다.
 const { t } = require("../shared/i18n.js");
 
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
@@ -42,10 +44,12 @@ function stripLeadingProvince(city: string): string | null {
   return place.endsWith("시") ? place : null;
 }
 
-type DailyForecast = {
+// timezone=auto라 time은 "YYYY-MM-DDTHH:mm" 지역 표준시 그대로 온다 — 오전/오후를
+// 나누려면 하루 평균값(daily)이 아니라 시간별(hourly) 값이 필요해 daily 대신 이걸 쓴다.
+type HourlyForecast = {
+  time: string[];
   weathercode: Array<number | null>;
-  max: Array<number | null>;
-  min: Array<number | null>;
+  temperature: Array<number | null>;
   precip: Array<number | null>;
 };
 
@@ -53,6 +57,15 @@ type DailyForecast = {
 type WeatherLine = { icon: string; text: string };
 // lines는 성공했을 때만 채워진다. 실패(위치 미설정·조회 실패)하면 null이고 message만 보여준다.
 type WeatherBriefing = { message: string; lines: WeatherLine[] | null };
+
+// dayOffset 0=오늘, 1=내일. anchorHour는 대표 날씨 코드를 뽑을 시각(구간 중간값) —
+// 오전 6~11시는 9시, 오후 12~17시는 15시로 잡았다.
+const DAY_PERIODS = [
+  { labelKey: "weather.todayMorningLabel", dayOffset: 0, startHour: 6, endHour: 11, anchorHour: 9 },
+  { labelKey: "weather.todayAfternoonLabel", dayOffset: 0, startHour: 12, endHour: 17, anchorHour: 15 },
+  { labelKey: "weather.tomorrowMorningLabel", dayOffset: 1, startHour: 6, endHour: 11, anchorHour: 9 },
+  { labelKey: "weather.tomorrowAfternoonLabel", dayOffset: 1, startHour: 12, endHour: 17, anchorHour: 15 }
+] as const;
 
 const WEATHER_ICONS = {
   clear: "☀️",
@@ -138,48 +151,68 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     return null;
   }
 
-  async function fetchDailyForecastFromUrl(url: string): Promise<DailyForecast | null> {
-    const data = await fetchJson(url) as { daily?: Record<string, unknown[]> } | null;
-    const daily = data?.daily;
-    if (!daily || !Array.isArray(daily.time) || daily.time.length < 2) return null;
+  async function fetchHourlyForecastFromUrl(url: string): Promise<HourlyForecast | null> {
+    const data = await fetchJson(url) as { hourly?: Record<string, unknown[]> } | null;
+    const hourly = data?.hourly;
+    if (!hourly || !Array.isArray(hourly.time) || hourly.time.length === 0) return null;
     return {
-      weathercode: daily.weathercode as Array<number | null>,
-      max: daily.temperature_2m_max as Array<number | null>,
-      min: daily.temperature_2m_min as Array<number | null>,
-      precip: daily.precipitation_probability_max as Array<number | null>
+      time: hourly.time as string[],
+      weathercode: hourly.weathercode as Array<number | null>,
+      temperature: hourly.temperature_2m as Array<number | null>,
+      precip: hourly.precipitation_probability as Array<number | null>
     };
   }
 
-  // kma_seamless는 이따금 이 지역·시각에 대해 모든 daily 필드를 null로 돌려준다(실측,
-  // 2026-08). 그럴 때 "?"로만 채워진 문장을 보여주느니 기본 모델(best_match)로 조용히
-  // 물러난다 — 대한민국 우선은 "쓸 수 있으면" 정도의 개선이지 강한 보장이 아니다.
-  async function fetchDailyForecast(geo: GeocodeResult): Promise<DailyForecast | null> {
+  // kma_seamless는 이따금 이 지역·시각에 대해 모든 필드를 null로 돌려준다(실측, 2026-08).
+  // 그럴 때 "?"로만 채워진 문장을 보여주느니 기본 모델(best_match)로 조용히 물러난다 —
+  // 대한민국 우선은 "쓸 수 있으면" 정도의 개선이지 강한 보장이 아니다.
+  async function fetchHourlyForecast(geo: GeocodeResult): Promise<HourlyForecast | null> {
     const baseUrl = `${FORECAST_URL}?latitude=${geo.latitude}&longitude=${geo.longitude}` +
-      `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+      `&hourly=temperature_2m,weathercode,precipitation_probability` +
       `&timezone=auto&forecast_days=2`;
     if (geo.countryCode === "KR") {
-      const kmaForecast = await fetchDailyForecastFromUrl(`${baseUrl}&models=kma_seamless`);
-      if (kmaForecast && kmaForecast.max.some((value) => typeof value === "number")) return kmaForecast;
+      const kmaForecast = await fetchHourlyForecastFromUrl(`${baseUrl}&models=kma_seamless`);
+      if (kmaForecast && kmaForecast.temperature.some((value) => typeof value === "number")) return kmaForecast;
     }
-    return fetchDailyForecastFromUrl(baseUrl);
+    return fetchHourlyForecastFromUrl(baseUrl);
   }
 
   // 아이콘은 텍스트 문구에 섞지 않고 따로 돌려준다 — 호출부(펫 창)가 이모지를 배지 안에
   // 크게 그려서 흰 배경에 묻히는 문제를 UI 쪽에서 해결할 수 있게 하기 위함이다.
-  function buildDayLine(language: string, labelKey: string, index: number, forecast: DailyForecast): WeatherLine {
-    const code = forecast.weathercode?.[index] ?? null;
-    const max = forecast.max?.[index];
-    const min = forecast.min?.[index];
-    const precip = forecast.precip?.[index];
+  function buildPeriodLine(
+    language: string,
+    period: typeof DAY_PERIODS[number],
+    forecast: HourlyForecast,
+    dates: string[]
+  ): WeatherLine | null {
+    const date = dates[period.dayOffset];
+    if (!date) return null;
+    const indices = forecast.time
+      .map((time, index) => ({ time, index }))
+      .filter(({ time }) => {
+        if (!time.startsWith(date)) return false;
+        const hour = Number(time.slice(11, 13));
+        return hour >= period.startHour && hour <= period.endHour;
+      })
+      .map(({ index }) => index);
+    if (indices.length === 0) return null;
+
+    const temps = indices.map((i) => forecast.temperature[i]).filter((v): v is number => typeof v === "number");
+    const precips = indices.map((i) => forecast.precip[i]).filter((v): v is number => typeof v === "number");
+    const anchorIndex = forecast.time.indexOf(`${date}T${String(period.anchorHour).padStart(2, "0")}:00`);
+    const anchorCode = anchorIndex >= 0 ? forecast.weathercode[anchorIndex] : null;
+    const fallbackCode = indices.map((i) => forecast.weathercode[i]).find((code): code is number => typeof code === "number");
+    const code = typeof anchorCode === "number" ? anchorCode : (fallbackCode ?? null);
+
     let text = t(language, "weather.dayLine", {
-      label: t(language, labelKey),
-      max: typeof max === "number" ? Math.round(max) : "?",
-      min: typeof min === "number" ? Math.round(min) : "?"
+      label: t(language, period.labelKey),
+      max: temps.length ? Math.round(Math.max(...temps)) : "?",
+      min: temps.length ? Math.round(Math.min(...temps)) : "?"
     });
-    if (typeof precip === "number") {
-      text += t(language, "weather.precipSuffix", { percent: Math.round(precip) });
+    if (precips.length) {
+      text += t(language, "weather.precipSuffix", { percent: Math.round(Math.max(...precips)) });
     }
-    return { icon: weatherCodeToIcon(typeof code === "number" ? code : null), text };
+    return { icon: weatherCodeToIcon(code), text };
   }
 
   // 실패해도 예외를 던지지 않고 사용자에게 보여줄 안내 문구를 그대로 돌려준다 —
@@ -189,16 +222,17 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     if (!city.trim()) return { message: t(language, "weather.locationMissing"), lines: null };
     const geo = await geocodeCity(city, language);
     if (!geo) return { message: t(language, "weather.fetchFailed"), lines: null };
-    const forecast = await fetchDailyForecast(geo);
+    const forecast = await fetchHourlyForecast(geo);
     if (!forecast) return { message: t(language, "weather.fetchFailed"), lines: null };
-    const lines = [
-      buildDayLine(language, "weather.todayLabel", 0, forecast),
-      buildDayLine(language, "weather.tomorrowLabel", 1, forecast)
-    ];
+    const dates = [...new Set(forecast.time.map((time) => time.slice(0, 10)))];
+    const lines = DAY_PERIODS
+      .map((period) => buildPeriodLine(language, period, forecast, dates))
+      .filter((line): line is WeatherLine => line !== null);
+    if (lines.length === 0) return { message: t(language, "weather.fetchFailed"), lines: null };
     return { message: lines.map((line) => `${line.icon} ${line.text}`).join("\n"), lines };
   }
 
-  return { getWeatherBriefing, geocodeCity, fetchDailyForecast };
+  return { getWeatherBriefing, geocodeCity, fetchHourlyForecast };
 }
 
 export { createWeatherService, weatherCodeToIcon };

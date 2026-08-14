@@ -1319,6 +1319,7 @@ window.desktopPet.onMediaUpdate((data) => {
 function renderRestMessage(payload: PetRestStartPayload | undefined): void {
   const lines = payload?.weatherLines;
   restMessage.textContent = "";
+  restBubble.classList.toggle("weather-briefing", Boolean(lines && lines.length > 0));
   if (lines && lines.length > 0) {
     restIcon.hidden = true;
     for (const line of lines) {

@@ -11,6 +11,56 @@ function jsonResponse(body) {
 const GEOCODE_KR = { results: [{ latitude: 37.566, longitude: 126.9784, country_code: "KR" }] };
 const GEOCODE_JP = { results: [{ latitude: 35.6762, longitude: 139.6503, country_code: "JP" }] };
 
+const DATES = ["2026-08-14", "2026-08-15"];
+const RANGES = [
+  { key: "todayMorning", date: DATES[0], start: 6, end: 11 },
+  { key: "todayAfternoon", date: DATES[0], start: 12, end: 17 },
+  { key: "tomorrowMorning", date: DATES[1], start: 6, end: 11 },
+  { key: "tomorrowAfternoon", date: DATES[1], start: 12, end: 17 }
+];
+
+/**
+ * 48시간(이틀치) hourly 응답을 만든다. periods의 각 구간은 { code, tempMin, precipMax }를
+ * 받아 시간마다 값을 조금씩 다르게 채운다(온도는 시작에서 끝까지 1도씩 오르고, 강수확률은
+ * 구간 끝에서 precipMax를 찍도록) — max/min을 진짜로 여러 시간 중에서 골라내는지 검증하기
+ * 위함이다. 구간에 없는 시간이나 omitPrecip이면 해당 값은 null.
+ * @param {Record<string, { code: number, tempMin: number, precipMax: number }>} periods
+ * @param {{ omitPrecip?: boolean }} [options]
+ */
+function buildHourlyResponse(periods, options = {}) {
+  const time = [];
+  const weathercode = [];
+  const temperature_2m = [];
+  const precipitation_probability = [];
+  for (const date of DATES) {
+    for (let hour = 0; hour < 24; hour++) {
+      time.push(`${date}T${String(hour).padStart(2, "0")}:00`);
+      const range = RANGES.find((r) => r.date === date && hour >= r.start && hour <= r.end);
+      const period = range && periods[range.key];
+      if (!range || !period) {
+        weathercode.push(null);
+        temperature_2m.push(null);
+        precipitation_probability.push(null);
+        continue;
+      }
+      const offset = hour - range.start;
+      weathercode.push(period.code);
+      temperature_2m.push(period.tempMin + offset);
+      precipitation_probability.push(options.omitPrecip ? null : Math.min(100, period.precipMax - (range.end - hour)));
+    }
+  }
+  return { hourly: { time, weathercode, temperature_2m, precipitation_probability } };
+}
+
+function allNullHourlyResponse() {
+  const time = [];
+  for (const date of DATES) {
+    for (let hour = 0; hour < 24; hour++) time.push(`${date}T${String(hour).padStart(2, "0")}:00`);
+  }
+  const nulls = time.map(() => null);
+  return { hourly: { time, weathercode: nulls, temperature_2m: nulls, precipitation_probability: nulls } };
+}
+
 /**
  * @param {(url: string) => { ok: boolean, json: () => Promise<unknown> } | null} respond
  */
@@ -50,26 +100,29 @@ test("네트워크 요청이 실패해도(예외) 실패 안내로 조용히 처
   assert.deepEqual(briefing, { message: "Couldn't fetch the weather.", lines: null });
 });
 
-test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 줄을 아이콘·텍스트로 나눠 만든다", async () => {
+test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 오전·오후 4줄을 아이콘·텍스트로 나눠 만든다", async () => {
   const { service, calledUrls } = createService((url) => {
     if (url.includes("geocoding-api")) return jsonResponse(GEOCODE_JP);
-    return jsonResponse({
-      daily: {
-        time: ["2026-08-14", "2026-08-15"],
-        weathercode: [0, 61],
-        temperature_2m_max: [29.4, 24.6],
-        temperature_2m_min: [23.1, 20.9],
-        precipitation_probability_max: [10, 80]
-      }
-    });
+    return jsonResponse(buildHourlyResponse({
+      todayMorning: { code: 0, tempMin: 24, precipMax: 10 },
+      todayAfternoon: { code: 61, tempMin: 20, precipMax: 80 },
+      tomorrowMorning: { code: 1, tempMin: 17, precipMax: 5 },
+      tomorrowAfternoon: { code: 3, tempMin: 15, precipMax: 90 }
+    }));
   });
   const briefing = await service.getWeatherBriefing("Tokyo", "ko");
   assert.deepEqual(briefing.lines, [
-    { icon: "☀️", text: "오늘 최고 29°/최저 23° (강수 10%)" },
-    { icon: "🌧️", text: "내일 최고 25°/최저 21° (강수 80%)" }
+    { icon: "☀️", text: "오늘 오전 ▲29° ▼24° (강수 10%)" },
+    { icon: "🌧️", text: "오늘 오후 ▲25° ▼20° (강수 80%)" },
+    { icon: "⛅", text: "내일 오전 ▲22° ▼17° (강수 5%)" },
+    { icon: "☁️", text: "내일 오후 ▲20° ▼15° (강수 90%)" }
   ]);
   // message는 아이콘을 포함한 평문 버전(펫 창이 배지를 못 그리는 경우의 대비책)으로 유지한다.
-  assert.equal(briefing.message, "☀️ 오늘 최고 29°/최저 23° (강수 10%)\n🌧️ 내일 최고 25°/최저 21° (강수 80%)");
+  assert.equal(
+    briefing.message,
+    "☀️ 오늘 오전 ▲29° ▼24° (강수 10%)\n🌧️ 오늘 오후 ▲25° ▼20° (강수 80%)\n" +
+    "⛅ 내일 오전 ▲22° ▼17° (강수 5%)\n☁️ 내일 오후 ▲20° ▼15° (강수 90%)"
+  );
   assert.ok(calledUrls.every((url) => !url.includes("models=")));
 });
 
@@ -77,32 +130,29 @@ test("대한민국은 kma_seamless 모델을 먼저 요청하고, 값이 있으�
   const { service, calledUrls } = createService((url) => {
     if (url.includes("geocoding-api")) return jsonResponse(GEOCODE_KR);
     if (url.includes("models=kma_seamless")) {
-      return jsonResponse({
-        daily: {
-          time: ["2026-08-14", "2026-08-15"],
-          weathercode: [3, 3],
-          temperature_2m_max: [27, 28],
-          temperature_2m_min: [22, 23],
-          precipitation_probability_max: [null, null]
-        }
-      });
+      // kma_seamless는 강수확률을 안 줄 때가 있다(실측) — omitPrecip으로 그 상황을 흉내낸다.
+      return jsonResponse(buildHourlyResponse({
+        todayMorning: { code: 3, tempMin: 20, precipMax: 0 },
+        todayAfternoon: { code: 3, tempMin: 21, precipMax: 0 },
+        tomorrowMorning: { code: 3, tempMin: 22, precipMax: 0 },
+        tomorrowAfternoon: { code: 3, tempMin: 23, precipMax: 0 }
+      }, { omitPrecip: true }));
     }
     // 기본 모델(폴백)이 불렸다면 kma 결과와 확실히 구별되는 값을 준다.
-    return jsonResponse({
-      daily: {
-        time: ["2026-08-14", "2026-08-15"],
-        weathercode: [0, 0],
-        temperature_2m_max: [99, 99],
-        temperature_2m_min: [99, 99],
-        precipitation_probability_max: [0, 0]
-      }
-    });
+    return jsonResponse(buildHourlyResponse({
+      todayMorning: { code: 0, tempMin: 99, precipMax: 0 },
+      todayAfternoon: { code: 0, tempMin: 99, precipMax: 0 },
+      tomorrowMorning: { code: 0, tempMin: 99, precipMax: 0 },
+      tomorrowAfternoon: { code: 0, tempMin: 99, precipMax: 0 }
+    }));
   });
   const briefing = await service.getWeatherBriefing("Seoul", "ko");
-  // kma_seamless 값(27/22)을 썼는지, precip이 null이라 강수 문구가 빠졌는지 함께 확인.
+  // kma_seamless 값(20~28)을 썼는지, precip이 없어 강수 문구가 빠졌는지 함께 확인.
   assert.deepEqual(briefing.lines, [
-    { icon: "☁️", text: "오늘 최고 27°/최저 22°" },
-    { icon: "☁️", text: "내일 최고 28°/최저 23°" }
+    { icon: "☁️", text: "오늘 오전 ▲25° ▼20°" },
+    { icon: "☁️", text: "오늘 오후 ▲26° ▼21°" },
+    { icon: "☁️", text: "내일 오전 ▲27° ▼22°" },
+    { icon: "☁️", text: "내일 오후 ▲28° ▼23°" }
   ]);
   assert.ok(calledUrls.some((url) => url.includes("models=kma_seamless")));
 });
@@ -110,31 +160,20 @@ test("대한민국은 kma_seamless 모델을 먼저 요청하고, 값이 있으�
 test("kma_seamless가 전부 null이면(모델 미제공 시각) 기본 모델로 물러난다", async () => {
   const { service } = createService((url) => {
     if (url.includes("geocoding-api")) return jsonResponse(GEOCODE_KR);
-    if (url.includes("models=kma_seamless")) {
-      return jsonResponse({
-        daily: {
-          time: ["2026-08-14", "2026-08-15"],
-          weathercode: [null, null],
-          temperature_2m_max: [null, null],
-          temperature_2m_min: [null, null],
-          precipitation_probability_max: [null, null]
-        }
-      });
-    }
-    return jsonResponse({
-      daily: {
-        time: ["2026-08-14", "2026-08-15"],
-        weathercode: [1, 2],
-        temperature_2m_max: [26, 27],
-        temperature_2m_min: [21, 22],
-        precipitation_probability_max: [40, 50]
-      }
-    });
+    if (url.includes("models=kma_seamless")) return jsonResponse(allNullHourlyResponse());
+    return jsonResponse(buildHourlyResponse({
+      todayMorning: { code: 1, tempMin: 21, precipMax: 40 },
+      todayAfternoon: { code: 1, tempMin: 22, precipMax: 45 },
+      tomorrowMorning: { code: 2, tempMin: 23, precipMax: 50 },
+      tomorrowAfternoon: { code: 2, tempMin: 24, precipMax: 55 }
+    }));
   });
   const briefing = await service.getWeatherBriefing("Seoul", "ko");
   assert.deepEqual(briefing.lines, [
-    { icon: "⛅", text: "오늘 최고 26°/최저 21° (강수 40%)" },
-    { icon: "⛅", text: "내일 최고 27°/최저 22° (강수 50%)" }
+    { icon: "⛅", text: "오늘 오전 ▲26° ▼21° (강수 40%)" },
+    { icon: "⛅", text: "오늘 오후 ▲27° ▼22° (강수 45%)" },
+    { icon: "⛅", text: "내일 오전 ▲28° ▼23° (강수 50%)" },
+    { icon: "⛅", text: "내일 오후 ▲29° ▼24° (강수 55%)" }
   ]);
 });
 

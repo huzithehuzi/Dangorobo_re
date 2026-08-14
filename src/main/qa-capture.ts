@@ -322,15 +322,19 @@ function capturePetWindow(
     if (flags.rest) {
       const language = ctx.getSettings().language;
       // --capture-rest-weather를 같이 주면 날씨 배지 레이아웃(weatherLines)을 찍는다 —
-      // 실제 API 호출 없이 고정 샘플로, 시계 아이콘이 빠지고 배지 두 줄이 나와야 한다.
+      // 실제 API 호출 없이 고정 샘플로, 시계 아이콘이 빠지고 오늘/내일 오전·오후 4줄이
+      // 나와야 한다.
       if (argv.includes("--capture-rest-weather")) {
+        const lines = [
+          { icon: "☀️", text: "오늘 오전 ▲27° ▼20° (강수 10%)" },
+          { icon: "🌦️", text: "오늘 오후 ▲28° ▼22° (강수 60%)" },
+          { icon: "⛅", text: "내일 오전 ▲25° ▼19° (강수 30%)" },
+          { icon: "🌧️", text: "내일 오후 ▲24° ▼21° (강수 80%)" }
+        ];
         ctx.startRestAlert({
           title: ctx.translate(language, "weather.alertTitle"),
-          message: "☀️ 오늘 최고 27°/최저 22°\n🌦️ 내일 최고 28°/최저 22°",
-          weatherLines: [
-            { icon: "☀️", text: "오늘 최고 27°/최저 22° (강수 20%)" },
-            { icon: "🌦️", text: "내일 최고 28°/최저 22° (강수 78%)" }
-          ]
+          message: lines.map((line) => `${line.icon} ${line.text}`).join("\n"),
+          weatherLines: lines
         });
       } else {
         ctx.startRestAlert({
