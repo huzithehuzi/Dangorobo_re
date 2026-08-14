@@ -126,6 +126,39 @@ test("일본처럼 KR이 아니면 기본 모델만 조회하고 오늘·내일 
   assert.ok(calledUrls.every((url) => !url.includes("models=")));
 });
 
+test("구간 도중 날씨가 궂어지면 강수확률 최고치와 일치하게 가장 궂은 아이콘을 쓴다", async () => {
+  // 오전 6~10시는 맑다가(코드 0) 11시에 갑자기 비(코드 61)로 바뀐다 — 강수확률도 11시에
+  // 급등. 대표 시각 하나(예: 9시)만 보고 아이콘을 정하면 "강수 100%인데 해가 떴다"는
+  // 모순이 생긴다(실측 사용자 보고, 2026-08) — 구간 전체에서 가장 궂은 조건을 써야 한다.
+  const time = /** @type {string[]} */ ([]);
+  const weathercode = /** @type {Array<number | null>} */ ([]);
+  const temperature_2m = /** @type {Array<number | null>} */ ([]);
+  const precipitation_probability = /** @type {Array<number | null>} */ ([]);
+  for (let hour = 0; hour < 24; hour++) {
+    time.push(`2026-08-14T${String(hour).padStart(2, "0")}:00`);
+    if (hour >= 6 && hour <= 11) {
+      const isLastHour = hour === 11;
+      weathercode.push(isLastHour ? 61 : 0);
+      temperature_2m.push(20 + (hour - 6));
+      precipitation_probability.push(isLastHour ? 100 : 5);
+    } else {
+      weathercode.push(null);
+      temperature_2m.push(null);
+      precipitation_probability.push(null);
+    }
+  }
+  const { service } = createService((url) => (
+    url.includes("geocoding-api")
+      ? jsonResponse(GEOCODE_JP)
+      : jsonResponse({ hourly: { time, weathercode, temperature_2m, precipitation_probability } })
+  ));
+  const briefing = await service.getWeatherBriefing("Tokyo", "ko");
+  const todayMorning = briefing.lines?.[0];
+  assert.ok(todayMorning, "오늘 오전 줄이 있어야 한다");
+  assert.equal(todayMorning.icon, "🌧️");
+  assert.equal(todayMorning.text, "오늘 오전 ▲25° ▼20° (강수 100%)");
+});
+
 test("대한민국은 kma_seamless 모델을 먼저 요청하고, 값이 있으면 그걸 쓴다", async () => {
   const { service, calledUrls } = createService((url) => {
     if (url.includes("geocoding-api")) return jsonResponse(GEOCODE_KR);

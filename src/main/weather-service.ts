@@ -58,16 +58,20 @@ type WeatherLine = { icon: string; text: string };
 // lines는 성공했을 때만 채워진다. 실패(위치 미설정·조회 실패)하면 null이고 message만 보여준다.
 type WeatherBriefing = { message: string; lines: WeatherLine[] | null };
 
-// dayOffset 0=오늘, 1=내일. anchorHour는 대표 날씨 코드를 뽑을 시각(구간 중간값) —
-// 오전 6~11시는 9시, 오후 12~17시는 15시로 잡았다.
+// dayOffset 0=오늘, 1=내일.
 const DAY_PERIODS = [
-  { labelKey: "weather.todayMorningLabel", dayOffset: 0, startHour: 6, endHour: 11, anchorHour: 9 },
-  { labelKey: "weather.todayAfternoonLabel", dayOffset: 0, startHour: 12, endHour: 17, anchorHour: 15 },
-  { labelKey: "weather.tomorrowMorningLabel", dayOffset: 1, startHour: 6, endHour: 11, anchorHour: 9 },
-  { labelKey: "weather.tomorrowAfternoonLabel", dayOffset: 1, startHour: 12, endHour: 17, anchorHour: 15 }
+  { labelKey: "weather.todayMorningLabel", dayOffset: 0, startHour: 6, endHour: 11 },
+  { labelKey: "weather.todayAfternoonLabel", dayOffset: 0, startHour: 12, endHour: 17 },
+  { labelKey: "weather.tomorrowMorningLabel", dayOffset: 1, startHour: 6, endHour: 11 },
+  { labelKey: "weather.tomorrowAfternoonLabel", dayOffset: 1, startHour: 12, endHour: 17 }
 ] as const;
 
-const WEATHER_ICONS = {
+// 순서 자체가 심각도다(맑음이 제일 가볍고 뇌우가 제일 무겁다) — 구간 안에서 가장 심한
+// 조건을 뽑을 때 이 배열의 인덱스를 그대로 비교 기준으로 쓴다.
+const WEATHER_CATEGORIES = ["clear", "partlyCloudy", "cloudy", "fog", "drizzle", "rain", "snow", "thunderstorm"] as const;
+type WeatherCategory = typeof WEATHER_CATEGORIES[number];
+
+const WEATHER_ICONS: Record<WeatherCategory, string> = {
   clear: "☀️",
   partlyCloudy: "⛅",
   cloudy: "☁️",
@@ -76,20 +80,36 @@ const WEATHER_ICONS = {
   rain: "🌧️",
   snow: "❄️",
   thunderstorm: "⛈️"
-} as const;
+};
 
-// WMO 날씨 코드(Open-Meteo daily.weathercode) → 이모지 카테고리.
+// WMO 날씨 코드(Open-Meteo weathercode) → 카테고리.
 // https://open-meteo.com/en/docs 의 WMO Weather interpretation codes 표 기준.
+function weatherCodeToCategory(code: number | null): WeatherCategory {
+  if (code === 0) return "clear";
+  if (code === 1 || code === 2) return "partlyCloudy";
+  if (code === 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if ([51, 53, 55, 56, 57].includes(code as number)) return "drizzle";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code as number)) return "rain";
+  if ([71, 73, 75, 77, 85, 86].includes(code as number)) return "snow";
+  if ([95, 96, 99].includes(code as number)) return "thunderstorm";
+  return "cloudy";
+}
+
 function weatherCodeToIcon(code: number | null): string {
-  if (code === 0) return WEATHER_ICONS.clear;
-  if (code === 1 || code === 2) return WEATHER_ICONS.partlyCloudy;
-  if (code === 3) return WEATHER_ICONS.cloudy;
-  if (code === 45 || code === 48) return WEATHER_ICONS.fog;
-  if ([51, 53, 55, 56, 57].includes(code as number)) return WEATHER_ICONS.drizzle;
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code as number)) return WEATHER_ICONS.rain;
-  if ([71, 73, 75, 77, 85, 86].includes(code as number)) return WEATHER_ICONS.snow;
-  if ([95, 96, 99].includes(code as number)) return WEATHER_ICONS.thunderstorm;
-  return WEATHER_ICONS.cloudy;
+  return WEATHER_ICONS[weatherCodeToCategory(code)];
+}
+
+// 구간 안 여러 시간 중 가장 심한 조건의 코드를 뽑는다. 강수확률처럼 최고/최저 기온도
+// 구간 전체에서 뽑는데 아이콘만 특정 시각(예: 오전 9시) 하나로 정하면, "강수 100%"인데
+// 그 9시엔 아직 안 와서 맑음 아이콘이 뜨는 모순이 생긴다(실측, 2026-08 사용자 보고).
+function worstCodeInBucket(codes: number[]): number | null {
+  if (codes.length === 0) return null;
+  return codes.reduce((worst, current) => (
+    WEATHER_CATEGORIES.indexOf(weatherCodeToCategory(current)) > WEATHER_CATEGORIES.indexOf(weatherCodeToCategory(worst))
+      ? current
+      : worst
+  ));
 }
 
 function createWeatherService(deps: WeatherServiceDeps = {}) {
@@ -199,10 +219,8 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
 
     const temps = indices.map((i) => forecast.temperature[i]).filter((v): v is number => typeof v === "number");
     const precips = indices.map((i) => forecast.precip[i]).filter((v): v is number => typeof v === "number");
-    const anchorIndex = forecast.time.indexOf(`${date}T${String(period.anchorHour).padStart(2, "0")}:00`);
-    const anchorCode = anchorIndex >= 0 ? forecast.weathercode[anchorIndex] : null;
-    const fallbackCode = indices.map((i) => forecast.weathercode[i]).find((code): code is number => typeof code === "number");
-    const code = typeof anchorCode === "number" ? anchorCode : (fallbackCode ?? null);
+    const codes = indices.map((i) => forecast.weathercode[i]).filter((v): v is number => typeof v === "number");
+    const code = worstCodeInBucket(codes);
 
     let text = t(language, "weather.dayLine", {
       label: t(language, period.labelKey),
