@@ -246,10 +246,25 @@ function createFavoritesWindowController(deps: FavoritesWindowDependencies) {
     dockWindow.webContents.send("favoritesDock:expanded", { expanded: true, cursorMode: true });
   }
 
+  /**
+   * cursor 방식 파이가 지금 실제로 떠 있는가.
+   *
+   * `dockExpanded` 플래그가 아니라 **창의 표시 상태**를 본다. 플래그는 화면과 어긋날 수 있고
+   * (blur 경합, 렌더러가 못 받은 이벤트, 모드 전환 중 창 재사용), 한 번 어긋나면 아래
+   * closeCursorPie()가 조용히 돌아가 **가운데 닫기 버튼·Esc·바깥 클릭이 전부 아무 일도
+   * 안 하는** 상태가 된다("닫기 버튼이 동작을 안 함" 리포트). 화면에 떠 있는지는 창에게 묻는 게
+   * 언제나 맞다.
+   */
+  function isCursorPieOpen(): boolean {
+    return pieCursorMode() && alive(dockWindow) && dockWindow.isVisible();
+  }
+
   function closeCursorPie() {
-    if (!dockExpanded) return;
+    // 플래그는 먼저 내린다 — 창이 이미 없어도 상태는 맞춰 둔다.
     dockExpanded = false;
     if (!alive(dockWindow)) return;
+    // 이미 숨어 있으면 중복 통지만 건너뛴다. 판단 기준이 플래그가 아니라 창이라는 점이 중요하다.
+    if (!dockWindow.isVisible()) return;
     dockWindow.webContents.send("favoritesDock:expanded", { expanded: false, cursorMode: true });
     dockWindow.hide();
   }
@@ -365,6 +380,7 @@ function createFavoritesWindowController(deps: FavoritesWindowDependencies) {
     window: () => favoritesWindow,
     dockWindow: () => dockWindow,
     isDockExpanded: () => dockExpanded,
+    isCursorPieOpen,
     pieCursorMode,
     createWindow,
     openWindow,

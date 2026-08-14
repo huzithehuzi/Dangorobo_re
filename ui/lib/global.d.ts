@@ -28,6 +28,11 @@ interface WindowAppearanceSettings {
   uiFontSizePercent?: number;
   uiFontEnabled?: boolean;
   uiFontPreset?: string;
+  /**
+   * 외형은 아니지만 창이 스스로 동작을 정할 때 본다 — 플로팅 독은 이 값으로 자기가
+   * "커서 파이"인지 판단한다. 이벤트 한 번을 놓쳐도 설정은 언제든 다시 물어볼 수 있다.
+   */
+  favoritesDisplayMode?: string;
 }
 
 interface PetI18nApi {

@@ -109,11 +109,13 @@ export default function App() {
   const [language, setLanguage] = useState(() => window.PetI18n.DEFAULT_LANGUAGE);
   const receivedEventRef = useRef(false);
   const expandedRef = useRef(false);
+  const cursorModeRef = useRef(false);
   const dragOriginRef = useRef<{ x: number; y: number } | null>(null);
   const draggingRef = useRef(false);
   const ringRef = useRef<HTMLDivElement>(null);
 
   expandedRef.current = expanded;
+  cursorModeRef.current = cursorMode;
 
   const tt = useCallback(
     (key: string, vars?: Record<string, string | number>) => window.PetI18n.t(language, key, vars),
@@ -131,6 +133,7 @@ export default function App() {
     });
     window.desktopPet.onSettingsUpdated((settings) => {
       setLanguage(applyWindowAppearance(settings, { zoom: false }));
+      setCursorMode(settings?.favoritesDisplayMode === "cursor");
     });
     Promise.all([
       window.desktopPet.getSettings(),
@@ -139,11 +142,18 @@ export default function App() {
       if (!receivedEventRef.current) {
         setItems(Array.isArray(payload?.items) ? payload.items : []);
       }
+      // 표시 방식은 설정에서도 읽는다 — favoritesDock:expanded 한 번을 못 받으면(창이 아직
+      // 로드 중일 때 도착) 가운데 버튼이 "닫기"가 아니라 dock용 런처로 동작해 아무 일도
+      // 일어나지 않는다. 설정은 창이 살아 있는 한 언제든 다시 물어볼 수 있는 값이다.
+      setCursorMode(settings?.favoritesDisplayMode === "cursor");
       setLanguage(applyWindowAppearance(settings, { zoom: false }));
       window.PetUiMotion?.markReady();
     });
+    // cursor 방식에서는 펼침 상태를 따지지 않는다 — 이 창이 키를 받는다는 것 자체가 떠 있다는
+    // 뜻이고, 상태가 어긋났을 때 Esc까지 같이 죽으면 닫을 방법이 사라진다. 닫기는 멱등하다.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && expandedRef.current) window.desktopPet.setFavoritesDockExpanded(false);
+      if (event.key !== "Escape") return;
+      if (expandedRef.current || cursorModeRef.current) window.desktopPet.setFavoritesDockExpanded(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

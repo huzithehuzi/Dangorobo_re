@@ -862,7 +862,8 @@ function toggleFavoritesUi() {
   }
   if (settings.favoritesDisplayMode === "cursor") {
     // 커서 방식은 "창 on/off"가 아니라 "지금 커서 자리에 열기"다. 이미 떠 있으면 닫는다.
-    if (favoritesWindows.isDockExpanded()) favoritesWindows.closeCursorPie();
+    // 판단은 플래그가 아니라 창의 표시 상태로 한다(isCursorPieOpen 주석 참고).
+    if (favoritesWindows.isCursorPieOpen()) favoritesWindows.closeCursorPie();
     else favoritesWindows.openCursorPie();
     return;
   }
@@ -1328,9 +1329,7 @@ const inputMonitor = createInputMonitor({
   // 파이가 실제로 떠 있을 때만 창을 넘긴다 — 접힌 뒤에도 넘기면 그 뒤의 모든 클릭이
   // "바깥 클릭"으로 잡혀 펫 드래그가 통째로 막힌다.
   favoritesCursorPieWindow: () => (
-    favoritesWindows.pieCursorMode() && favoritesWindows.isDockExpanded()
-      ? favoritesWindows.dockWindow()
-      : null
+    favoritesWindows.isCursorPieOpen() ? favoritesWindows.dockWindow() : null
   ),
   closeFavoritesCursorPie: () => favoritesWindows.closeCursorPie(),
   getCursorPoint: () => screen.getCursorScreenPoint(),

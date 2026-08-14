@@ -32,6 +32,7 @@ class FakeBrowserWindow extends EventEmitter {
     this.options = options;
     this.webContents = new FakeWebContents();
     this.destroyed = false;
+    this.visible = options.show !== false;
     /** 창에 건 조작을 순서대로 남긴다 — show/destroy 같은 것은 순서가 곧 계약이다. */
     this.operations = /** @type {string[]} */ ([]);
     /** @type {Array<{ x: number, y: number, width: number, height: number }>} */
@@ -48,11 +49,14 @@ class FakeBrowserWindow extends EventEmitter {
   }
 
   isDestroyed() { return this.destroyed; }
+  // 표시 상태를 실제로 추적한다 — cursor 방식 파이가 "떠 있는가"를 플래그가 아니라 창에
+  // 묻도록 바뀌었으므로, 가짜 창도 show/hide를 반영해야 그 계약을 검증할 수 있다.
+  isVisible() { return this.visible; }
   setAlwaysOnTop() {}
-  show() { this.operations.push("show"); }
-  showInactive() { this.operations.push("showInactive"); }
+  show() { this.operations.push("show"); this.visible = true; }
+  showInactive() { this.operations.push("showInactive"); this.visible = true; }
   focus() { this.operations.push("focus"); }
-  hide() { this.operations.push("hide"); }
+  hide() { this.operations.push("hide"); this.visible = false; }
   getPosition() { return [this.bounds.x, this.bounds.y]; }
   getSize() { return [this.bounds.width, this.bounds.height]; }
   getBounds() { return { ...this.bounds }; }
@@ -441,6 +445,37 @@ test("이미 닫힌 파이를 또 닫아도 아무 일도 하지 않는다", () 
 
   h.controller.closeCursorPie();
   assert.equal(sent(dock).length, messages);
+});
+
+// "가운데 닫기 버튼이 아무 일도 안 한다"의 구조적 원인. 예전 closeCursorPie()는 dockExpanded
+// 플래그가 false면 곧바로 돌아갔는데, 그 플래그가 화면과 어긋나면 닫기 경로가 전부 죽었다.
+test("플래그가 화면과 어긋나도 떠 있는 파이는 닫힌다", () => {
+  const h = createHarness({ settings: { favoritesDisplayMode: "cursor" } });
+  h.controller.openCursorPie();
+  const dock = /** @type {any} */ (h.controller.dockWindow());
+  // 창은 그대로 떠 있는데 플래그만 내려간 상태를 만든다(blur 경합 등으로 실제 일어난다).
+  dock.emit("blur");
+  dock.visible = true;
+  assert.equal(h.controller.isDockExpanded(), false, "플래그는 내려가 있다");
+  assert.equal(h.controller.isCursorPieOpen(), true, "그래도 화면에는 떠 있다");
+
+  const hidesBefore = dock.operations.filter((/** @type {string} */ op) => op === "hide").length;
+  h.controller.setDockExpanded(false);
+  const hidesAfter = dock.operations.filter((/** @type {string} */ op) => op === "hide").length;
+  assert.equal(hidesAfter, hidesBefore + 1, "떠 있는 창은 반드시 숨겨야 한다");
+  assert.deepEqual(sent(dock).at(-1)?.payload, { expanded: false, cursorMode: true });
+});
+
+// 단축키 토글도 같은 기준을 쓴다 — 플래그를 보면 "열려 있는데 또 여는" 상태가 된다.
+test("떠 있는 파이 여부는 플래그가 아니라 창에게 묻는다", () => {
+  const h = createHarness({ settings: { favoritesDisplayMode: "cursor" } });
+  assert.equal(h.controller.isCursorPieOpen(), false, "만들기 전");
+  h.controller.createDockWindow({ show: false });
+  assert.equal(h.controller.isCursorPieOpen(), false, "숨겨 만들어 둔 상태");
+  h.controller.openCursorPie();
+  assert.equal(h.controller.isCursorPieOpen(), true);
+  h.controller.closeCursorPie();
+  assert.equal(h.controller.isCursorPieOpen(), false);
 });
 
 test("바깥을 클릭해 포커스를 잃으면 cursor 방식만 닫힌다", () => {
