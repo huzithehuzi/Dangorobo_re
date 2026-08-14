@@ -43,8 +43,14 @@ body {
   transition: box-shadow 140ms ease, filter 140ms ease, transform 90ms ease;
 }
 .fab:hover { filter: brightness(1.08); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.32); }
-/* 누름 반응. translate를 그대로 다시 써야 한다 — scale만 쓰면 가운데 정렬이 풀려 튄다. */
-.fab:active { transform: translate(-50%, -50%) scale(0.92); }
+/* 누름 반응. translate를 그대로 다시 써야 한다 — scale만 쓰면 가운데 정렬이 풀려 튄다.
+   ⚠ 명시도까지 이겨야 한다. 상대는 window-base.css의 `button:active:not(:disabled)`(0,2,1)이라
+   `.fab:active`(0,2,0)로는 **진다** — 그러면 누르는 순간 버튼이 translate(-50%, -50%)를 잃고
+   자기 크기의 절반만큼 오른쪽 아래로 튄다(실측: 52px 버튼이 +27.56px, 계산된 transform이
+   `matrix(0.94,0,0,0.94,0,0)`으로 바뀐다). transition 때문에 "스르륵 미끄러지듯" 보인다.
+   `.gradient-stop`이 2026-08-08에 똑같이 당했고 같은 처방을 썼다 — 앞에 부모 클래스를 붙여
+   (0,3,0)으로 올린다. */
+.dock .fab:active { transform: translate(-50%, -50%) scale(0.92); }
 .dock.dragging .fab { cursor: grabbing; }
 
 /* 3x3 점 그리드(런처 느낌). 펼치면 45도 돌면서 살짝 오므라들어 "닫기"처럼 보인다. */
