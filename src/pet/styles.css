@@ -100,8 +100,8 @@ body.dev-debug-bounds { outline: 1px dashed #7CFC00; outline-offset: -1px; }
   line-height: 1;
 }
 .speech-bubble .weather-icon-badge svg {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   display: block;
 }
 .speech-bubble .weather-line-text {
