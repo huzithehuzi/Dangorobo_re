@@ -436,6 +436,8 @@
     "settings.conversation.memoryTurnsLabel": { ko: "기억할 최근 대화", en: "Recent turns to remember", ja: "記憶する最近の会話" },
     "settings.conversation.turnsUnit": { ko: "턴", en: "turns", ja: "ターン" },
     "settings.conversation.memoryNote": { ko: "켜두면 설정한 수의 최근 질문·답변을 참고해 답합니다. 다른 주제를 물으면 이전 대화에 얽매이지 않고 자연스럽게 새 주제로 넘어갑니다.", en: "When on, the pet references the chosen number of recent Q&As. If you ask something unrelated, it naturally moves to the new topic without being bound by the old one.", ja: "オンにすると、設定した数の直近の質問・回答を参考に答えます。別の話題を聞くと、前の会話にとらわれず自然に新しい話題に移ります。" },
+    "settings.conversation.memoryTabToggle": { ko: "'기억 관리' 탭 표시 (고급 사용자 전용)", en: "Show 'Memory Management' tab (advanced users only)", ja: "「メモリー管理」タブを表示(上級ユーザー向け)" },
+    "settings.conversation.memoryTabToggleNote": { ko: "펫이 저장한 장기 기억을 직접 조회·삭제하는 탭입니다. 대부분의 경우 펫에게 맡겨두는 편이 자연스러워 기본적으로 숨겨져 있습니다.", en: "This tab lets you directly view and delete the pet's long-term memories. It's hidden by default since most people find it more natural to just let the pet manage its own memory.", ja: "ペットが保存した長期記憶を直接確認・削除できるタブです。多くの場合ペットに任せておく方が自然なため、初期状態では非表示です。" },
     "settings.conversation.petChatHeading": { ko: "펫이 먼저 말 걸기", en: "Pet Speaks First", ja: "ペットから話しかける" },
     "settings.conversation.petChatToggle": { ko: "랜덤 주기로 먼저 말 걸기 사용", en: "Enable random-interval opener", ja: "ランダム間隔で話しかけを使用" },
     "settings.conversation.petChatMinLabel": { ko: "최소 주기", en: "Minimum interval", ja: "最短間隔" },

@@ -18,7 +18,7 @@ import { applyBubbleTheme, applyUiFont, applyUiFontSize, applyUiScale } from "..
 
 const TAB_GROUPS = [
   { labelKey: "settings.tabGroup.pet", tabs: [{ id: "appearance", labelKey: "settings.tab.appearance" }, { id: "customization", labelKey: "settings.tab.customization" }] },
-  { labelKey: "settings.tabGroup.talk", tabs: [{ id: "conversation", labelKey: "settings.tab.conversation" }, { id: "memory", labelKey: "settings.tab.memory" }] },
+  { labelKey: "settings.tabGroup.talk", tabs: [{ id: "conversation", labelKey: "settings.tab.conversation" }] },
   { labelKey: "settings.tabGroup.interaction", tabs: [{ id: "alerts", labelKey: "settings.tab.alerts" }, { id: "shortcuts", labelKey: "settings.tab.shortcuts" }, { id: "favorites", labelKey: "settings.tab.favorites" }, { id: "player", labelKey: "settings.tab.player" }] },
   { labelKey: "settings.tabGroup.app", tabs: [{ id: "general", labelKey: "settings.tab.general" }, { id: "ui", labelKey: "settings.tab.ui" }, { id: "tray", labelKey: "settings.tab.tray" }] }
 ];
@@ -89,6 +89,13 @@ export default function App() {
   } = useCustomizationState();
   const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem("settings-active-tab") || "appearance");
   const [refreshMemoryTick, setRefreshMemoryTick] = useState(0);
+  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이 켜져 있을 때만 목록에 넣는다.
+  const tabGroups = useMemo(() => {
+    if (!d?.memoryTabVisible) return TAB_GROUPS;
+    return TAB_GROUPS.map((group) => group.labelKey !== "settings.tabGroup.talk"
+      ? group
+      : { ...group, tabs: [...group.tabs, { id: "memory", labelKey: "settings.tab.memory" }] });
+  }, [d?.memoryTabVisible]);
   // 로드·수정·저장 수명주기는 use-settings-lifecycle.ts가 소유한다(dirty를 셋이 공유한다).
   const {
     loadStatus, saveError, saveSuccess,
@@ -168,6 +175,11 @@ export default function App() {
   useEffect(() => {
     if (loadStatus !== "loading") window.PetUiMotion?.markReady();
   }, [loadStatus]);
+
+  // 토글을 꺼서 "기억 관리" 탭이 목록에서 사라지면 그 탭에 머물러 있지 않게 대화 탭으로 옮긴다.
+  useEffect(() => {
+    if (activeTab === "memory" && d && !d.memoryTabVisible) activateTab("conversation");
+  }, [activeTab, d?.memoryTabVisible]);
 
   // 프리셋 목록이 처음 로드되면 썸네일을 요청한다(펫 창이 그려주므로 비동기).
   useEffect(() => {
@@ -310,7 +322,7 @@ export default function App() {
             <p>{tt("settings.subtitle")}</p>
           </header>
           <nav className="settings-tabs" role="tablist" aria-label={tt("settings.tabsAriaLabel")}>
-            {TAB_GROUPS.map((group) => (
+            {tabGroups.map((group) => (
               <div key={group.labelKey} className="settings-tab-group">
                 <span className="settings-tab-group-label">{tt(group.labelKey)}</span>
                 {group.tabs.map((tab) => (

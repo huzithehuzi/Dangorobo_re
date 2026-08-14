@@ -114,6 +114,7 @@ export interface Draft {
   assistantCustomPersonality: string;
   assistantMemoryEnabled: boolean;
   assistantMemoryTurns: string;
+  memoryTabVisible: boolean;
   assistantUserNickname: string;
   assistantPetNickname: string;
   petChatEnabled: boolean;
@@ -291,6 +292,7 @@ export function draftFromSettings(s: AnySettings): Draft {
     assistantCustomPersonality: str(s.assistantCustomPersonality, ""),
     assistantMemoryEnabled: s.assistantMemoryEnabled === true,
     assistantMemoryTurns: str(s.assistantMemoryTurns ?? 3, "3"),
+    memoryTabVisible: s.memoryTabVisible === true,
     assistantUserNickname: str(s.assistantUserNickname, ""),
     assistantPetNickname: str(s.assistantPetNickname, ""),
     petChatEnabled: s.petChatEnabled === true,
@@ -424,6 +426,7 @@ export function buildPayload(d: Draft, c: ComplexState, defaultFavoriteName: str
     assistantCustomPersonality: d.assistantCustomPersonality,
     assistantMemoryEnabled: d.assistantMemoryEnabled,
     assistantMemoryTurns: Number(d.assistantMemoryTurns),
+    memoryTabVisible: d.memoryTabVisible,
     assistantUserNickname: d.assistantUserNickname,
     assistantPetNickname: d.assistantPetNickname,
     petChatEnabled: d.petChatEnabled,

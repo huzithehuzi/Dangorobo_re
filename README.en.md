@@ -149,7 +149,8 @@ and it's off by default.
   pitch are adjustable.
 - **Memory**: turn this on and it keeps the conversation going across sessions, gradually
   remembering things like your preferences and habits. You can see and delete exactly what it
-  remembers from the **Memory** tab in settings.
+  remembers from the **Memory** tab in settings, which appears once you turn on "Show 'Memory
+  Management' tab (advanced users only)" in the Chat tab.
 - Everything you've said to each other can be searched and deleted from **Q&A History** in the
   right-click menu.
 

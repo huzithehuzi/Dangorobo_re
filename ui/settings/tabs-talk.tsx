@@ -69,6 +69,8 @@ export function ConversationTab() {
         disabled={!d.assistantMemoryEnabled}
       />
       <Note>{tt("settings.conversation.memoryNote")}</Note>
+      <ToggleRow checked={d.memoryTabVisible} onChange={(checked) => set("memoryTabVisible", checked)} label={tt("settings.conversation.memoryTabToggle")} />
+      <Note>{tt("settings.conversation.memoryTabToggleNote")}</Note>
       <div className="settings-group">
         <h2>{tt("settings.conversation.petChatHeading")}</h2>
         <ToggleRow checked={d.petChatEnabled} onChange={(checked) => set("petChatEnabled", checked)} label={tt("settings.conversation.petChatToggle")} />
