@@ -192,6 +192,7 @@ function createHarness(options = {}) {
     mediaPlayerHidden: true,
     squishAmount: 0,
     wobbleAmount: 0,
+    dragLeanAngle: 0,
     /** @type {any} */
     routineFrame: null
   };
@@ -281,7 +282,7 @@ function createHarness(options = {}) {
       }
     },
     dragLeanMotion: {
-      advance: () => { log.push("dragLean"); return control.dragLeanAngle ?? 0; }
+      advance: () => { log.push("dragLean"); return control.dragLeanAngle; }
     },
     interactionState: {
       getTargetTypingIntensity: () => control.targetTyping,

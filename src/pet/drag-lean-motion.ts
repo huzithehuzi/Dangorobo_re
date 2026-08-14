@@ -9,8 +9,8 @@ import * as THREE from "three";
 
 const LEAN_STIFFNESS = 45;      // 클수록 목표 각도를 더 빠르게 뒤쫓는다
 const LEAN_DAMPING = 7;         // 임계감쇠(2*sqrt(45)≈13.4)보다 작게 잡아 진자처럼 오버슈트한다
-const LEAN_VELOCITY_GAIN = 0.00028; // 가로 속도(px/s) → 목표 각도(rad) 변환 계수
-const LEAN_MAX_ANGLE = 0.28;    // 최대 기울임(rad), 약 16도
+const LEAN_VELOCITY_GAIN = 0.00052; // 가로 속도(px/s) → 목표 각도(rad) 변환 계수(체감상 더 크게 기울도록 상향, 2026-08-15)
+const LEAN_MAX_ANGLE = 0.42;    // 최대 기울임(rad), 약 24도(2026-08-15 상향)
 
 function createDragLeanMotion() {
   let leanAngle = 0;
