@@ -26,7 +26,7 @@
   // (eye만 0을 허용하지 않는다 — 눈은 항상 하나를 고른다).
   const FACE_PATTERN_COUNT = 6;
   const FACE_COSMETIC_COUNT = 4;
-  const FACE_EYE_STYLE_COUNT = 2;
+  const FACE_EYE_STYLE_COUNT = 5;
   const FACE_MOUTH_STYLE_COUNT = 2;
   const BODY_COSTUME_COUNT = 6;
 
