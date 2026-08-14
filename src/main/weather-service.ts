@@ -93,8 +93,8 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     }
   }
 
-  async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
-    const url = `${GEOCODING_URL}?name=${encodeURIComponent(query)}&count=1&language=ko&format=json`;
+  async function geocodeQuery(query: string, geocodeLanguage: string): Promise<GeocodeResult | null> {
+    const url = `${GEOCODING_URL}?name=${encodeURIComponent(query)}&count=1&language=${geocodeLanguage}&format=json`;
     const data = await fetchJson(url) as { results?: Array<Record<string, unknown>> } | null;
     const result = data?.results?.[0];
     if (!result || typeof result.latitude !== "number" || typeof result.longitude !== "number") return null;
@@ -105,18 +105,31 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     };
   }
 
-  async function geocodeCity(city: string): Promise<GeocodeResult | null> {
+  // 지오코딩의 language 파라미터는 결과 이름 표기만 바꾸는 게 아니라 실제로 어떤 후보가
+  // 매칭되는지도 바꾼다(실측, 2026-08) — "New York"을 language=ko·ja로 조회하면 네브래스카의
+  // 소도시 "York"가 대신 걸린다(이 경우는 아예 못 찾는 게 아니라 엉뚱한 결과가 걸리는 것이라
+  // 이 폴백으로도 못 잡는다 — GeoNames 색인 자체의 한계로 남겨둔다). 앱 언어로 먼저 찾고,
+  // 완전히 못 찾았을 때만 en·ko를 순서대로 한 번씩 더 시도한다 — 앱 언어가 en이어도 한글
+  // 지명을(예: "성남시") 그대로 입력하는 경우까지 커버하기 위해 ko도 항상 후보에 둔다.
+  async function geocodeCity(city: string, language: string): Promise<GeocodeResult | null> {
     const trimmed = city.trim();
     if (!trimmed) return null;
-    const direct = await geocodeQuery(trimmed);
+    const primaryLanguage = language === "ko" || language === "ja" ? language : "en";
+    const direct = await geocodeQuery(trimmed, primaryLanguage);
     if (direct) return direct;
+    for (const fallbackLanguage of ["en", "ko"]) {
+      if (fallbackLanguage === primaryLanguage) continue;
+      const viaFallback = await geocodeQuery(trimmed, fallbackLanguage);
+      if (viaFallback) return viaFallback;
+    }
+    // 아래 두 폴백은 한국 행정구역 이름 전용이라 항상 language=ko로 시도한다.
     const metroFormalName = METRO_CITY_FORMAL_NAMES[trimmed];
     if (metroFormalName) {
-      const metro = await geocodeQuery(metroFormalName);
+      const metro = await geocodeQuery(metroFormalName, "ko");
       if (metro) return metro;
     }
     const strippedCity = stripLeadingProvince(trimmed);
-    if (strippedCity) return geocodeQuery(strippedCity);
+    if (strippedCity) return geocodeQuery(strippedCity, "ko");
     return null;
   }
 
@@ -167,7 +180,7 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
   // 호출부(알람 발동, 트레이 클릭)가 실패 케이스를 따로 처리할 필요가 없게 하기 위함.
   async function getWeatherBriefing(city: string, language: string): Promise<string> {
     if (!city.trim()) return t(language, "weather.locationMissing");
-    const geo = await geocodeCity(city);
+    const geo = await geocodeCity(city, language);
     if (!geo) return t(language, "weather.fetchFailed");
     const forecast = await fetchDailyForecast(geo);
     if (!forecast) return t(language, "weather.fetchFailed");

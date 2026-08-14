@@ -51,6 +51,9 @@ html, body, #pet-stage {
 .speech-bubble span { display: block; }
 .mode-card strong { margin-bottom: 3px; font-size: calc(12px * var(--ui-font-size-scale)); }
 .mode-card span { color: var(--bubble-subtext); font-size: calc(10px * var(--ui-font-size-scale)); }
+/* 날씨 브리핑처럼 메시지 안에 실제 줄바꿈(\n)이 들어있는 경우를 위함 — 기본값(normal)은
+   \n을 공백으로 뭉개서 폭 기준으로만 줄바꿈해, "오늘"/"내일" 줄이 뒤섞여 보인다. */
+#rest-message { white-space: pre-line; }
 
 .speech-bubble {
   /* 차콜 = 마스코트 기본 프리셋("미로")의 배색(2026-08-09). --bubble-border는 다른 테마들처럼

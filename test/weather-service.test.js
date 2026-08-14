@@ -17,13 +17,13 @@ const GEOCODE_JP = { results: [{ latitude: 35.6762, longitude: 139.6503, country
 function createService(respond) {
   const calledUrls = /** @type {string[]} */ ([]);
   const service = createWeatherService({
-    fetchImpl: /** @type {any} */ (async (url) => {
+    fetchImpl: /** @type {any} */ (async (/** @type {string} */ url) => {
       calledUrls.push(String(url));
       const response = respond(String(url));
       if (!response) throw new Error("network down");
       return response;
     }),
-    setTimeoutFn: /** @type {any} */ ((fn) => fn && 0),
+    setTimeoutFn: /** @type {any} */ (() => 0),
     clearTimeoutFn: () => {}
   });
   return { service, calledUrls };
@@ -128,12 +128,13 @@ test("kma_seamless가 전부 null이면(모델 미제공 시각) 기본 모델�
 test("'도 시' 형태는 그대로 못 찾으면 도를 뗀 시 이름으로 재시도한다", async () => {
   const { service, calledUrls } = createService((url) => {
     if (url.includes(encodeURIComponent("경기도 성남시"))) return jsonResponse({ results: [] });
-    if (url.includes(encodeURIComponent("성남시"))) return jsonResponse(GEOCODE_KR);
+    if (url.includes(encodeURIComponent("성남시")) && url.includes("language=ko")) return jsonResponse(GEOCODE_KR);
     return jsonResponse({ results: [] });
   });
-  const geo = await service.geocodeCity("경기도 성남시");
+  const geo = await service.geocodeCity("경기도 성남시", "ko");
   assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
-  assert.equal(calledUrls.length, 2);
+  // 직접 조회(ko) 실패 → en 재시도 실패 → "성남시"(ko) 재시도 성공, 총 3회.
+  assert.equal(calledUrls.length, 3);
 });
 
 test("광역시 축약형(서울 등)은 못 찾으면 정식 명칭으로 재시도한다", async () => {
@@ -141,17 +142,38 @@ test("광역시 축약형(서울 등)은 못 찾으면 정식 명칭으로 재�
     if (url.includes(encodeURIComponent("서울특별시"))) return jsonResponse(GEOCODE_KR);
     return jsonResponse({ results: [] });
   });
-  const geo = await service.geocodeCity("서울");
+  const geo = await service.geocodeCity("서울", "ko");
   assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
-  assert.equal(calledUrls.length, 2);
+  assert.equal(calledUrls.length, 3);
 });
 
 test("'시/도 구' 형태는 구를 떼어 재시도하지 않는다(동명 지역 오검색 방지)", async () => {
   const { service, calledUrls } = createService(() => jsonResponse({ results: [] }));
-  const geo = await service.geocodeCity("서울특별시 강남구");
+  const geo = await service.geocodeCity("서울특별시 강남구", "ko");
   assert.equal(geo, null);
-  // 직접 조회 한 번뿐 — "강남구"만 떼어 다시 부르지 않는다.
-  assert.equal(calledUrls.length, 1);
+  // 직접(ko) + en 재시도, 총 2회 — "강남구"만 떼어 다시 부르지는 않는다.
+  assert.equal(calledUrls.length, 2);
+});
+
+test("앱 언어가 영어여도 한글 지명은 language=ko로 재시도해서 찾는다", async () => {
+  const { service, calledUrls } = createService((url) => {
+    if (url.includes("language=ko")) return jsonResponse(GEOCODE_KR);
+    return jsonResponse({ results: [] });
+  });
+  const geo = await service.geocodeCity("성남시", "en");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+  // 직접(en) 실패 → ko 재시도 성공. en은 이미 시도했으니 fallback 목록에서 건너뛴다.
+  assert.equal(calledUrls.length, 2);
+});
+
+test("앱 언어가 한국어여도 영문 지명은 language=en으로 재시도해서 찾는다", async () => {
+  const { service, calledUrls } = createService((url) => {
+    if (url.includes("language=en")) return jsonResponse(GEOCODE_JP);
+    return jsonResponse({ results: [] });
+  });
+  const geo = await service.geocodeCity("Osaka", "ko");
+  assert.deepEqual(geo, { latitude: 35.6762, longitude: 139.6503, countryCode: "JP" });
+  assert.equal(calledUrls.length, 2);
 });
 
 test("weatherCodeToIcon은 WMO 코드를 이모지 카테고리로 매핑한다", () => {
