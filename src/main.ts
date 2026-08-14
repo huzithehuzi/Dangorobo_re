@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { execFile } from "node:child_process";
 import {
   app,
+  BrowserWindow,
   clipboard,
   dialog,
   globalShortcut,
@@ -13,7 +14,7 @@ import {
   safeStorage,
   shell
 } from "electron";
-import type { BrowserWindow, OpenDialogOptions, WebContents } from "electron";
+import type { OpenDialogOptions, WebContents } from "electron";
 import { uIOhook } from "uiohook-napi";
 import {
   DEFAULT_SETTINGS,
@@ -160,6 +161,7 @@ import { createPetPointer } from "./main/windows/pet-pointer.js";
 import { createInputMonitor } from "./main/input-monitor.js";
 import { createPetBubblePanels } from "./main/windows/pet-bubble-panels.js";
 import { createPetMenuController } from "./main/windows/pet-menu-controller.js";
+import { hideSurfacesForQuit } from "./main/windows/quit-surfaces.js";
 
 type I18nModule = {
   t: (language: string, key: string, vars?: Record<string, string | number>) => string;
@@ -1859,8 +1861,11 @@ registerMemoryIpcHandlers(ipcMain, {
 // await만 걸면 요약 요청·저장이 종료 도중에 끊길 수 있다. 대신 preventDefault()로 종료를
 // 한 번 막고, 요약이 끝나면(성공·실패 무관) 다시 quit한다. one-shot 가드로 재진입을 막는다.
 let quitSummaryHandled = false;
+
 app.on("before-quit", (event) => {
   appIsQuitting = true;
+  // 요약을 기다리는 동안(최대 8초) 펫이 그대로 떠 있으면 종료가 안 먹는 것처럼 보인다.
+  hideSurfacesForQuit({ windows: () => BrowserWindow.getAllWindows(), tray: petMenu.tray });
   if (quitSummaryHandled) return;
   quitSummaryHandled = true;
   if (!settings.assistantMemoryEnabled || assistantHistory.getHistory().length === 0) return;
