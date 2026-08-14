@@ -37,6 +37,7 @@ const DEFAULT_UI = {
  *   ui?: Partial<Record<string, boolean>>,
  *   dnd?: boolean,
  *   overPet?: boolean, overMedia?: boolean, overPanel?: boolean, overMenu?: boolean,
+ *   overCursorPie?: boolean, cursorPieOpen?: boolean,
  *   contextMenuOpen?: boolean, alwaysDrag?: boolean, dragging?: boolean,
  *   now?: () => number,
  *   readCapsLockState?: () => Promise<boolean | undefined>
@@ -52,9 +53,13 @@ function createHarness(overrides = {}) {
     dragStarts: 0,
     dragEnds: 0,
     dragUpdates: 0,
+    cursorPieClosed: 0,
     pettingUpdates: 0,
     shortcuts: 0,
     applyInteraction: 0,
+    /** 한 번의 mousedown 안에서 어떤 처리가 먼저 돌았는지. */
+    /** @type {string[]} */
+    order: [],
     /** @type {Array<{pet: boolean, media: boolean}>} */
     interactionStates: []
   };
@@ -63,6 +68,8 @@ function createHarness(overrides = {}) {
     overMedia: overrides.overMedia === true,
     overPanel: overrides.overPanel === true,
     overMenu: overrides.overMenu === true,
+    overCursorPie: overrides.overCursorPie === true,
+    cursorPieOpen: overrides.cursorPieOpen === true,
     contextMenuOpen: overrides.contextMenuOpen === true,
     alwaysDrag: overrides.alwaysDrag !== false,
     dragging: overrides.dragging === true,
@@ -70,9 +77,13 @@ function createHarness(overrides = {}) {
     ui: { ...overrides.ui },
     settings: { ...overrides.settings }
   };
+  // 우클릭 메뉴와 커서 파이는 같은 좌표 판정을 쓰므로 창 정체로 갈라 준다.
+  const cursorPieWindow = { isDestroyed: () => false };
   const monitor = createInputMonitor({
     pointer: {
-      isPointOverWindowBounds: () => state.overMenu,
+      isPointOverWindowBounds: (win) => (
+        win === cursorPieWindow ? state.overCursorPie : state.overMenu
+      ),
       isPointOverPet: () => state.overPet,
       isPointOverMediaPlayer: () => state.overMedia,
       isPointOverFloatingPanel: () => state.overPanel,
@@ -101,8 +112,16 @@ function createHarness(overrides = {}) {
     ),
     closePetContextMenu: () => { calls.menuClosed += 1; },
     openPetContextMenu: () => { calls.menuOpened += 1; },
+    favoritesCursorPieWindow: () => (state.cursorPieOpen ? cursorPieWindow : null),
+    closeFavoritesCursorPie: () => {
+      calls.cursorPieClosed += 1;
+      calls.order.push("closeCursorPie");
+    },
     getCursorPoint: () => ({ x: 0, y: 0 }),
-    dispatchMouseShortcut: () => { calls.shortcuts += 1; },
+    dispatchMouseShortcut: () => {
+      calls.shortcuts += 1;
+      calls.order.push("shortcut");
+    },
     applyMouseInteractionState: () => {
       calls.applyInteraction += 1;
       calls.interactionStates.push({
@@ -303,6 +322,37 @@ test("우클릭 메뉴가 떠 있으면 바깥 클릭은 닫고 안쪽 클릭은
   inside.monitor.onMouseDown({ button: 1, x: 0, y: 0 });
   assert.equal(inside.calls.menuClosed, 0);
   assert.equal(inside.calls.dragStarts, 0);
+});
+
+// 커서 파이는 창의 blur만으로는 닫히지 않는다 — 펫 창이 setFocusable(false)라 그 위 클릭이
+// 활성 창을 바꾸지 않고, 다른 앱이 포그라운드면 파이가 포커스를 못 받아 blur가 아예 안 온다.
+test("커서 파이가 떠 있으면 바깥 클릭은 닫고 안쪽 클릭은 흘려보낸다", () => {
+  const outside = createHarness({ cursorPieOpen: true, overCursorPie: false, overPet: true });
+  outside.monitor.onMouseDown({ button: 1, x: 0, y: 0 });
+  assert.equal(outside.calls.cursorPieClosed, 1);
+  // 파이는 커서 자리(=펫 위)에 뜨므로 그 클릭이 펫 드래그로 잡히면 안 된다.
+  assert.equal(outside.calls.dragStarts, 0);
+
+  const inside = createHarness({ cursorPieOpen: true, overCursorPie: true, overPet: true });
+  inside.monitor.onMouseDown({ button: 1, x: 0, y: 0 });
+  assert.equal(inside.calls.cursorPieClosed, 0);
+  assert.equal(inside.calls.dragStarts, 0);
+});
+
+test("파이가 닫혀 있으면 바깥 클릭 판정을 하지 않는다", () => {
+  const { monitor, calls } = createHarness({ cursorPieOpen: false, overPet: true });
+  monitor.onMouseDown({ button: 1, x: 0, y: 0 });
+  assert.equal(calls.cursorPieClosed, 0);
+  // 파이가 없으면 평소대로 펫 드래그가 시작돼야 한다.
+  assert.equal(calls.dragStarts, 1);
+});
+
+// 마우스 단축키(Mouse4/5)로 파이를 토글하는 경로가 이 판정보다 먼저 돌아야 한다 —
+// 뒤에 돌면 단축키가 연 파이를 같은 클릭이 곧바로 "바깥 클릭"으로 닫는다.
+test("마우스 단축키 전달은 파이 바깥 클릭 처리보다 먼저 한다", () => {
+  const { monitor, calls } = createHarness({ cursorPieOpen: true, overCursorPie: false });
+  monitor.onMouseDown({ button: 4, x: 0, y: 0 });
+  assert.deepEqual(calls.order, ["shortcut", "closeCursorPie"]);
 });
 
 test("펫 위 우클릭은 메뉴를 연다", async () => {

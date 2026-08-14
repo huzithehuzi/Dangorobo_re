@@ -59,6 +59,9 @@ type InputMonitorDependencies = {
   contextMenuWindow: () => WindowLike | null | undefined;
   closePetContextMenu: () => void;
   openPetContextMenu: (cursorPoint: Point) => void;
+  /** cursor 방식 즐겨찾기 파이가 **열려 있을 때만** 그 창을 준다. 아니면 null. */
+  favoritesCursorPieWindow: () => WindowLike | null | undefined;
+  closeFavoritesCursorPie: () => void;
   getCursorPoint: () => Point;
   dispatchMouseShortcut(event: MouseInputEvent): void;
   applyMouseInteractionState: () => void;
@@ -194,6 +197,20 @@ function createInputMonitor(deps: InputMonitorDependencies) {
     if (contextMenuOpen()) {
       if (!pointer.isPointOverWindowBounds(deps.contextMenuWindow(), event.x, event.y)) {
         deps.closePetContextMenu();
+      }
+      return;
+    }
+    // 커서 자리에 뜨는 즐겨찾기 파이도 우클릭 메뉴와 똑같은 이유로 창의 blur만으로는 못
+    // 닫는다 — 커서 위치에 뜨니 펫과 겹치기 쉬운데, 펫 창은 상황에 따라 setFocusable(false)라
+    // 그 위를 클릭해도 Windows가 활성 창을 바꾸지 않아 파이 창에 blur가 오지 않는다. 게다가
+    // 파이를 부르는 순간 다른 앱이 포그라운드면 show()+focus()가 아예 먹지 않아 blur가
+    // 처음부터 오지 않을 수 있다("마우스로 안 닫힘" 리포트). 포커스에 기대지 말고 전역 훅
+    // 좌표로 직접 판정한다. 안쪽 클릭에서도 return하는 이유는 메뉴와 같다 — 파이가 펫 위에
+    // 겹쳐 있어 항목을 누르는 클릭이 아래 startPetDrag()에 걸리면 펫이 따라 끌려온다.
+    const cursorPie = deps.favoritesCursorPieWindow();
+    if (cursorPie) {
+      if (!pointer.isPointOverWindowBounds(cursorPie, event.x, event.y)) {
+        deps.closeFavoritesCursorPie();
       }
       return;
     }

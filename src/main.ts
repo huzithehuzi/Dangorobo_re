@@ -1323,6 +1323,14 @@ const inputMonitor = createInputMonitor({
   contextMenuWindow: petMenu.contextMenuWindow,
   closePetContextMenu: petMenu.close,
   openPetContextMenu: petMenu.open,
+  // 파이가 실제로 떠 있을 때만 창을 넘긴다 — 접힌 뒤에도 넘기면 그 뒤의 모든 클릭이
+  // "바깥 클릭"으로 잡혀 펫 드래그가 통째로 막힌다.
+  favoritesCursorPieWindow: () => (
+    favoritesWindows.pieCursorMode() && favoritesWindows.isDockExpanded()
+      ? favoritesWindows.dockWindow()
+      : null
+  ),
+  closeFavoritesCursorPie: () => favoritesWindows.closeCursorPie(),
   getCursorPoint: () => screen.getCursorScreenPoint(),
   dispatchMouseShortcut: (event) => dispatchMouseShortcut(event),
   applyMouseInteractionState: () => petInteraction.apply()
