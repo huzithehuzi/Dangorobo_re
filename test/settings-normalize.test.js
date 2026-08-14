@@ -171,6 +171,28 @@ test("기본 문구는 전역 언어가 아니라 정규화 결과 언어를 따
   assert.ok(String(koreanAlarm.title).length > 0);
 });
 
+test("정시 알람은 간격을 1~12시간으로 클램프하고 빠졌으면 1로 채운다", () => {
+  const alarms = [
+    { id: "a1", type: "hourly", hourlyInterval: 3 },
+    { id: "a2", type: "hourly", hourlyInterval: 99 },
+    { id: "a3", type: "hourly", hourlyInterval: 0 },
+    { id: "a4", type: "hourly" },
+    { id: "a5", type: "hourly", hourlyInterval: "이상한 값" },
+    { id: "a6", type: "hourly", hourlyInterval: 2.4, enabled: false }
+  ];
+  // 종류별 유니온이라 필드 접근에 좁히기가 필요하다 — 여기서 보는 것은 정규화 결과의
+  // 모양뿐이므로 레코드로 읽는다.
+  const normalized = /** @type {Record<string, unknown>[]} */ (
+    /** @type {unknown} */ (normalizeSettings({ language: "ko", alarms }).alarms)
+  );
+  assert.deepEqual(normalized.map((alarm) => alarm.hourlyInterval), [3, 12, 1, 1, 1, 2]);
+  // enabled를 안 준 알람은 켜진 것으로 본다(다른 반복 알람과 같은 규칙).
+  assert.deepEqual(normalized.map((alarm) => alarm.enabled), [true, true, true, true, true, false]);
+  // 다른 종류의 필드는 섞여 들어가지 않는다.
+  assert.equal(normalized[0].intervalMinutes, undefined);
+  assert.equal(normalized[0].dailyTime, undefined);
+});
+
 test("범위 밖 숫자는 클램프하고 min/max가 뒤집히면 바로잡는다", () => {
   const normalized = normalizeSettings({
     petScalePercent: 99999,

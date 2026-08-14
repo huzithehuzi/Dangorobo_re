@@ -141,10 +141,11 @@ interface AlarmItem {
   id: string;
   title?: string;
   message?: string;
-  type: "interval" | "daily" | "once" | string;
+  type: "interval" | "hourly" | "daily" | "once" | string;
   enabled?: boolean;
   soundFile?: string;
   intervalMinutes?: number;
+  hourlyInterval?: number;
   dailyTime?: string;
   daysOfWeek?: number[];
   fireAt?: string;

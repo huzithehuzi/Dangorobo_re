@@ -93,7 +93,13 @@ type DailyAlarm = AlarmCommon & {
   enabled: boolean;
   daysOfWeek: number[];
 };
-type NormalizedAlarm = OnceAlarm | IntervalAlarm | DailyAlarm;
+// 정시 알람. interval과 달리 등록 시각이 아니라 시계의 정각(분·초 0)에 맞춰 울린다.
+type HourlyAlarm = AlarmCommon & {
+  type: "hourly";
+  hourlyInterval: number;
+  enabled: boolean;
+};
+type NormalizedAlarm = OnceAlarm | IntervalAlarm | DailyAlarm | HourlyAlarm;
 
 // 저장되는 즐겨찾기 한 개.
 type FavoriteItem = {
@@ -950,7 +956,10 @@ function normalizeMediaPlayer(value: unknown) {
   };
 }
 
-const ALARM_TYPES = ["interval", "daily", "once"];
+const ALARM_TYPES = ["interval", "hourly", "daily", "once"];
+// 정시 알람의 "몇 시간마다". 상한이 12인 것은 그 위(24)가 daily와 같아지기 때문이다.
+const HOURLY_INTERVAL_MIN = 1;
+const HOURLY_INTERVAL_MAX = 12;
 
 // 즐겨찾기 아이콘 경로 검증(normalizeFavoriteIconPath)과 같은 패턴 — 파일을
 // userData로 복사하지 않고 원본 절대 경로를 그대로 저장, 확장자만 화이트리스트로 제한.
@@ -985,6 +994,20 @@ function normalizeAlarm(entryValue: unknown, language: string): NormalizedAlarm 
       type: "interval",
       soundFile,
       intervalMinutes: Number.isFinite(minutes) ? Math.min(1440, Math.max(1, Math.round(minutes))) : 60,
+      enabled: entry.enabled !== false
+    };
+  }
+  if (type === "hourly") {
+    const hours = Number(entry.hourlyInterval);
+    return {
+      id,
+      title,
+      message,
+      type: "hourly",
+      soundFile,
+      hourlyInterval: Number.isFinite(hours)
+        ? Math.min(HOURLY_INTERVAL_MAX, Math.max(HOURLY_INTERVAL_MIN, Math.round(hours)))
+        : 1,
       enabled: entry.enabled !== false
     };
   }
@@ -1354,6 +1377,7 @@ export type {
   AlarmCommon,
   DailyAlarm,
   FavoriteItem,
+  HourlyAlarm,
   IntervalAlarm,
   NormalizedAlarm,
   NormalizeSettingsFallback,

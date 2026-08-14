@@ -44,6 +44,38 @@ test("꺼진 알람은 예약하지 않는다", () => {
   assert.equal(computeAlarmDelayMs({ id: "c", type: "interval", intervalMinutes: 1 }), MINUTE_MS);
 });
 
+test("hourly 알람은 등록 시각이 아니라 다음 정각까지를 센다", (t) => {
+  freezeWednesday(t, { hour: 10, minute: 17 });
+  assert.equal(computeAlarmDelayMs({ id: "a", type: "hourly", hourlyInterval: 1 }), 43 * MINUTE_MS);
+  // 간격을 안 준 옛 데이터는 매 정각으로 본다.
+  assert.equal(computeAlarmDelayMs({ id: "b", type: "hourly" }), 43 * MINUTE_MS);
+});
+
+test("hourly 알람은 지금이 정확히 정각이어도 다음 정각으로 넘어간다", (t) => {
+  freezeWednesday(t, { hour: 10, minute: 0 });
+  // 0을 주면 발동 직후 같은 시각에 무한 재발동한다.
+  assert.equal(computeAlarmDelayMs({ id: "a", type: "hourly", hourlyInterval: 1 }), HOUR_MS);
+});
+
+test("hourly 알람의 간격은 시(hour)의 배수 자리에 맞춘다", (t) => {
+  freezeWednesday(t, { hour: 10, minute: 30 });
+  // 3시간마다면 0·3·6·9·12…시라 10시 30분 다음은 12시다.
+  assert.equal(computeAlarmDelayMs({ id: "a", type: "hourly", hourlyInterval: 3 }), 90 * MINUTE_MS);
+  // 12시간마다면 0시·12시. 자정을 넘겨야 하는 경우도 같은 규칙이다.
+  assert.equal(computeAlarmDelayMs({ id: "b", type: "hourly", hourlyInterval: 12 }), 90 * MINUTE_MS);
+});
+
+test("hourly 알람은 다음 배수 시각이 내일이면 자정을 넘겨 잡는다", (t) => {
+  freezeWednesday(t, { hour: 13, minute: 0 });
+  // 12시간마다면 0시·12시뿐이라 13시 다음은 내일 0시다.
+  assert.equal(computeAlarmDelayMs({ id: "a", type: "hourly", hourlyInterval: 12 }), 11 * HOUR_MS);
+});
+
+test("꺼진 hourly 알람은 예약하지 않는다", (t) => {
+  freezeWednesday(t, { hour: 10, minute: 30 });
+  assert.equal(computeAlarmDelayMs({ id: "a", type: "hourly", enabled: false, hourlyInterval: 1 }), null);
+});
+
 test("daily 알람은 오늘 아직 안 지났으면 오늘로 잡는다", (t) => {
   freezeWednesday(t, { hour: 10 });
   assert.equal(computeAlarmDelayMs({ id: "a", type: "daily", dailyTime: "14:30" }), 4 * HOUR_MS + 30 * MINUTE_MS);

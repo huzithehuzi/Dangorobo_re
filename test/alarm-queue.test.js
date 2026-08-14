@@ -46,6 +46,18 @@ function createHarness(options = {}) {
 
 const ONCE_ALARM = { id: "a1", type: "once", fireAt: "2026-08-10T09:00", title: "한 번" };
 const INTERVAL_ALARM = { id: "a2", type: "interval", intervalMinutes: 30, title: "반복" };
+const HOURLY_ALARM = { id: "a3", type: "hourly", hourlyInterval: 1, title: "정시" };
+
+test("정시 알람은 발동해도 지우지 않고 다음 정각을 다시 예약한다", () => {
+  const { queue, calls, state } = createHarness({ alarms: [HOURLY_ALARM] });
+  queue.fireAlarm("a3");
+
+  assert.deepEqual(state.settings.alarms, [HOURLY_ALARM]);
+  assert.deepEqual(calls.schedule, ["a3"]);
+  assert.deepEqual(calls.clear, []);
+  assert.equal(calls.saveSettings, 0);
+  assert.deepEqual(calls.shown, [HOURLY_ALARM]);
+});
 
 test("once 알람 발동은 목록에서 지우고 저장한 뒤 보여준다", () => {
   const { queue, calls, state } = createHarness({ alarms: [ONCE_ALARM, INTERVAL_ALARM] });

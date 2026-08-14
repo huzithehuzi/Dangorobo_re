@@ -6,7 +6,8 @@
 type OnceAlarm = { id: string; type: "once"; fireAt: string };
 type IntervalAlarm = { id: string; type: "interval"; enabled?: boolean; intervalMinutes: number };
 type DailyAlarm = { id: string; type: "daily"; enabled?: boolean; dailyTime: string; daysOfWeek?: number[] };
-type ScheduledAlarm = OnceAlarm | IntervalAlarm | DailyAlarm;
+type HourlyAlarm = { id: string; type: "hourly"; enabled?: boolean; hourlyInterval?: number };
+type ScheduledAlarm = OnceAlarm | IntervalAlarm | DailyAlarm | HourlyAlarm;
 
 // 알람 하나가 다음에 울릴 때까지 남은 시간(ms)을 계산한다. 순수 함수 — Date.now() 외에
 // 다른 공유 상태를 참조하지 않는다.
@@ -18,6 +19,21 @@ function computeAlarmDelayMs(alarm: ScheduledAlarm): number | null {
   if (alarm.type === "interval") {
     if (alarm.enabled === false) return null;
     return alarm.intervalMinutes * 60 * 1000;
+  }
+  if (alarm.type === "hourly") {
+    if (alarm.enabled === false) return null;
+    // 등록 시각이 아니라 시계의 정각에 맞춘다 — interval 알람과 다른 점이 이것뿐이다.
+    const every = Math.min(12, Math.max(1, Math.round(Number(alarm.hourlyInterval)) || 1));
+    const now = new Date();
+    // offset을 1부터 시작해 "지금이 정확히 정각"일 때 지연 0으로 즉시 재발동하는 것을 막는다.
+    // 시(hour)만 더해 Date에 넘기면 월말·서머타임 넘김을 표준 정규화가 처리한다.
+    for (let offset = 1; offset <= 24; offset++) {
+      const candidate = new Date(
+        now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + offset, 0, 0, 0
+      );
+      if (candidate.getHours() % every === 0) return candidate.getTime() - now.getTime();
+    }
+    return null;
   }
   if (alarm.type === "daily") {
     if (alarm.enabled === false) return null;

@@ -91,8 +91,9 @@ appearance to defaults" button brings everything back at once.
 
 Register as many as you like from the **Alarms** tab in settings.
 
-- **Three repeat modes**: `every N minutes` / `at a set time every day` (specific weekdays
-  supported) / `once, after a delay`.
+- **Four repeat modes**: `every N minutes` / `on the hour` (every 1–12 hours) / `at a set time
+  every day` (specific weekdays supported) / `once, after a delay`.
+- `On the hour` rings at **:00 on the clock**, no matter when you added it.
 - Each alarm can have its own **title and message**.
 - **Pause and resume** without deleting, and **edit** the content later.
 - When it's time, the pet cheers to let you know and waits until you dismiss it.

@@ -362,9 +362,17 @@
     "settings.alerts.messageLabel": { ko: "내용", en: "Message", ja: "内容" },
     "settings.alerts.repeatLabel": { ko: "반복 방식", en: "Repeat mode", ja: "繰り返し方式" },
     "settings.alerts.repeatInterval": { ko: "N분마다 반복", en: "Repeat every N minutes", ja: "N分ごとに繰り返し" },
+    "settings.alerts.repeatHourly": { ko: "정시마다 (매 정각)", en: "On the hour", ja: "毎正時" },
     "settings.alerts.repeatDaily": { ko: "매일 특정 시각", en: "Daily at a set time", ja: "毎日決まった時刻" },
     "settings.alerts.repeatOnce": { ko: "한 번만 (몇 분 뒤)", en: "Once (in N minutes)", ja: "一度だけ(数分後)" },
     "settings.alerts.intervalLabel": { ko: "간격", en: "Interval", ja: "間隔" },
+    "settings.alerts.hourlyLabel": { ko: "몇 시간마다", en: "Every", ja: "何時間ごと" },
+    "settings.alerts.hoursUnit": { ko: "시간", en: "hour(s)", ja: "時間" },
+    "settings.alerts.hourlyNote": {
+      ko: "등록한 시각과 상관없이 시계의 정각(분·초 0)에 맞춰 울립니다.",
+      en: "Rings on the hour (at :00), no matter when you added it.",
+      ja: "登録した時刻に関係なく、時計の正時(分・秒が0)に鳴ります。"
+    },
     "settings.alerts.dailyLabel": { ko: "매일 시각", en: "Daily time", ja: "毎日の時刻" },
     "settings.alerts.onceLabel": { ko: "몇 분 뒤", en: "Minutes from now", ja: "何分後" },
     "settings.alerts.soundFileLabel": { ko: "알람 소리(선택)", en: "Alarm sound (optional)", ja: "アラーム音(任意)" },
@@ -387,7 +395,7 @@
     "weekday.fri": { ko: "금", en: "Fri", ja: "金" },
     "weekday.sat": { ko: "토", en: "Sat", ja: "土" },
     "settings.alerts.addButton": { ko: "알람 추가", en: "Add Alarm", ja: "アラームを追加" },
-    "settings.alerts.note": { ko: "알람이 울리면 확인 버튼을 누를 때까지 화면에 유지됩니다. N분마다/매일 알람은 계속 반복되고, 한 번만 알람은 울린 뒤 자동으로 목록에서 사라집니다.", en: "When an alarm fires, it stays on screen until you press Confirm. Every-N-minutes/daily alarms keep repeating; once alarms disappear from the list automatically after firing.", ja: "アラームが鳴ると、確認ボタンを押すまで画面に表示され続けます。N分ごと/毎日のアラームは繰り返され、一度だけのアラームは鳴った後自動的にリストから消えます。" },
+    "settings.alerts.note": { ko: "알람이 울리면 확인 버튼을 누를 때까지 화면에 유지됩니다. N분마다/정시마다/매일 알람은 계속 반복되고, 한 번만 알람은 울린 뒤 자동으로 목록에서 사라집니다.", en: "When an alarm fires, it stays on screen until you press Confirm. Every-N-minutes, on-the-hour and daily alarms keep repeating; once alarms disappear from the list automatically after firing.", ja: "アラームが鳴ると、確認ボタンを押すまで画面に表示され続けます。N分ごと/正時/毎日のアラームは繰り返され、一度だけのアラームは鳴った後自動的にリストから消えます。" },
     "settings.alerts.testButton": { ko: "지금 알람 테스트", en: "Test Alarm Now", ja: "今すぐアラームをテスト" },
 
     "settings.ui.bubbleHeading": { ko: "말풍선", en: "Speech Bubble", ja: "吹き出し" },
@@ -518,6 +526,8 @@
     "favoriteIcon.terminal": { ko: "터미널", en: "Terminal", ja: "ターミナル" },
     "settings.alerts.emptyList": { ko: "등록된 알람이 없습니다.", en: "No alarms registered.", ja: "登録されたアラームがありません。" },
     "settings.alerts.scheduleInterval": { ko: "{{minutes}}분마다 반복", en: "Every {{minutes}} min", ja: "{{minutes}}分ごと" },
+    "settings.alerts.scheduleHourly": { ko: "매 정각", en: "Every hour on the hour", ja: "毎正時" },
+    "settings.alerts.scheduleHourlyEvery": { ko: "{{hours}}시간마다 정각", en: "Every {{hours}} h on the hour", ja: "{{hours}}時間ごとの正時" },
     "settings.alerts.scheduleDaily": { ko: "매일 {{time}}", en: "Daily at {{time}}", ja: "毎日{{time}}" },
     "settings.alerts.scheduleOnce": { ko: "1회성 · 약 {{minutes}}분 후", en: "One-time · in about {{minutes}} min", ja: "一度きり・約{{minutes}}分後" },
 

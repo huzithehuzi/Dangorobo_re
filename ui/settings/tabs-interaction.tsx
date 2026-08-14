@@ -17,6 +17,7 @@ export function AlertsTab() {
   const [message, setMessage] = useState("");
   const [type, setType] = useState("interval");
   const [intervalValue, setIntervalValue] = useState("60");
+  const [hourlyValue, setHourlyValue] = useState("1");
   const [dailyValue, setDailyValue] = useState("15:00");
   const [onceValue, setOnceValue] = useState("30");
   const [selectedDays, setSelectedDays] = useState<Set<number>>(() => new Set([0, 1, 2, 3, 4, 5, 6]));
@@ -29,6 +30,7 @@ export function AlertsTab() {
     setMessage("");
     setType("interval");
     setIntervalValue("60");
+    setHourlyValue("1");
     setDailyValue("15:00");
     setOnceValue("30");
     setSelectedDays(new Set([0, 1, 2, 3, 4, 5, 6]));
@@ -41,6 +43,7 @@ export function AlertsTab() {
     setMessage(alarm.message || "");
     setType(alarm.type);
     if (alarm.type === "interval") setIntervalValue(String(alarm.intervalMinutes ?? 60));
+    if (alarm.type === "hourly") setHourlyValue(String(alarm.hourlyInterval ?? 1));
     if (alarm.type === "daily") {
       setDailyValue(alarm.dailyTime || "15:00");
       const days = Array.isArray(alarm.daysOfWeek) && alarm.daysOfWeek.length ? alarm.daysOfWeek : [0, 1, 2, 3, 4, 5, 6];
@@ -55,6 +58,12 @@ export function AlertsTab() {
 
   const scheduleLabel = (alarm: AlarmItem): string => {
     if (alarm.type === "interval") return tt("settings.alerts.scheduleInterval", { minutes: alarm.intervalMinutes ?? 0 });
+    if (alarm.type === "hourly") {
+      const hours = alarm.hourlyInterval ?? 1;
+      return hours === 1
+        ? tt("settings.alerts.scheduleHourly")
+        : tt("settings.alerts.scheduleHourlyEvery", { hours });
+    }
     if (alarm.type === "daily") {
       const days = Array.isArray(alarm.daysOfWeek) && alarm.daysOfWeek.length ? alarm.daysOfWeek : [0, 1, 2, 3, 4, 5, 6];
       if (days.length === 7) return tt("settings.alerts.scheduleDaily", { time: alarm.dailyTime ?? "" });
@@ -80,6 +89,9 @@ export function AlertsTab() {
     };
     if (type === "interval") {
       alarm.intervalMinutes = Math.min(1440, Math.max(1, Number(intervalValue) || 60));
+    } else if (type === "hourly") {
+      // 클램프 범위는 settings-schema.ts의 normalizeAlarm()과 같아야 한다.
+      alarm.hourlyInterval = Math.min(12, Math.max(1, Number(hourlyValue) || 1));
     } else if (type === "daily") {
       alarm.dailyTime = /^\d{2}:\d{2}$/.test(dailyValue) ? dailyValue : "15:00";
       alarm.daysOfWeek = selectedDays.size ? [...selectedDays].sort((a, b) => a - b) : [0, 1, 2, 3, 4, 5, 6];
@@ -165,6 +177,7 @@ export function AlertsTab() {
           onChange={setType}
           options={[
             { value: "interval", label: tt("settings.alerts.repeatInterval") },
+            { value: "hourly", label: tt("settings.alerts.repeatHourly") },
             { value: "daily", label: tt("settings.alerts.repeatDaily") },
             { value: "once", label: tt("settings.alerts.repeatOnce") }
           ]}
@@ -177,6 +190,18 @@ export function AlertsTab() {
               <span>{tt("settings.appearance.minutesUnit")}</span>
             </span>
           </label>
+        )}
+        {type === "hourly" && (
+          <>
+            <label className="setting-row">
+              <span>{tt("settings.alerts.hourlyLabel")}</span>
+              <span className="input-wrap">
+                <input type="number" min={1} max={12} value={hourlyValue} onChange={(event) => setHourlyValue(event.target.value)} />
+                <span>{tt("settings.alerts.hoursUnit")}</span>
+              </span>
+            </label>
+            <Note>{tt("settings.alerts.hourlyNote")}</Note>
+          </>
         )}
         {type === "daily" && (
           <>
