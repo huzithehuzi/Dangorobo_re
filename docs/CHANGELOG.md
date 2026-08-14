@@ -5,6 +5,25 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-14
 
+- **알람 중 미디어 플레이어가 뜨고 재생 버튼이 알람을 다시 울리던 것 수정**: 사용자 보고로
+  확인 — 알람 소리도 Chromium `<audio>` 요소라 재생되는 순간 Windows SMTC가 그걸 "현재
+  재생 중인 미디어"로 잡아버리는데, `media-monitor.ts`는 세션 출처를 구분하지 않고
+  `GetCurrentSession()` 결과를 그대로 전달한다. `broadcastMediaUpdate()`가 휴식 알림이
+  떠 있는 동안(`petInteraction.isRestActive()`)은 상태를 `"None"`으로 덮어써 플레이어
+  자체를 안 띄우게 했고, `sendMediaCommand()`에도 같은 조건의 이중 방어를 추가했다(재생
+  버튼이 뒤늦게 눌려도 무시).
+- **말풍선이 떠 있을 때 우클릭하면 Windows 창 시스템 메뉴가 뜨고 "닫기"를 누르면 펫이
+  통째로 파괴되던 것 수정**: 사용자 보고로 확인 — 상시 드래그 모드의 canvas가
+  `-webkit-app-region: drag`라, 그 위에서 우클릭하면 DOM `contextmenu` 이벤트를 거치지
+  않고 Windows 시스템 메뉴(복원/이동/크기 조정/**닫기** 등)가 곧장 뜬다. 거기서 닫기를
+  누르면 pet 창엔 `close` 가드가 전혀 없어 그대로 파괴됐다(트레이는 살아있지만 재호출
+  경로를 모르면 다시 못 여는 것처럼 보임). 세 가지를 고쳤다: (1) `window-factory.ts`의
+  `buildPetWindow()`에 `system-context-menu` 이벤트를 막아 그 시스템 메뉴 자체가 안 뜨게
+  했다(DOM 이벤트보다 먼저 발생해 renderer의 `contextmenu` preventDefault로는 못 막는
+  경로), (2) 그래도 어떤 경로로든 `close`가 오면 `appIsQuitting`이 아닌 한 파괴 대신
+  `hide()`로 대체하는 가드를 추가했다(설정창의 기존 가드와 같은 패턴), (3) renderer.ts의
+  `contextmenu` preventDefault를 `#pet-canvas` 전용에서 `document` 전체로 넓혔다 — 말풍선은
+  canvas 바깥(머리 위)에 있어서 canvas 전용 리스너로는 그 위 우클릭을 못 막았다.
 - **강수확률 100%인데 맑음 아이콘이 뜨던 것 수정**: 사용자 보고로 확인 — 아이콘을 구간
   중간 시각(오전 9시·오후 3시) 하나의 날씨 코드로만 정했는데, 최고/최저 기온과 강수확률은
   구간 전체(6시간)에서 뽑다 보니 "9시엔 맑았다가 11시에 비가 와서 강수확률이 100%까지

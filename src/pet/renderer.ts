@@ -1394,7 +1394,11 @@ const assistantPanels = createAssistantPanels({
 // 핸들러, tray.popUpContextMenu()). 브라우저 기본 컨텍스트 메뉴만 막아서 우클릭할 때
 // Electron/Chromium 기본 메뉴가 뜨는 걸 방지한다 — 예전엔 여기서 AI 질문을 직접
 // 열었는데, 그러면 트레이 메뉴와 AI 질문창이 동시에 뜨는 버그가 생긴다.
-canvas.addEventListener("contextmenu", (event) => {
+// canvas뿐 아니라 문서 전체에 걸어야 한다 — 휴식 알림 등으로 창이 interactive해지면
+// 말풍선은 canvas 바깥(머리 위)에 있어서 canvas 전용 리스너로는 못 막는다. 그 경우
+// 브라우저 기본 메뉴가 그대로 떠서 사용자가 실수로 "닫기"를 눌러 펫 창이 통째로
+// 파괴되는 사고로 이어졌다(피드백, 2026-08).
+document.addEventListener("contextmenu", (event) => {
   event.preventDefault();
 });
 restConfirm.addEventListener("click", () => window.desktopPet.confirmRest());

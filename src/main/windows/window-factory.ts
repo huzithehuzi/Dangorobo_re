@@ -62,6 +62,8 @@ type PetWindowDependencies = {
   sendCapsLockState: () => void;
   onMoved: () => void;
   onClosed: () => void;
+  /** 종료 중이 아니면 실수로 닫혀도(시스템 메뉴 등) 파괴 대신 숨긴다. */
+  isAppQuitting: () => boolean;
 };
 
 function buildPetWindow(deps: PetWindowDependencies): BrowserWindow {
@@ -118,7 +120,21 @@ function buildPetWindow(deps: PetWindowDependencies): BrowserWindow {
     console.error("💥 petWindow renderer crashed. killed:", killed);
     deps.logWindowOp("petWindow:crashed", { killed });
   });
+  // 상시 드래그 모드는 canvas에 -webkit-app-region: drag를 건다(styles.css) — 그 위에서
+  // 우클릭하면 DOM contextmenu 이벤트를 거치지 않고 Windows 창 시스템 메뉴(복원/이동/
+  // 크기 조정/닫기 등)가 곧장 뜬다. 거기서 "닫기"를 누르면 창이 통째로 파괴된다(피드백,
+  // 2026-08) — renderer.ts의 contextmenu preventDefault로는 못 막는 경로라 여기서 막는다.
+  win.on("system-context-menu", (event) => {
+    event.preventDefault();
+  });
   win.on("move", deps.onMoved);
+  win.on("close", (event) => {
+    if (deps.isAppQuitting()) return;
+    // 위 system-context-menu 방어를 뚫고 다른 경로로 닫기 시도가 와도 파괴 대신 숨긴다 —
+    // 펫 창은 설정 같은 "닫으면 끝"인 창이 아니라 트레이로 항상 되돌아와야 한다.
+    event.preventDefault();
+    win.hide();
+  });
   win.on("closed", deps.onClosed);
   return win;
 }

@@ -682,9 +682,14 @@ const readCapsLockState = createCapsLockStateReader({
 // 아래 콜백이 그 경계다(alarm-scheduler.js와 같은 의존성 주입 패턴).
 
 function broadcastMediaUpdate(data: MediaUpdate): void {
-  mediaPlayerVisible = data.status === "Playing" || data.status === "Paused";
+  // 알람 소리도 Chromium <audio> 요소라 재생되는 순간 Windows SMTC가 "현재 세션"으로
+  // 잡아버린다(실측, 2026-08) — media-monitor.js는 세션 출처를 구분하지 않고 그대로
+  // 전달하므로, 휴식 알림이 떠 있는 동안은 그 상태를 무시하고 플레이어를 숨긴다. 안 그러면
+  // 미디어 플레이어에 알람 소리 재생 버튼이 뜨고, 누르면 알람이 다시 울린다.
+  const effectiveData: MediaUpdate = petInteraction.isRestActive() ? { status: "None" } : data;
+  mediaPlayerVisible = effectiveData.status === "Playing" || effectiveData.status === "Paused";
   if (!mediaPlayerVisible) mediaPlayerRect = null;
-  petWindow?.webContents.send("pet:media-update", data);
+  petWindow?.webContents.send("pet:media-update", effectiveData);
 }
 
 const mediaMonitor = createMediaMonitor({
@@ -708,6 +713,9 @@ function stopMediaMonitor() {
 }
 
 function sendMediaCommand(action: string): void {
+  // broadcastMediaUpdate가 휴식 알림 중엔 플레이어를 숨기지만, 그 사이 큐에 남아 있던
+  // 클릭이 뒤늦게 도착하는 경우까지 막는 이중 방어다.
+  if (petInteraction.isRestActive()) return;
   mediaMonitor.sendCommand(action);
 }
 
@@ -908,7 +916,8 @@ function createPetWindow() {
     onMoved: () => petPosition.handleMoved(),
     onClosed: () => {
       petWindow = undefined;
-    }
+    },
+    isAppQuitting: () => appIsQuitting
   });
 }
 
