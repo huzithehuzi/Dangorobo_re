@@ -53,6 +53,13 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
   **interactive와 focusable의 조건이 다르다** — 호버 두 가지(펫·미디어)는 interactive에만
   들어간다. 커서를 얹었다고 작업 중인 창의 포커스를 빼앗으면 타이핑이 끊긴다.
   `setIgnoreMouseEvents`의 `forward: true`가 빠지면 통과된 클릭이 아래 창에 전달되지 않는다.
+  **값이 바뀌지 않으면 네이티브 호출을 하지 않는다.** Electron의 Windows `setFocusable()`은
+  값과 무관하게 내부적으로 `Deactivate()`를 부르고, 그건 z-order 바로 아래 창에
+  `SetForegroundWindow()`를 건다 — 펫이 다른 창들 사이로 가라앉아 있으면 엉뚱한 배경 창이
+  앞으로 끌려 나와 창 순서가 뒤섞인다. 이 모듈이 "마지막으로 건 값"의 유일한 소유자이므로
+  **바깥에서 `petWindow.setFocusable()`을 직접 부르지 않는다** — 캐시가 어긋나면 다음 전환이
+  통째로 씹힌다. `window-debug.log`의 `focusableChanged`·`interactiveChanged`가 실제 호출
+  여부를 남긴다.
 - 펫 창의 논리 위치는 `windows/pet-position-controller.ts`가 소유한다. 파일 I/O는
   `pet-position-store.ts`, 작업 영역 클램프 계산은 `windows/pet-window-layout.ts`가 하고,
   컨트롤러는 그 둘을 실제 창·화면에 붙이는 부분과 "언제 디스크에 쓸지" 같은 수명주기를 맡는다.
@@ -525,6 +532,11 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
 - 전체화면 DND는 Windows 알림 상태를 이용해 일부 앱을 전체화면으로 오인할 수 있다.
 - 펫이 다른 topmost 창 아래로 내려가거나 전체화면 게임 복귀 후 숨는 현상은 장시간 실사용
   관찰이 필요하다. 렌더러/GPU 종료 이벤트는 `window-debug.log`에 기록한다.
+- 창 순서가 뒤섞이던 현상의 원인은 2026-08-15에 `setFocusable()` 반복 호출로 좁혔지만
+  (위 `pet-interaction-mode.ts` 항목), 진짜 전환일 때는 여전히 Electron이 `Deactivate()`를
+  부른다. 휴식 알림·말풍선·이동 모드처럼 사용자가 일으키는 드문 전환만 남았으므로 실사용
+  관찰로 재발 여부를 확인한다. 펫이 가라앉는 것 자체(30초 `moveTop()` 워치독이 되돌린다)는
+  별개 문제로 남아 있다.
 - 실제 Gemini 질문·번역·문서 요약과 기억 추출·open loop 판정은 API 키와 네트워크가 필요한
   수동 검증 영역이다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.

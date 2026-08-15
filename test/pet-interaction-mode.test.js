@@ -20,20 +20,27 @@ function setup(overrides = {}) {
   const logs = [];
   /** @type {boolean[]} */
   const skipTaskbar = [];
-  const win = {
-    destroyed: false,
-    isDestroyed: () => win.destroyed,
-    /** @param {boolean} value */
-    setFocusable: (value) => focusable.push(value),
-    /** @param {boolean} ignore @param {any} options */
-    setIgnoreMouseEvents: (ignore, options) => ignoreMouse.push({ ignore, options }),
-    /** @param {boolean} skip */
-    setSkipTaskbar: (skip) => skipTaskbar.push(skip),
-    webContents: {
-      /** @param {string} channel @param {any} payload */
-      send: (channel, payload) => sent.push({ channel, payload })
-    }
-  };
+  /** 호출을 전부 같은 배열에 모으므로 창을 갈아끼워도 기록은 이어진다. */
+  function makeWindow() {
+    /** @type {any} */
+    const w = {
+      destroyed: false,
+      isDestroyed: () => w.destroyed,
+      /** @param {boolean} value */
+      setFocusable: (value) => focusable.push(value),
+      /** @param {boolean} ignore @param {any} options */
+      setIgnoreMouseEvents: (ignore, options) => ignoreMouse.push({ ignore, options }),
+      /** @param {boolean} skip */
+      setSkipTaskbar: (skip) => skipTaskbar.push(skip),
+      webContents: {
+        /** @param {string} channel @param {any} payload */
+        send: (channel, payload) => sent.push({ channel, payload })
+      }
+    };
+    return w;
+  }
+  const win = makeWindow();
+  const current = { win };
   const state = {
     panelActive: false,
     customizeActive: false,
@@ -42,7 +49,7 @@ function setup(overrides = {}) {
     ensureVisibleCount: 0
   };
   const deps = {
-    petWindow: () => win,
+    petWindow: () => current.win,
     anyPanelActive: () => state.panelActive,
     isCustomizeActive: () => state.customizeActive,
     isPetHoverInteractive: () => state.petHover,
@@ -56,6 +63,8 @@ function setup(overrides = {}) {
   return {
     mode: createPetInteractionMode(/** @type {any} */ (deps)),
     win, state, focusable, ignoreMouse, sent, logs, skipTaskbar,
+    /** 펫 창 재생성을 흉내 낸다. */
+    recreateWindow: () => { current.win = makeWindow(); },
     /** 마지막 apply() 결과 */
     last: () => ({
       focusable: focusable[focusable.length - 1],
@@ -64,16 +73,65 @@ function setup(overrides = {}) {
   };
 }
 
-test("apply()마다 skipTaskbar를 다시 건다", () => {
+test("setFocusable을 걸 때마다 skipTaskbar를 다시 건다", () => {
   // Windows가 focusable을 켤 때 생성 시 설정한 skipTaskbar를 가끔 잊어버려(피드백,
   // 2026-08) 작업 표시줄에 아이콘이 생기고, 그 우클릭 메뉴는 Windows 셸이 직접 그려서
-  // 이 앱의 어떤 이벤트로도 못 막는다 — 아예 안 생기게 매번 다시 건다.
+  // 이 앱의 어떤 이벤트로도 못 막는다 — setFocusable을 부른 apply마다 다시 건다.
   const { mode, state, skipTaskbar } = setup();
   mode.apply();
   assert.deepEqual(skipTaskbar, [true]);
 
   state.panelActive = true;
   mode.apply();
+  assert.deepEqual(skipTaskbar, [true, true]);
+
+  // focusable이 그대로면 Windows가 잊을 계기가 없으므로 다시 걸지 않는다.
+  state.petHover = true;
+  mode.apply();
+  assert.deepEqual(skipTaskbar, [true, true]);
+});
+
+test("값이 그대로면 setFocusable을 다시 부르지 않는다", () => {
+  // Electron의 Windows setFocusable()은 값과 무관하게 Deactivate()를 부르고, 그건
+  // z-order 바로 아래 창에 SetForegroundWindow()를 건다. 펫이 다른 창들 사이로
+  // 가라앉아 있으면 엉뚱한 배경 창이 앞으로 끌려 나와 창 순서가 뒤섞인다
+  // (전체화면 게임 중 리포트, 2026-08-15). 호버는 interactive만 바꾸므로
+  // 커서가 펫 위를 드나드는 동안 focusable을 다시 걸어선 안 된다.
+  const { mode, state, focusable, ignoreMouse } = setup();
+  mode.apply();
+  assert.deepEqual(focusable, [false]);
+  assert.equal(ignoreMouse.length, 1);
+
+  state.petHover = true;
+  mode.apply();
+  state.petHover = false;
+  mode.apply();
+  state.petHover = true;
+  mode.apply();
+
+  assert.deepEqual(focusable, [false], "호버 왕복은 focusable을 건드리지 않는다");
+  assert.equal(ignoreMouse.length, 4, "interactive는 바뀔 때마다 반영한다");
+});
+
+test("값이 그대로면 setIgnoreMouseEvents도 다시 부르지 않는다", () => {
+  const { mode, ignoreMouse } = setup();
+  mode.apply();
+  mode.apply();
+  mode.apply();
+  assert.equal(ignoreMouse.length, 1);
+});
+
+test("창이 새로 만들어지면 값이 같아도 네이티브 상태를 다시 건다", () => {
+  // 펫을 껐다 켜거나 렌더러가 죽어 창이 재생성되면 캐시한 값은 새 창의 상태가 아니다.
+  const { mode, recreateWindow, focusable, ignoreMouse, skipTaskbar } = setup();
+  mode.apply();
+  mode.apply();
+  assert.deepEqual(focusable, [false], "같은 창이면 그대로 둔다");
+
+  recreateWindow();
+  mode.apply();
+  assert.deepEqual(focusable, [false, false]);
+  assert.equal(ignoreMouse.length, 2);
   assert.deepEqual(skipTaskbar, [true, true]);
 });
 
@@ -175,8 +233,19 @@ test("판단 근거를 전부 기록에 남긴다", () => {
   assert.deepEqual(logs[0].detail, {
     interactive: true, focusable: true, restActive: true, customizeActive: false,
     petHoverInteractive: true, mediaPlayerHoverInteractive: false, clickThrough: true,
+    focusableChanged: true, interactiveChanged: true,
     assistantPanelActive: false
   });
+});
+
+test("네이티브 호출을 건너뛴 apply도 기록에는 남는다", () => {
+  // z-order 사고를 역추적하려면 "그때 setFocusable을 실제로 걸었는가"가 로그에 있어야 한다.
+  const { mode, logs } = setup();
+  mode.apply();
+  mode.apply();
+  assert.equal(logs.length, 2);
+  assert.equal(logs[1].detail.focusableChanged, false);
+  assert.equal(logs[1].detail.interactiveChanged, false);
 });
 
 test("휴식 알림 상태는 읽어 갈 수 있다", () => {

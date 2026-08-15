@@ -1199,7 +1199,11 @@ function startRestAlert(alarm: RestAlert): void {
   if (!petWindow || petWindow.isDestroyed()) createPetWindow();
   else petPosition.ensureVisible();
   const restWindow = requireWindow(petWindow);
-  restWindow.setFocusable(true);
+  // show() 전에 포커스를 받을 수 있게 만들어야 확인 버튼을 누를 수 있다. setFocusable을
+  // 직접 부르지 않고 apply()를 태우는 이유는 그쪽이 "마지막으로 건 값" 캐시의 소유자라서다
+  // — 밖에서 몰래 바꾸면 캐시가 어긋나 다음 전환이 통째로 씹힌다. restActive는 위에서 이미
+  // 켰으므로 여기서 apply()는 focusable/interactive를 둘 다 켠다.
+  petInteraction.apply();
   restWindow.show();
   petInteraction.setClickThrough(false);
   restWindow.webContents.send("pet:rest-start", {
@@ -1229,8 +1233,10 @@ function confirmRestAlert() {
   petInteraction.setRestActive(false);
   petWindow?.webContents.send("pet:rest-end");
 
+  // setClickThrough(true)가 이미 apply()를 태워 focusable을 내린다. 여기서 setFocusable을
+  // 또 부르면 캐시가 어긋날 뿐 아니라, 말풍선이 떠 있는 경우 apply()가 켜둔 focusable을
+  // 되돌려 입력을 못 받게 만든다.
   petInteraction.setClickThrough(true);
-  petWindow?.setFocusable(false);
   rebuildTrayMenu();
   setTimeout(alarmQueue.tryShowNext, 400);
 }
