@@ -22,11 +22,12 @@
     "source:verify": "node scripts/source-archive.js --verify",
     "source:dist": "node scripts/source-archive.js",
     "predist": "npm run source:verify && npm run ui:build && npm run build:runtime",
-    "dist": "electron-builder --win portable --x64",
+    "dist": "electron-builder --win --x64",
     "postdist": "npm run source:dist"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
+    "electron-updater": "^6.8.9",
     "jimp": "^1.6.1",
     "sql.js": "^1.10.0",
     "three": "^0.185.1",
@@ -58,9 +59,22 @@
       "output": "release"
     },
     "win": {
-      "target": "portable",
-      "icon": "assets/app-icon.ico",
-      "artifactName": "Dangorobo-${version}-Windows.${ext}"
+      "target": ["nsis", "portable"],
+      "icon": "assets/app-icon.ico"
+    },
+    "nsis": {
+      "artifactName": "Dangorobo-${version}-Setup.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "portable": {
+      "artifactName": "Dangorobo-${version}-Portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "huzithehuzi",
+      "repo": "Dangorobo_re"
     },
     "mac": {
       "icon": "assets/app-icon.icns"

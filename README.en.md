@@ -37,6 +37,11 @@ runs as a single executable with no installation needed.
 Korean, English, and Japanese are supported, and the language is picked automatically to match
 your Windows language on first launch.
 
+If you installed via the setup file (`Dangorobo-Setup.exe`), the app checks for new versions,
+downloads them automatically, and asks whether to restart and install. The portable build
+(`Dangorobo-Portable.exe`) does not check for updates, so you'll need to download new versions
+yourself.
+
 ## How the pet reacts
 
 - **Follows your mouse.** It turns its head toward the cursor.

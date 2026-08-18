@@ -22,7 +22,10 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 
 ## 현재 상태와 다음 작업
 
-- Windows x64용 Electron portable 앱이며 현재 버전은 `package.json`을 기준으로 한다.
+- Windows x64용 Electron 앱이며 현재 버전은 `package.json`을 기준으로 한다. NSIS 설치본과
+  portable EXE 두 형태로 배포하고(`package.json`의 `build.win.target`), 설치본만
+  `electron-updater`로 자동 업데이트를 확인한다 — portable 실행은 업데이트 채널이 없어
+  확인 자체가 조용히 실패한다(`auto-update-service.ts`).
 - main·preload·펫 창 모듈의 구현 원본은 TypeScript다. main은 CommonJS, 펫 창 모듈은 브라우저
   ESM JavaScript로 제자리 emit해 기존 런타임 경로를 유지한다.
 - 독립 창은 `ui/`의 React + Tailwind CSS 앱이고, 펫 창은 명령형 Three.js 렌더러다.
@@ -223,6 +226,12 @@ main·preload·pet 산출물을 감지해 종료한다.
 소스 ZIP은 반대로 원본 TS와 빌드 설정을 포함하고 제자리 emit, `dist`, `release`, 사용자
 데이터, 비밀값, 로그, temp·rollback을 제외한다.
 
+`package.json`의 `build.publish`는 GitHub Releases(`huzithehuzi/Dangorobo_re`)를 가리킨다.
+`npm run dist`는 로컬 빌드만 하고 업로드하지 않는다 — `electron-builder --publish always`로
+직접 부르거나 CI에 `GH_TOKEN`을 넘겨야 실제로 릴리스에 올라간다. `electron-updater`는 릴리스에
+설치용 EXE·`latest.yml`·`.blockmap`이 함께 있어야 새 버전을 인식하므로, NSIS 산출물 세 개를
+빠짐없이 같은 릴리스에 올린다(electron-builder가 `dist` 시 `release/`에 셋 다 생성한다).
+
 `src/main.ts`의 첫 import는 `src/main/legacy-user-data.ts`다. 이 side effect가 예전 userData
 경로를 먼저 선택한 뒤에만 다른 main 모듈이 평가돼야 한다.
 
@@ -267,6 +276,7 @@ main·preload·pet 산출물을 감지해 종료한다.
 | 말풍선 다섯 패널 열림 상태 | `windows/pet-bubble-panels.ts` |
 | 머리 쓰다듬기 제스처 | `petting-tracker.ts`, `windows/pet-pointer.ts` |
 | 알람 예약·DND 보류 큐 | `alarm-scheduler.ts`, `alarm-queue.ts`, `dnd-monitor.ts` |
+| 자동 업데이트 확인·다운로드·재시작 확인 다이얼로그 | `auto-update-service.ts` |
 | 날씨(Open-Meteo, API 키 불필요) | `weather-service.ts`, `alarm-queue.ts`의 `resolveAlarmForDisplay`, `windows/pet-menu-model.ts`의 `check-weather` 항목 |
 | 체크리스트 | `windows/checklist.ts`, `checklist-ipc.ts`, `ui/checklist/` |
 | 즐겨찾기와 아이콘 | `windows/favorites-panels.ts`, `favorites-layout.ts`, `favorite-icon-service.ts`, `favorites-ipc.ts`, `ui/favorites-*/` |

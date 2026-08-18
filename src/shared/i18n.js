@@ -624,6 +624,12 @@
     "dialog.unsavedTitle": { ko: "저장하지 않은 변경사항", en: "Unsaved Changes", ja: "未保存の変更" },
     "dialog.unsavedMessage": { ko: "저장하지 않은 변경사항이 있습니다. 저장하지 않고 닫으시겠습니까?", en: "You have unsaved changes. Close without saving?", ja: "保存されていない変更があります。保存せずに閉じますか?" },
 
+    // ---- 자동 업데이트 대화상자 ----
+    "update.downloadedTitle": { ko: "새 버전 다운로드 완료", en: "Update Downloaded", ja: "アップデートのダウンロード完了" },
+    "update.downloadedMessage": { ko: "새 버전 {{version}}이 준비되었습니다. 지금 재시작해서 설치할까요?", en: "Version {{version}} is ready. Restart now to install?", ja: "新しいバージョン {{version}} の準備ができました。今すぐ再起動してインストールしますか?" },
+    "update.restartNow": { ko: "지금 재시작", en: "Restart Now", ja: "今すぐ再起動" },
+    "update.restartLater": { ko: "나중에", en: "Later", ja: "後で" },
+
     // ---- 즐겨찾기(바로가기) ----
     "favorites.pickerTitle": { ko: "프로그램 또는 바로가기 선택", en: "Select a Program or Shortcut", ja: "プログラムまたはショートカットを選択" },
     "favorites.pickerFilterName": { ko: "프로그램 및 바로가기", en: "Programs and Shortcuts", ja: "プログラムとショートカット" },

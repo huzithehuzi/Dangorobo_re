@@ -3,6 +3,21 @@
 Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·기능 계약·제약과 향후 과제는
 [`DEVELOPMENT.md`](./DEVELOPMENT.md)를 기준으로 삼고, 세부 작업 과정은 Git 이력에서 확인한다.
 
+## 2026-08-18
+
+- **자동 업데이트 추가**: 지금까지는 portable EXE 하나만 배포해 사용자가 새 버전을 직접
+  받아야 했다. `electron-updater`를 붙여 설치본에서는 실행 시 새 버전을 자동으로 확인·다운로드
+  하고, 다운로드가 끝나면 지금 재시작해서 설치할지 다이얼로그로 물어본다(`auto-update-service.ts`).
+  `electron-updater`는 portable 실행에서 동작하지 않으므로(업데이트 채널 없음), 배포 타겟을
+  `nsis`(설치본) + `portable` 둘로 늘렸다 — 기존 portable 사용자는 그대로 수동 업데이트를
+  이어갈 수 있다. `package.json`에 GitHub Releases(`huzithehuzi/Dangorobo_re`) publish 설정을
+  추가했지만 `npm run dist`는 로컬 빌드만 하고 자동 업로드는 하지 않는다 — 릴리스에는 설치본
+  EXE·`latest.yml`·`.blockmap`을 함께 올려야 electron-updater가 새 버전을 인식한다. 개발 실행
+  (`app.isPackaged === false`)에서는 확인을 아예 건너뛴다. `npm run dist`로 NSIS·portable 두
+  산출물이 정상 생성됨을 확인했다(로컬 빌드 검증). **설치본 위에서 실제 업데이트 다운로드→
+  재시작 다이얼로그→설치까지 이어지는 흐름은 Windows 실기로 아직 확인하지 못한 미해결
+  검증이다** — GitHub Release에 낮은 버전과 새 버전을 각각 올려 실제로 감지되는지 봐야 한다.
+
 ## 2026-08-15
 
 - **창 z-order가 뒤섞이던 현상 원인 규명·수정**: 다른 사용자에게서도 "윈도우 창 순서를 앱이

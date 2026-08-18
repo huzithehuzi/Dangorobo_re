@@ -219,7 +219,9 @@ npm run source:verify
   이미 실행 중이면 single-instance lock 때문에 캡처가 조용히 실패할 수 있다.
 - 렌더링 변경은 팔레트·외곽선 ON/OFF 네 조합과 투명 배경을 확인한다.
 - 휴식·알람 변경은 즉시 알림과 카운트다운을 확인한다.
-- 배포 전에는 Windows portable EXE, 소스 ZIP 구성, 버전, 비밀값·사용자 데이터 제외를 직접 확인한다.
+- 배포 전에는 Windows NSIS 설치본·portable EXE, 소스 ZIP 구성, 버전, 비밀값·사용자 데이터 제외를
+  직접 확인한다. 설치본으로 자동 업데이트를 확인할 때는 `release/`의 낮은 버전을 먼저 설치해
+  두고 그 위에서 새 버전을 배포해 다운로드·재시작 다이얼로그·설치까지 실제로 거친다.
 - Windows 전용 PowerShell·SMTC·DND·uIOhook·globalShortcut 변경은 Windows 실기로 확인하지 못했다면
   미해결 검증으로 명시한다.
 

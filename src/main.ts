@@ -52,6 +52,7 @@ import {
 import { resizeClipboardImage } from "./main/image-resize.js";
 import { createAlarmScheduler } from "./main/alarm-scheduler.js";
 import { createWeatherService } from "./main/weather-service.js";
+import { createAutoUpdateService } from "./main/auto-update-service.js";
 import { createMediaMonitor } from "./main/media-monitor.js";
 import type { MediaUpdate } from "./main/media-monitor.js";
 import { createCapsLockStateReader } from "./main/caps-lock-state.js";
@@ -341,6 +342,7 @@ let mediaPlayerRect: MediaPlayerRect | null = null;
 let trayCountdownTimer: Timer;
 const alarmScheduler = createAlarmScheduler((id) => alarmQueue.fireAlarm(id));
 const weatherService = createWeatherService();
+const autoUpdateService = createAutoUpdateService({ getLanguage: () => settings.language });
 const alarmQueue = createAlarmQueue({
   scheduler: alarmScheduler,
   getSettings: () => settings,
@@ -1477,6 +1479,9 @@ app.whenReady().then(async () => {
     favoritesWindows.createDockWindow({ show: false });
   }
   petMenu.createTray();
+  // 개발 실행(app.isPackaged === false)에서는 electron-updater가 dev-app-update.yml을
+  // 찾다가 실패하며 시끄러운 로그만 남기므로, 패키징된 배포본에서만 확인한다.
+  if (app.isPackaged) autoUpdateService.checkForUpdates();
   trayCountdownTimer = setInterval(() => {
     rebuildTrayMenu();
     if (petWindow && !petWindow.isDestroyed() && petWindow.isVisible()) {
