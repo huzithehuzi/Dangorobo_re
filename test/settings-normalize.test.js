@@ -97,14 +97,14 @@ test("키 구성은 입력이 무엇이든 DEFAULT_SETTINGS와 정확히 같다"
 });
 
 // DEFAULT_SETTINGS는 "출하 시 펫 외형"이고, 일부 개별 정규화 함수의 폴백은 "값이 없을 때 쓰는
-// 중립값"이라 이 7개 키는 서로 다르다. 의도된 차이지만 눈에 안 띄어서 여기 못박아둔다 —
+// 중립값"이라 이 8개 키는 서로 다르다. 의도된 차이지만 눈에 안 띄어서 여기 못박아둔다 —
 // 이 목록이 달라지면 어느 쪽이 바뀐 건지 확인할 것.
 const NEUTRAL_FALLBACK_KEYS = [
   "paletteEnabled", "outlineEnabled", "facePattern", "faceCosmetic",
-  "bodyCostume", "partVariations", "customizationPresets"
+  "bodyCostume", "partVariations", "customizationPresets", "fullscreenDndEnabled"
 ];
 
-test("빈 입력도 모든 키를 채우고, 기본값과 다른 키는 알려진 7개뿐이다", () => {
+test("빈 입력도 모든 키를 채우고, 기본값과 다른 키는 알려진 8개뿐이다", () => {
   const normalized = /** @type {Record<string, any>} */ (normalizeSettings({}));
   const differing = [];
   for (const key of Object.keys(DEFAULT_SETTINGS)) {

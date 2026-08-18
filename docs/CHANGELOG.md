@@ -5,6 +5,16 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-18
 
+- **전체화면 방해금지 모드 새 설치 기본값을 켬으로 변경**: 전체화면 게임 중 펫이 창 뒤로
+  가라앉아 z-order를 흐트러뜨리던 사례(2026-08-15 수정)가 애초에 이 기능이 꺼져 있어야만
+  체감되는 문제였다는 점에 착안해, `fullscreenDndEnabled`의 `DEFAULT_SETTINGS` 기본값을
+  `false`→`true`로 바꿨다(`settings-schema.ts`). 이 값은 브랜드 뉴 설치에서만
+  `DEFAULT_SETTINGS`를 직접 쓰고 기존 사용자는 저장된 값을 그대로 따르므로(`normalizeSettings`의
+  `source.fullscreenDndEnabled === true` 검사) 기존 사용자의 동작은 그대로다. `normalizeSettings({})`
+  (빈 입력)의 중립 폴백은 여전히 `false`라 `DEFAULT_SETTINGS`와 갈라지는 키가 하나 늘었고,
+  `settings-normalize.test.js`의 `NEUTRAL_FALLBACK_KEYS` 목록(7→8개)에 반영해 회귀 테스트를
+  통과시켰다.
+
 - **자동 업데이트 추가**: 지금까지는 portable EXE 하나만 배포해 사용자가 새 버전을 직접
   받아야 했다. `electron-updater`를 붙여 설치본에서는 실행 시 새 버전을 자동으로 확인·다운로드
   하고, 다운로드가 끝나면 지금 재시작해서 설치할지 다이얼로그로 물어본다(`auto-update-service.ts`).

@@ -167,7 +167,10 @@ const DEFAULT_SETTINGS = {
   idleRoutineEnabled: true,
   idleRoutineMinSeconds: 18,
   idleRoutineMaxSeconds: 42,
-  fullscreenDndEnabled: false,
+  // 전체화면 게임 중 펫이 창 뒤로 가라앉아 z-order를 흐트러뜨리던 사례가 있어(2026-08-15
+  // 수정) 새 설치 기본값을 켬으로 바꿨다(2026-08-18). 기존 사용자는 저장된 값을 그대로
+  // 따르므로(normalizeSettings의 `=== true` 검사) 이 변경의 영향을 받지 않는다.
+  fullscreenDndEnabled: true,
   petDragMode: "always",
   bubbleTheme: DEFAULT_BUBBLE_THEME,
   bubbleThemeCustomBg: "#20232b",
