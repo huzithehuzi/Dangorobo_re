@@ -1,6 +1,6 @@
 *[한국어](./README.md) · English · [日本語](./README.ja.md)*
 
-# Dangorobo 0.9.0
+# Dangorobo 0.9.1
 
 A low-poly cat that lives on a corner of your desktop. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even

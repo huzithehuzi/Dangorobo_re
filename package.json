@@ -1,6 +1,6 @@
 {
   "name": "dangorobo",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "type": "commonjs",
   "description": "마우스를 바라보고 휴식을 알려주는 로우폴리 데스크톱 펫 Dangorobo",

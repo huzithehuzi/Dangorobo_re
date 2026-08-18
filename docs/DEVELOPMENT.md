@@ -232,6 +232,33 @@ main·preload·pet 산출물을 감지해 종료한다.
 설치용 EXE·`latest.yml`·`.blockmap`이 함께 있어야 새 버전을 인식하므로, NSIS 산출물 세 개를
 빠짐없이 같은 릴리스에 올린다(electron-builder가 `dist` 시 `release/`에 셋 다 생성한다).
 
+### 퍼블리시 절차 (실제로 검증된 순서)
+
+```powershell
+# GH_TOKEN은 User 환경변수에 저장해두고, 새 프로세스에서 명시적으로 읽어 넘긴다
+# (레지스트리에 막 등록한 값은 이미 떠 있는 셸 프로세스에 자동으로 안 들어온다).
+$env:GH_TOKEN = [System.Environment]::GetEnvironmentVariable("GH_TOKEN", "User")
+npm run dist -- --publish always
+```
+
+- **`GH_TOKEN`은 classic PAT(`repo` scope)로 발급한다.** fine-grained PAT는 저장소별
+  Repository access·Contents 권한 화면에서 설정을 다 맞춰도 `403 Resource not accessible by
+  personal access token`이 재현성 있게 났다(2026-08-18에 두 번 다른 fine-grained 토큰으로
+  확인). 원인을 더 파기보다 classic + `repo` 한 번에 발급하는 쪽이 확실하고 빠르다.
+- **에셋 병렬 업로드 중 같은 태그로 draft 릴리스가 2개 생기는 레이스가 있다.** `electron-builder`가
+  `Setup.exe.blockmap`/`Setup.exe`/`Portable.exe`/`latest.yml`을 동시에 올리면서 "release
+  doesn't exist" 판단을 두 번 내려 `v{version}` 태그의 draft를 두 개 만드는 경우가 있었다.
+  퍼블리시 뒤에는 항상 `GET /repos/{owner}/{repo}/releases`로 같은 태그가 중복됐는지 확인하고,
+  중복이면 에셋이 적은 쪽을 지우고 나머지 쪽에 빠진 파일을 `POST
+  uploads.github.com/.../releases/{id}/assets?name=...`로 채운 뒤 `PATCH .../releases/{id}`에
+  `{"draft": false}`를 보내 발행한다. draft 상태로 남으면 `electron-updater`가 해당 릴리스를
+  못 찾는다.
+- 저장소가 private이면 fine-grained PAT의 repo 선택 화면이 먹통일 때 public으로 바꿔 우회할 수도
+  있지만, 그러면 GET(읽기)만 인증 없이 뚫릴 뿐 릴리스 생성(POST)엔 여전히 쓰기 권한이 있는
+  토큰이 필요하다 — 근본 원인(classic 토큰)과는 별개 문제였다.
+- 다운로드된 `latest.yml`이 실제 버전과 SHA512를 담고 있는지, 설치본(0.9.0 등 이전 버전)에서
+  실행 시 새 버전 다운로드 다이얼로그가 뜨는지까지 실기로 확인해야 "퍼블리시 성공"으로 본다.
+
 `src/main.ts`의 첫 import는 `src/main/legacy-user-data.ts`다. 이 side effect가 예전 userData
 경로를 먼저 선택한 뒤에만 다른 main 모듈이 평가돼야 한다.
 
