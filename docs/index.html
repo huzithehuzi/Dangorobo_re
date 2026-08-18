@@ -269,6 +269,17 @@
     transition: transform .3s cubic-bezier(.34,1.56,.64,1);
   }
   .preset:hover .disc img { transform: translateY(-5px) rotate(-2.5deg); }
+  /* 프리셋 아래 덧붙이는 한 줄 — 손으로 적어둔 쪽지처럼 보이게 점선 테두리를 쓴다. */
+  .presets-note {
+    display: flex; align-items: flex-start; gap: 10px;
+    width: fit-content; max-width: 52em; margin: 22px auto 0;
+    padding: 14px 22px; border: 2px dashed var(--border);
+    /* 알약 모양(999px)으로 두면 줄바꿈이 생기는 순간 반경이 높이의 절반까지 커져
+       럭비공처럼 잡힌다. 줄 수와 무관하게 안전한 값을 쓴다. */
+    border-radius: 22px;
+    font-size: 14.5px; color: var(--muted); text-align: left;
+  }
+  .presets-note .pen { flex: none; }
 
   /* ---------- showcase ---------- */
   .shots { display: flex; flex-direction: column; gap: 26px; }
@@ -549,6 +560,10 @@
         <div class="disc"><img src="media/preset-loro.png" alt=""></div>
       </article>
     </div>
+    <p class="presets-note reveal">
+      <span class="pen">✏️</span>
+      <span data-i18n="presets.custom">이 세 가지 말고도, 얼굴은 표정별 그림을 zip으로 묶어 넣고 몸 무늬는 PNG로 직접 그려 넣을 수 있습니다.</span>
+    </p>
   </div>
 </section>
 
@@ -746,6 +761,7 @@ const I18N = {
     "presets.kicker": "기본으로 들어 있는 3종",
     "presets.title": "같은 펫, 다른 얼굴",
     "presets.lead": "색과 파츠를 바꾸면 이만큼 달라집니다. 설치하면 이 세 조합이 이미 들어 있고, 직접 만든 조합도 이름 붙여 저장할 수 있습니다.",
+    "presets.custom": "이 세 가지 말고도, 얼굴은 표정별 그림을 zip으로 묶어 넣고 몸 무늬는 PNG로 직접 그려 넣을 수 있습니다.",
     "s1.title": "펫 옆에서 바로 색을 고릅니다",
     "s1.body": "이름만 보고 고르기 어려울 때, 부위별 색 카드가 실제 위치와 선으로 이어져 펫 좌우에 뜹니다. 보면서 누르면 바로 반영됩니다.",
     "s1.t1": "부위별 색", "s1.t2": "귀 5종 · 꼬리 3종", "s1.t3": "머리 장식 8종", "s1.t4": "프리셋 저장",
@@ -814,6 +830,7 @@ const I18N = {
     "presets.kicker": "three included by default",
     "presets.title": "Same pet, different faces",
     "presets.lead": "This is how far colours and parts take it. All three ship with the app, and you can name and save your own combinations too.",
+    "presets.custom": "Beyond these three you can draw your own — expression images bundled into a ZIP for the face, and a single PNG for the body pattern.",
     "s1.title": "Pick colours right beside the pet",
     "s1.body": "When names alone aren't enough, colour cards float on both sides of the pet, each connected by a line to the part it paints. Tap one and it applies instantly.",
     "s1.t1": "Per-part colours", "s1.t2": "5 ears · 3 tails", "s1.t3": "8 headgear", "s1.t4": "Presets",
@@ -882,6 +899,7 @@ const I18N = {
     "presets.kicker": "最初から入っている3種",
     "presets.title": "同じペット、違う顔",
     "presets.lead": "色とパーツを変えるとこれだけ変わります。この3つの組み合わせは最初から入っていて、自分で作った組み合わせも名前を付けて保存できます。",
+    "presets.custom": "この3つ以外にも、顔は表情ごとの画像をZIPにまとめて、体の模様はPNGで自分で描いて入れられます。",
     "s1.title": "ペットのそばで色を選べます",
     "s1.body": "名前だけでは選びにくいとき、部位ごとの色カードが実際の位置と線でつながってペットの左右に浮かびます。見ながら押せばすぐ反映されます。",
     "s1.t1": "部位ごとの色", "s1.t2": "耳5種 · 尻尾3種", "s1.t3": "頭の飾り8種", "s1.t4": "プリセット保存",
