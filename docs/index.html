@@ -61,7 +61,7 @@
 
   /* Jua는 400 한 굵기만 있어서, 이 폰트를 쓰는 곳은 굵기를 400으로 못박아
      브라우저가 합성 볼드를 그리지 않게 한다(합성 볼드는 획이 뭉개진다). */
-  h1, h2, h3, .display, .brand, .btn, .eyebrow, .kicker, summary, .bubble, .foot strong {
+  h1, h2, h3, .display, .brand, .btn, .eyebrow, .kicker, summary, .foot strong {
     font-family: var(--display); font-weight: 400; letter-spacing: .002em;
   }
 
@@ -172,7 +172,7 @@
     background: radial-gradient(circle, rgba(255, 210, 84, .2), transparent 66%);
     filter: blur(10px);
   }
-  .pet-stage { position: relative; cursor: pointer; }
+  .pet-stage { position: relative; }
   .pet-stage .pet {
     position: relative; width: 252px;
     filter: drop-shadow(0 26px 32px rgba(0, 0, 0, .55));
@@ -180,7 +180,6 @@
     transition: transform .3s cubic-bezier(.34,1.56,.64,1);
     will-change: transform;
   }
-  .pet-stage.squish .pet { animation: squish .42s ease; }
   .pet-stage .shadow {
     position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
     width: 150px; height: 22px; border-radius: 50%;
@@ -192,45 +191,8 @@
     0%, 100% { transform: translateX(-50%) scale(1); opacity: .45; }
     50% { transform: translateX(-50%) scale(.87); opacity: .3; }
   }
-  @keyframes squish {
-    0% { transform: scale(1, 1); }
-    35% { transform: scale(1.13, .84) translateY(9px); }
-    70% { transform: scale(.95, 1.06) translateY(-3px); }
-    100% { transform: scale(1, 1); }
-  }
-
-  /* 말풍선 — 앱의 핵심 UI라 페이지에서도 같은 모양을 쓴다 */
-  .bubble {
-    position: absolute; top: 6px; left: 50%;
-    transform: translateX(-118%) rotate(-3deg);
-    background: var(--surface); border: 2px solid var(--border);
-    border-radius: 18px; padding: 9px 17px;
-    font-family: var(--display); font-size: 17px; color: var(--text);
-    box-shadow: 0 10px 24px rgba(0,0,0,.4);
-    animation: pop .5s cubic-bezier(.34,1.56,.64,1) .9s both, float 3.8s ease-in-out 1.4s infinite;
-    white-space: nowrap;
-  }
-  .bubble::after {
-    content: ""; position: absolute; right: 20px; bottom: -9px;
-    width: 14px; height: 14px; background: var(--surface);
-    border-right: 2px solid var(--border); border-bottom: 2px solid var(--border);
-    transform: rotate(45deg);
-  }
-  @keyframes pop { from { opacity: 0; transform: translateX(-118%) rotate(-3deg) scale(.6); } }
-  @keyframes float { 0%,100% { margin-top: 0; } 50% { margin-top: -7px; } }
-
-  .heart {
-    position: absolute; pointer-events: none; font-size: 22px;
-    animation: heartUp 1.05s ease-out forwards;
-  }
-  @keyframes heartUp {
-    0% { opacity: 0; transform: translate(0, 0) scale(.5); }
-    18% { opacity: 1; }
-    100% { opacity: 0; transform: translate(var(--dx), -86px) scale(1.15); }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .pet-stage .pet, .pet-stage .shadow, .bubble, .sparkle.t, .sparkle.t2, .sparkle.t3 { animation: none; }
+    .pet-stage .pet, .pet-stage .shadow, .sparkle.t, .sparkle.t2, .sparkle.t3 { animation: none; }
     html { scroll-behavior: auto; }
   }
 
@@ -331,12 +293,23 @@
   .p-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.66; }
 
   /* ---------- keys ---------- */
-  .keys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
-  .key-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 14px 4px; border-bottom: 2px dotted var(--border-soft); font-size: 15px;
+  .keys-card {
+    display: grid; grid-template-columns: auto 1fr; gap: 32px; align-items: center;
+    background: var(--surface); border: 2px solid var(--border-soft);
+    border-radius: 24px; padding: 32px 34px;
   }
-  .key-row span:first-child { color: var(--muted); }
+  .keys-card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .keys-demo { display: flex; align-items: center; gap: 7px; }
+  .keys-demo .plus { color: var(--muted-2); font-size: 14px; }
+  kbd.free {
+    color: #40300a; background: var(--accent);
+    border-color: var(--accent-deep); border-bottom-color: var(--accent-deep);
+    animation: keyBlink 2.4s ease-in-out infinite;
+  }
+  @keyframes keyBlink {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
   kbd {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 12.5px; color: var(--text);
@@ -373,9 +346,11 @@
     border: 2px solid var(--border); border-radius: 32px;
     padding: 56px 48px; text-align: center;
   }
+  /* 박스 전체를 덮어야 한다 — 높이를 따로 주면 그라디언트가 다 사라지기 전에 잘려서
+     박스 안에 가로 이음선이 보인다. */
   .band-inner::before {
-    content: ""; position: absolute; inset: -60% 0 auto 0; height: 360px;
-    background: radial-gradient(440px 220px at 50% 100%, rgba(255, 210, 84, .18), transparent 70%);
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(660px 300px at 50% 0%, rgba(255, 210, 84, .16), transparent 72%);
     pointer-events: none;
   }
   .band-inner > * { position: relative; }
@@ -383,7 +358,9 @@
   .band h2 { margin-bottom: 12px; }
   .band p { margin: 0 auto 28px; color: var(--muted); max-width: 34em; }
   .dl-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-  .dl-meta { margin-top: 22px; font-size: 13px; color: var(--muted-2); }
+  /* `.band p`가 클래스+타입이라 `.dl-meta` 하나보다 명시도가 높다 — 그대로 두면 여기서
+     margin-bottom을 0으로 못 눌러 박스 아래에 빈 공간이 남는다. */
+  .band .dl-meta { margin: 22px auto 0; font-size: 13px; color: var(--muted-2); }
 
   /* ---------- footer ---------- */
   footer { border-top: 2px dotted var(--border-soft); padding: 40px 0 56px; }
@@ -402,12 +379,11 @@
     .hero-inner { grid-template-columns: 1fr; gap: 20px; }
     .hero-art { order: -1; min-height: 320px; }
     .pet-stage .pet { width: 200px; }
-    .bubble { font-size: 15px; padding: 7px 14px; }
     .features { grid-template-columns: repeat(2, 1fr); }
     .privacy-grid { grid-template-columns: 1fr; }
     .shot { grid-template-columns: 1fr; gap: 26px; padding: 30px; }
     .shot.flip .shot-text { order: 0; }
-    .keys-grid { grid-template-columns: 1fr; gap: 0; }
+    .keys-card { grid-template-columns: 1fr; gap: 20px; padding: 26px 24px; }
     .nav-links { display: none; }
     .sparkle { display: none; }
   }
@@ -473,8 +449,7 @@
     </div>
     <div class="hero-art">
       <div class="glow"></div>
-      <div class="pet-stage" id="petStage" title="쓰다듬어 보세요">
-        <span class="bubble" id="bubble" data-i18n="hero.hello">안녕!</span>
+      <div class="pet-stage" id="petStage">
         <img class="pet" id="petImg" src="media/pet.png" alt="Dangorobo">
         <div class="shadow"></div>
       </div>
@@ -618,14 +593,11 @@
       <h2 data-i18n="keys.title">손 떼지 않고</h2>
       <p data-i18n="keys.lead">종료를 뺀 나머지는 원하는 조합으로 바꾸거나 개별로 끌 수 있습니다.</p>
     </div>
-    <div class="keys-grid reveal">
-      <div class="key-row"><span data-i18n="k.chat">펫과 대화</span><kbd>Ctrl + Shift + A</kbd></div>
-      <div class="key-row"><span data-i18n="k.fav">즐겨찾기</span><kbd>Ctrl + Shift + F</kbd></div>
-      <div class="key-row"><span data-i18n="k.check">체크리스트</span><kbd>Ctrl + Shift + T</kbd></div>
-      <div class="key-row"><span data-i18n="k.doc">문서 요약</span><kbd>Ctrl + Shift + D</kbd></div>
-      <div class="key-row"><span data-i18n="k.trans">번역</span><kbd>Ctrl + Shift + E</kbd></div>
-      <div class="key-row"><span data-i18n="k.img">이미지 크기 바꾸기</span><kbd>Ctrl + Shift + R</kbd></div>
-      <div class="key-row"><span data-i18n="k.quit">종료</span><kbd>Ctrl + Shift + Q</kbd></div>
+    <div class="keys-card reveal">
+      <div class="keys-demo">
+        <kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd class="free">?</kbd>
+      </div>
+      <p data-i18n="keys.body">대화·즐겨찾기·체크리스트·번역 같은 기능은 전역 단축키로 바로 부릅니다. 기본 조합이 정해져 있고, 설정창에서 버튼을 누르고 원하는 키를 눌러 바꿀 수 있습니다. 안 쓰는 단축키는 개별로 끄면 됩니다.</p>
     </div>
   </div>
 </section>
@@ -699,12 +671,10 @@ const I18N = {
   ko: {
     "nav.features": "기능", "nav.showcase": "화면", "nav.faq": "FAQ", "nav.download": "다운로드",
     "hero.eyebrow": "Windows 데스크톱 펫",
-    "hero.hello": "안녕!",
     "hero.title": "일하는 옆자리에,<br><span class=\"hl\">작은 고양이</span> 한 마리.",
     "hero.lead": "마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아합니다. 평소에는 클릭이 그대로 통과되니 작업을 방해하지 않습니다.",
     "hero.ctaPrimary": "Windows용 다운로드", "hero.ctaSecondary": "GitHub에서 보기",
     "hero.note": "Windows 10 · 11  |  설치본과 무설치(portable) 두 가지",
-    "hero.petTitle": "쓰다듬어 보세요",
     "features.kicker": "이런 걸 합니다",
     "features.title": "그냥 떠 있기만 하지 않습니다",
     "features.lead": "반응하고, 꾸며지고, 일할 때 필요한 것들을 옆에서 챙겨줍니다.",
@@ -742,9 +712,8 @@ const I18N = {
     "p3.title": "API 키는 암호화 보관",
     "p3.body": "대화 기능을 쓸 때 넣는 키는 Windows 보안 저장소에 암호화해 두고, 설정 백업 파일에도 들어가지 않습니다.",
     "keys.kicker": "단축키", "keys.title": "손 떼지 않고",
-    "keys.lead": "종료를 뺀 나머지는 원하는 조합으로 바꾸거나 개별로 끌 수 있습니다.",
-    "k.chat": "펫과 대화", "k.fav": "즐겨찾기", "k.check": "체크리스트",
-    "k.doc": "문서 요약", "k.trans": "번역", "k.img": "이미지 크기 바꾸기", "k.quit": "종료",
+    "keys.lead": "자주 쓰는 기능은 키보드에서 바로 부릅니다.",
+    "keys.body": "대화·즐겨찾기·체크리스트·번역 같은 기능은 전역 단축키로 바로 부릅니다. 기본 조합이 정해져 있고, 설정창에서 버튼을 누르고 원하는 키를 눌러 바꿀 수 있습니다. 안 쓰는 단축키는 개별로 끄면 됩니다.",
     "faq.title": "자주 묻는 것",
     "q1.q": "타이핑 내용을 훔쳐보는 건 아닌가요?",
     "q1.a": "아닙니다. 무엇을 눌렀는지는 저장하지 않고, 최근 몇 초 동안 몇 번 눌렸는지만 세서 꼬리 속도에 씁니다.",
@@ -767,12 +736,10 @@ const I18N = {
   en: {
     "nav.features": "Features", "nav.showcase": "Screens", "nav.faq": "FAQ", "nav.download": "Download",
     "hero.eyebrow": "Windows desktop pet",
-    "hero.hello": "hi!",
     "hero.title": "A <span class=\"hl\">little cat</span><br>beside your work.",
     "hero.lead": "It follows your cursor, wags its tail as you type, and loves being petted. Clicks pass right through it, so it never gets in your way.",
     "hero.ctaPrimary": "Download for Windows", "hero.ctaSecondary": "View on GitHub",
     "hero.note": "Windows 10 · 11  |  Installer and portable builds",
-    "hero.petTitle": "give it a pat",
     "features.kicker": "what it does",
     "features.title": "More than something floating there",
     "features.lead": "It reacts, it dresses up, and it keeps an eye on the things you need while you work.",
@@ -810,9 +777,8 @@ const I18N = {
     "p3.title": "API keys stay encrypted",
     "p3.body": "The key you enter for chat is encrypted in Windows' credential store, and never appears in settings backups.",
     "keys.kicker": "shortcuts", "keys.title": "Without leaving the keyboard",
-    "keys.lead": "Everything except Quit can be rebound to any combination, or switched off individually.",
-    "k.chat": "Talk to pet", "k.fav": "Favourites", "k.check": "Checklist",
-    "k.doc": "Summarise document", "k.trans": "Translate", "k.img": "Resize image", "k.quit": "Quit",
+    "keys.lead": "The things you reach for most are one key press away.",
+    "keys.body": "Chat, favourites, the checklist and translation all open from a global shortcut. Each comes with a default combination, and you can rebind any of them by pressing the key you want in settings — or switch off the ones you never use.",
     "faq.title": "Frequently asked",
     "q1.q": "Is it spying on what I type?",
     "q1.a": "No. What you pressed is never stored — it only counts how many keys were hit in the last few seconds to drive the tail speed.",
@@ -835,12 +801,10 @@ const I18N = {
   ja: {
     "nav.features": "機能", "nav.showcase": "画面", "nav.faq": "FAQ", "nav.download": "ダウンロード",
     "hero.eyebrow": "Windows デスクトップペット",
-    "hero.hello": "やあ！",
     "hero.title": "作業のとなりに、<br><span class=\"hl\">小さな猫</span>を一匹。",
     "hero.lead": "マウスを目で追い、タイピングに合わせて尻尾を振り、撫でると喜びます。普段はクリックがそのまま通り抜けるので作業の邪魔になりません。",
     "hero.ctaPrimary": "Windows版をダウンロード", "hero.ctaSecondary": "GitHub で見る",
     "hero.note": "Windows 10 · 11  |  インストーラー版とポータブル版",
-    "hero.petTitle": "撫でてみてください",
     "features.kicker": "できること",
     "features.title": "ただ浮かんでいるだけではありません",
     "features.lead": "反応して、着せ替えて、作業に必要なものをそばで気にかけてくれます。",
@@ -878,9 +842,8 @@ const I18N = {
     "p3.title": "APIキーは暗号化して保管",
     "p3.body": "会話機能で入れるキーは Windows の資格情報ストアに暗号化して保管し、設定のバックアップファイルにも含まれません。",
     "keys.kicker": "ショートカット", "keys.title": "手を離さずに",
-    "keys.lead": "終了以外は好きな組み合わせに変更でき、個別にオフにもできます。",
-    "k.chat": "ペットと会話", "k.fav": "お気に入り", "k.check": "チェックリスト",
-    "k.doc": "文書要約", "k.trans": "翻訳", "k.img": "画像サイズ変更", "k.quit": "終了",
+    "keys.lead": "よく使う機能はキーボードからすぐに呼び出せます。",
+    "keys.body": "会話・お気に入り・チェックリスト・翻訳などはグローバルショートカットで呼び出します。既定の組み合わせが決まっていて、設定画面でボタンを押して好きなキーを押せば変更できます。使わないショートカットは個別にオフにできます。",
     "faq.title": "よくある質問",
     "q1.q": "入力内容を盗み見ていませんか？",
     "q1.a": "いいえ。何を押したかは保存せず、直近の数秒で何回押されたかだけを数えて尻尾の速さに使います。",
@@ -916,8 +879,6 @@ function applyLang(lang) {
     const value = dict[el.dataset.i18nHtml];
     if (value !== undefined) el.innerHTML = value;
   });
-  const stage = document.getElementById("petStage");
-  if (stage && dict["hero.petTitle"]) stage.title = dict["hero.petTitle"];
   if (latestVersion) showVersion(lang);
   try { localStorage.setItem("dangorobo-lang", lang); } catch (e) { /* 사생활 보호 모드 등 */ }
 }
@@ -976,30 +937,6 @@ if (stage && petImg && !reduceMotion) {
       `translate(${Math.max(-max, Math.min(max, dx * 34)).toFixed(1)}px,`
       + ` ${Math.max(-8, Math.min(8, dy * 18)).toFixed(1)}px) rotate(${(dx * 3.4).toFixed(2)}deg)`;
   }, { passive: true });
-}
-
-// 쓰다듬으면(클릭) 눌리면서 하트가 뜬다.
-const HEARTS = ["💛", "💚", "💙", "🩷", "✨"];
-let heartSeed = 0;
-if (stage) {
-  stage.addEventListener("click", () => {
-    if (!reduceMotion) {
-      stage.classList.remove("squish");
-      void stage.offsetWidth;
-      stage.classList.add("squish");
-    }
-    for (let index = 0; index < 3; index += 1) {
-      const heart = document.createElement("span");
-      heart.className = "heart";
-      heart.textContent = HEARTS[heartSeed++ % HEARTS.length];
-      heart.style.left = `${34 + index * 22}%`;
-      heart.style.top = "26%";
-      heart.style.setProperty("--dx", `${(index - 1) * 30}px`);
-      heart.style.animationDelay = `${index * 90}ms`;
-      stage.appendChild(heart);
-      setTimeout(() => heart.remove(), 1400);
-    }
-  });
 }
 
 // 등장 애니메이션
