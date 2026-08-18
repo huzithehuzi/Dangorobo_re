@@ -280,6 +280,14 @@ npm run dist -- --publish always
 - **`docs/media/`의 이미지는 QA 캡처 하네스 산출물이다.** 손으로 찍지 말고 `--capture-*`로 다시
   뽑는다(인자 목록의 원본은 `src/main/qa-capture.ts`). 투명 여백은 잘라서 넣는다. 펫 외형이나
   설정창 UI가 크게 바뀌면 이 이미지들도 다시 찍어야 실제 앱과 어긋나지 않는다.
+- **프리셋 3종 이미지(`preset-*.png`)는 프로필을 만들어 찍는다.** `--capture`는 그 프로필의
+  설정을 그대로 그리므로, 프리셋별로 임시 user-data-dir을 만들고 `pet-settings.json`에 해당
+  프리셋의 외형 키(`bodyColors`·`partVariations`·`facePattern`·`faceCosmetic`·`faceEyeStyle`·
+  `faceMouthStyle`·`bodyCostume`·`custom*Enabled`)를 top-level로 올려 넣은 뒤 각각 캡처한다.
+  그 JSON은 반드시 `DEFAULT_SETTINGS`에서 파생한다 — 키를 손으로 골라 담으면 빠진 키 때문에
+  멀쩡한 코드가 고장처럼 보인다. `settings-schema.js`는 평가 중 `app.getLocale()`만 쓰므로
+  `test/settings-normalize.test.js`와 같은 최소 electron 스텁으로 순수 Node에서 require할 수 있다.
+  프리셋 이름은 앱과 같아야 하니 `src/shared/i18n.js`의 `customization.builtinPreset.*`를 따른다.
 - 화면 캡처에는 한국어 UI 문구가 박혀 있어 영어·일본어로 전환해도 그대로다. 의도적으로 감수한
   부분이다(언어별로 캡처 세트를 3벌 유지하는 비용이 더 크다).
 
