@@ -261,37 +261,11 @@ npm run dist -- --publish always
 
 ### 소개 페이지(GitHub Pages)
 
-`docs/index.html`이 GitHub Pages로 서비스되는 소개 페이지다. GitHub Pages는 발행 소스로 저장소
-루트와 `/docs`만 받으므로 개발 문서와 같은 폴더에 있다 — 저장소 Settings → Pages에서 소스를
-`main` 브랜치의 `/docs`로 지정하면 `https://huzithehuzi.github.io/Dangorobo_re/`로 열린다.
-`docs/.nojekyll`은 Jekyll 전처리를 건너뛰게 해서 파일을 그대로 서빙시킨다.
-
-- **의존성 없는 단일 HTML이다.** CSS·JS가 파일 안에 들어 있고 외부 요청은 웹폰트(Pretendard,
-  Google Fonts의 Jua·M PLUS Rounded 1c)와 최신 릴리스 태그를 읽는 GitHub API뿐이다. 전부 실패해도
-  페이지는 그대로 뜬다(폰트는 시스템 글꼴로, 버전 문구는 정적 문구로 떨어진다).
-- **제목용 폰트 Jua는 400 한 굵기만 있다.** 그래서 이 폰트를 쓰는 선택자에는 `font-weight: 400`을
-  못박아 뒀다 — 굵기를 올리면 브라우저가 합성 볼드를 그려 획이 뭉개진다. 한글·라틴은 Jua가,
-  일본어는 다음 순위인 M PLUS Rounded 1c가 글리프별로 받는다.
-- **움직임은 모두 `prefers-reduced-motion`으로 끈다.** 커서 추적·하트·둥실 애니메이션·반짝임이
-  대상이다. 새 움직임을 넣으면 이 가드에도 같이 넣는다.
-- **한국어·영어·일본어를 페이지 안에서 전환한다.** 문구는 `<script>`의 `I18N` 객체 한 곳에 모여
-  있고 `data-i18n`(텍스트)·`data-i18n-html`(태그 포함) 속성으로 꽂힌다. 문구를 고칠 때는 세 언어를
-  같이 고친다 — README 3종과 같은 규칙이다.
-- **`docs/media/`의 이미지는 QA 캡처 하네스 산출물이다.** 손으로 찍지 말고 `--capture-*`로 다시
-  뽑는다(인자 목록의 원본은 `src/main/qa-capture.ts`). 투명 여백은 잘라서 넣는다. 펫 외형이나
-  설정창 UI가 크게 바뀌면 이 이미지들도 다시 찍어야 실제 앱과 어긋나지 않는다.
-- **프리셋 3종 이미지(`preset-*.png`)는 프로필을 만들어 찍는다.** `--capture`는 그 프로필의
-  설정을 그대로 그리므로, 프리셋별로 임시 user-data-dir을 만들고 `pet-settings.json`에 해당
-  프리셋의 외형 키(`bodyColors`·`partVariations`·`facePattern`·`faceCosmetic`·`faceEyeStyle`·
-  `faceMouthStyle`·`bodyCostume`·`custom*Enabled`)를 top-level로 올려 넣은 뒤 각각 캡처한다.
-  그 JSON은 반드시 `DEFAULT_SETTINGS`에서 파생한다 — 키를 손으로 골라 담으면 빠진 키 때문에
-  멀쩡한 코드가 고장처럼 보인다. `settings-schema.js`는 평가 중 `app.getLocale()`만 쓰므로
-  `test/settings-normalize.test.js`와 같은 최소 electron 스텁으로 순수 Node에서 require할 수 있다.
-- **페이지 문구에서 제품을 종(고양이/cat/猫)으로 부르지 않는다.** 파츠와 색을 바꾸면 고양이가
-  아니게 되므로 "펫"으로 쓴다. 앱 안의 파츠 이름("고양이 귀" 등)은 카탈로그 용어라 그대로 두고,
-  페이지 문구에만 적용되는 규칙이다.
-- 화면 캡처에는 한국어 UI 문구가 박혀 있어 영어·일본어로 전환해도 그대로다. 의도적으로 감수한
-  부분이다(언어별로 캡처 세트를 3벌 유지하는 비용이 더 크다).
+`docs/index.html`이 GitHub Pages로 서비스되는 배포용 소개 페이지다. 앱 코드와 독립적이라 절차와
+규칙을 [`SITE.md`](./SITE.md)에 따로 뒀다 — 문구·이미지·디자인을 고칠 일이 있으면 그 문서를 본다.
+`docs/media/`의 이미지는 QA 캡처 하네스 산출물이고, 프리셋 프로필 생성과 여백 잘라내기는
+`scripts/site-media.js`가 한다. **앱의 기능·기본값·외형이 바뀌면 이 페이지의 문구와 이미지도
+같이 낡는다**는 것만 여기서 기억한다.
 
 `src/main.ts`의 첫 import는 `src/main/legacy-user-data.ts`다. 이 side effect가 예전 userData
 경로를 먼저 선택한 뒤에만 다른 main 모듈이 평가돼야 한다.

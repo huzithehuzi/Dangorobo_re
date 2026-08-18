@@ -2,7 +2,7 @@
 
 # Dangorobo 0.9.1
 
-A low-poly cat that lives on a corner of your desktop. It watches your cursor, wags its tail as
+A retro-flavoured desktop pet that lives in a corner of your screen. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even
 chat with it if you want.
 
@@ -28,7 +28,7 @@ runs as a single executable with no installation needed.
 
 ## Getting started
 
-1. When you launch it, the cat appears in a corner of your screen and an icon shows up in the
+1. When you launch it, the pet appears in a corner of your screen and an icon shows up in the
    taskbar notification area.
 2. **Right-click** the pet or the tray icon to open a menu. The settings window is there.
 3. Just **drag** the pet anywhere you like. Its position is remembered the next time you launch.
