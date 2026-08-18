@@ -10,325 +10,413 @@
 <meta property="og:image" content="media/pet.png">
 <meta property="og:type" content="website">
 <link rel="icon" href="media/icon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
 <style>
   :root {
-    --bg: #14151a;
-    --bg-2: #191b21;
-    --surface: #21232b;
-    --surface-2: #282b35;
-    --border: #33363f;
-    --border-soft: #2a2d35;
-    --text: #f1f2f5;
-    --muted: #9ea3ae;
-    --muted-2: #6f747f;
-    --accent: #ffcd42;
-    --accent-deep: #d9a01e;
-    --cyan: #39fbfe;
-    --teal: #39a5c0;
-    --orange: #ff8e52;
-    --radius: 16px;
-    --maxw: 1140px;
-    --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
-            "Segoe UI", "Malgun Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    /* 밤에 책상 스탠드 하나 켜둔 느낌 — 자두빛 어둠에 노란 불빛 */
+    --bg: #17131f;
+    --bg-2: #1c1726;
+    --surface: #241e30;
+    --surface-2: #2c2539;
+    --border: #392f4a;
+    --border-soft: #2e2740;
+    --text: #f7f2f8;
+    --muted: #b3a8bf;
+    --muted-2: #7d7290;
+    --accent: #ffd254;
+    --accent-deep: #e0ac2b;
+    --pink: #ff90ad;
+    --cyan: #5fe6f0;
+    --peach: #ffab6b;
+    --maxw: 1120px;
+    --display: "Jua", "M PLUS Rounded 1c", -apple-system, "Segoe UI", sans-serif;
+    --body: "Pretendard Variable", Pretendard, "M PLUS Rounded 1c", -apple-system,
+            BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
   }
 
   * { box-sizing: border-box; }
-
   html { scroll-behavior: smooth; }
 
   body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font);
-    line-height: 1.65;
+    font-family: var(--body);
+    line-height: 1.68;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
+  /* 종이 결 같은 아주 옅은 노이즈 — 완벽하게 매끈한 화면의 차가움을 덜어낸다 */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .5;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.05'/></svg>");
+  }
+  body > * { position: relative; z-index: 1; }
 
   a { color: inherit; text-decoration: none; }
-
   img { max-width: 100%; display: block; }
-
   .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* Jua는 400 한 굵기만 있어서, 이 폰트를 쓰는 곳은 굵기를 400으로 못박아
+     브라우저가 합성 볼드를 그리지 않게 한다(합성 볼드는 획이 뭉개진다). */
+  h1, h2, h3, .display, .brand, .btn, .eyebrow, .kicker, summary, .bubble, .foot strong {
+    font-family: var(--display); font-weight: 400; letter-spacing: .002em;
+  }
+
+  /* ---------- 반짝이 ---------- */
+  .sparkle { position: absolute; pointer-events: none; color: var(--accent); opacity: .5; }
+  .sparkle svg { display: block; }
+  @keyframes twinkle {
+    0%, 100% { transform: scale(.7) rotate(0deg); opacity: .25; }
+    50% { transform: scale(1.1) rotate(18deg); opacity: .8; }
+  }
+  .sparkle.t { animation: twinkle 3.4s ease-in-out infinite; }
+  .sparkle.t2 { animation: twinkle 4.6s ease-in-out infinite .8s; }
+  .sparkle.t3 { animation: twinkle 3.9s ease-in-out infinite 1.6s; }
 
   /* ---------- nav ---------- */
   .nav {
     position: sticky; top: 0; z-index: 50;
-    background: rgba(20, 21, 26, 0.82);
+    background: rgba(23, 19, 31, .8);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid transparent;
     transition: border-color .25s ease;
   }
   .nav.scrolled { border-bottom-color: var(--border-soft); }
-  .nav-inner {
-    display: flex; align-items: center; gap: 20px;
-    height: 66px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
-  .brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .nav-inner { display: flex; align-items: center; gap: 20px; height: 70px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-size: 21px; }
+  .brand img { width: 34px; height: 34px; border-radius: 11px; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+  .brand:hover img { transform: rotate(-8deg) scale(1.08); }
   .nav-links { display: flex; gap: 26px; margin-left: auto; font-size: 14.5px; color: var(--muted); }
-  .nav-links a { transition: color .18s ease; }
+  .nav-links a { position: relative; transition: color .18s ease; }
   .nav-links a:hover { color: var(--text); }
-  .nav-side { display: flex; align-items: center; gap: 12px; }
+  .nav-links a::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -5px; height: 6px;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='6' viewBox='0 0 40 6'><path d='M0 3 Q5 0 10 3 T20 3 T30 3 T40 3' stroke='%23ffd254' stroke-width='1.8' fill='none'/></svg>");
+    opacity: 0; transform: translateY(3px); transition: opacity .2s ease, transform .2s ease;
+  }
+  .nav-links a:hover::after { opacity: 1; transform: none; }
+  .nav-side { display: flex; align-items: center; gap: 11px; }
 
   .lang {
     appearance: none;
     background: var(--surface); color: var(--text);
-    border: 1px solid var(--border); border-radius: 9px;
-    padding: 7px 30px 7px 11px; font-size: 13.5px; font-family: inherit;
+    border: 1.5px solid var(--border); border-radius: 999px;
+    padding: 8px 32px 8px 14px; font-size: 13.5px; font-family: var(--body);
     cursor: pointer;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4.5L6 8.5L10 4.5' stroke='%239ea3ae' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-    background-repeat: no-repeat; background-position: right 9px center;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4.5L6 8.5L10 4.5' stroke='%23b3a8bf' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 11px center;
+    transition: border-color .18s ease;
   }
-  .lang:hover { border-color: #444852; }
+  .lang:hover { border-color: var(--accent); }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 11px 20px; border-radius: 11px;
-    font-size: 14.5px; font-weight: 650; font-family: inherit;
-    border: 1px solid transparent; cursor: pointer;
-    transition: transform .16s ease, background .18s ease, border-color .18s ease;
-    white-space: nowrap;
+    padding: 11px 21px; border-radius: 999px;
+    font-family: var(--display); font-size: 15px;
+    border: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: transform .22s cubic-bezier(.34,1.56,.64,1), background .18s ease, box-shadow .2s ease;
   }
-  .btn-primary { background: var(--accent); color: #1a1608; }
-  .btn-primary:hover { background: #ffd85f; transform: translateY(-1px); }
-  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
-  .btn-ghost:hover { border-color: #4a4e59; background: var(--surface); transform: translateY(-1px); }
-  .btn-sm { padding: 8px 15px; font-size: 13.5px; border-radius: 9px; }
-  .btn-lg { padding: 14px 26px; font-size: 15.5px; border-radius: 13px; }
+  .btn-primary {
+    background: var(--accent); color: #40300a;
+    box-shadow: 0 5px 0 var(--accent-deep);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--accent-deep); }
+  .btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--accent-deep); }
+  .btn-ghost { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { transform: translateY(-2px); border-color: var(--pink); }
+  .btn-sm { padding: 8px 17px; font-size: 14px; box-shadow: 0 4px 0 var(--accent-deep); }
+  .btn-sm:hover { box-shadow: 0 6px 0 var(--accent-deep); }
+  .btn-lg { padding: 14px 28px; font-size: 17px; }
 
   /* ---------- hero ---------- */
-  .hero { position: relative; padding: 84px 0 96px; overflow: hidden; }
+  .hero { position: relative; padding: 76px 0 92px; overflow: hidden; }
   .hero::before {
-    content: ""; position: absolute; inset: -160px 0 auto 0; height: 620px;
+    content: ""; position: absolute; inset: -180px 0 auto 0; height: 660px;
     background:
-      radial-gradient(520px 300px at 76% 34%, rgba(255, 205, 66, .16), transparent 68%),
-      radial-gradient(460px 300px at 20% 12%, rgba(57, 165, 192, .13), transparent 70%);
+      radial-gradient(540px 320px at 74% 36%, rgba(255, 210, 84, .17), transparent 68%),
+      radial-gradient(420px 280px at 22% 8%, rgba(255, 144, 173, .11), transparent 70%);
     pointer-events: none;
-  }
-  .hero::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
-    background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
-    background-size: 4px 4px;
-    mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
-    -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 78%);
   }
   .hero-inner {
     position: relative; z-index: 1;
-    display: grid; grid-template-columns: 1.06fr .94fr; gap: 48px; align-items: center;
+    display: grid; grid-template-columns: 1.04fr .96fr; gap: 46px; align-items: center;
   }
   .eyebrow {
-    display: inline-flex; align-items: center; gap: 9px;
-    font-size: 12.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--accent);
-    background: rgba(255, 205, 66, .09);
-    border: 1px solid rgba(255, 205, 66, .22);
-    padding: 6px 13px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--display); font-size: 14px; color: var(--accent);
+    background: rgba(255, 210, 84, .1);
+    border: 1.5px dashed rgba(255, 210, 84, .38);
+    padding: 6px 15px; border-radius: 999px;
     margin-bottom: 22px;
+    transform: rotate(-1.4deg);
   }
-  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
   h1 {
-    margin: 0 0 20px; font-size: clamp(36px, 5.1vw, 58px); line-height: 1.16;
-    letter-spacing: -.032em; font-weight: 800;
+    margin: 0 0 20px; font-size: clamp(36px, 5.2vw, 60px); line-height: 1.24;
   }
-  h1 .hl {
-    background: linear-gradient(180deg, transparent 62%, rgba(255, 205, 66, .28) 62%);
+  h1 .hl { position: relative; color: var(--accent); white-space: nowrap; }
+  h1 .hl::after {
+    content: ""; position: absolute; left: -2%; right: -2%; bottom: -.14em; height: .18em;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='12' viewBox='0 0 120 12' preserveAspectRatio='none'><path d='M2 8 Q30 2 60 7 T118 5' stroke='%23ff90ad' stroke-width='4' fill='none' stroke-linecap='round'/></svg>") no-repeat center/100% 100%;
   }
-  .lead { margin: 0 0 32px; font-size: clamp(15.5px, 1.6vw, 17.5px); color: var(--muted); max-width: 30em; }
+  .lead { margin: 0 0 30px; font-size: clamp(15.5px, 1.6vw, 17px); color: var(--muted); max-width: 29em; }
   .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-  .cta-note { margin-top: 16px; font-size: 13px; color: var(--muted-2); }
+  .cta-note { margin-top: 18px; font-size: 13px; color: var(--muted-2); }
 
-  .hero-art { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 380px; }
+  .hero-art { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 400px; }
   .hero-art .glow {
-    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
-    width: 300px; height: 300px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 205, 66, .2), transparent 66%);
-    filter: blur(8px);
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    width: 320px; height: 320px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 210, 84, .2), transparent 66%);
+    filter: blur(10px);
   }
-  .hero-art .pet {
-    position: relative; width: 250px;
-    image-rendering: -webkit-optimize-contrast;
-    filter: drop-shadow(0 26px 34px rgba(0, 0, 0, .55));
-    animation: bob 4.6s ease-in-out infinite;
+  .pet-stage { position: relative; cursor: pointer; }
+  .pet-stage .pet {
+    position: relative; width: 252px;
+    filter: drop-shadow(0 26px 32px rgba(0, 0, 0, .55));
+    animation: bob 4.4s ease-in-out infinite;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    will-change: transform;
   }
-  .hero-art .shadow {
-    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-    width: 152px; height: 22px; border-radius: 50%;
+  .pet-stage.squish .pet { animation: squish .42s ease; }
+  .pet-stage .shadow {
+    position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
+    width: 150px; height: 22px; border-radius: 50%;
     background: rgba(0, 0, 0, .45); filter: blur(11px);
-    animation: shadowPulse 4.6s ease-in-out infinite;
+    animation: shadowPulse 4.4s ease-in-out infinite;
   }
-  @keyframes bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-13px); }
-  }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-13px); } }
   @keyframes shadowPulse {
     0%, 100% { transform: translateX(-50%) scale(1); opacity: .45; }
     50% { transform: translateX(-50%) scale(.87); opacity: .3; }
   }
+  @keyframes squish {
+    0% { transform: scale(1, 1); }
+    35% { transform: scale(1.13, .84) translateY(9px); }
+    70% { transform: scale(.95, 1.06) translateY(-3px); }
+    100% { transform: scale(1, 1); }
+  }
+
+  /* 말풍선 — 앱의 핵심 UI라 페이지에서도 같은 모양을 쓴다 */
+  .bubble {
+    position: absolute; top: 6px; left: 50%;
+    transform: translateX(-118%) rotate(-3deg);
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 18px; padding: 9px 17px;
+    font-family: var(--display); font-size: 17px; color: var(--text);
+    box-shadow: 0 10px 24px rgba(0,0,0,.4);
+    animation: pop .5s cubic-bezier(.34,1.56,.64,1) .9s both, float 3.8s ease-in-out 1.4s infinite;
+    white-space: nowrap;
+  }
+  .bubble::after {
+    content: ""; position: absolute; right: 20px; bottom: -9px;
+    width: 14px; height: 14px; background: var(--surface);
+    border-right: 2px solid var(--border); border-bottom: 2px solid var(--border);
+    transform: rotate(45deg);
+  }
+  @keyframes pop { from { opacity: 0; transform: translateX(-118%) rotate(-3deg) scale(.6); } }
+  @keyframes float { 0%,100% { margin-top: 0; } 50% { margin-top: -7px; } }
+
+  .heart {
+    position: absolute; pointer-events: none; font-size: 22px;
+    animation: heartUp 1.05s ease-out forwards;
+  }
+  @keyframes heartUp {
+    0% { opacity: 0; transform: translate(0, 0) scale(.5); }
+    18% { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), -86px) scale(1.15); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .hero-art .pet, .hero-art .shadow { animation: none; }
+    .pet-stage .pet, .pet-stage .shadow, .bubble, .sparkle.t, .sparkle.t2, .sparkle.t3 { animation: none; }
     html { scroll-behavior: auto; }
   }
 
+  /* ---------- 물결 구분선 ---------- */
+  .wave { display: block; width: 100%; height: 46px; color: var(--bg-2); }
+  .wave.flip { transform: rotate(180deg); }
+
   /* ---------- section shell ---------- */
-  section { padding: 92px 0; }
-  .section-head { max-width: 640px; margin-bottom: 48px; }
+  section { padding: 86px 0; position: relative; }
+  .section-head { max-width: 640px; margin-bottom: 46px; }
+  .section-head.mid { margin-left: auto; margin-right: auto; text-align: center; }
   .kicker {
-    font-size: 12.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--teal); margin-bottom: 12px;
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--display); font-size: 14px; color: var(--pink);
+    margin-bottom: 10px;
   }
-  h2 { margin: 0 0 14px; font-size: clamp(26px, 3.2vw, 36px); line-height: 1.25; letter-spacing: -.028em; font-weight: 750; }
+  h2 { margin: 0 0 12px; font-size: clamp(27px, 3.4vw, 38px); line-height: 1.32; }
   .section-head p { margin: 0; color: var(--muted); font-size: 16px; }
 
-  .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border-soft) 22%, var(--border-soft) 78%, transparent); }
-
   /* ---------- features ---------- */
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .card {
-    background: linear-gradient(180deg, var(--surface) 0%, #1d1f27 100%);
-    border: 1px solid var(--border-soft); border-radius: var(--radius);
+    position: relative;
+    background: var(--surface);
+    border: 2px solid var(--border-soft); border-radius: 22px;
     padding: 26px 24px 28px;
-    transition: transform .2s ease, border-color .2s ease;
+    transition: transform .28s cubic-bezier(.34,1.56,.64,1), border-color .2s ease, box-shadow .25s ease;
   }
-  .card:hover { transform: translateY(-3px); border-color: #3d4049; }
+  .card:nth-child(3n+1) { transform: rotate(-.7deg); }
+  .card:nth-child(3n+3) { transform: rotate(.7deg); }
+  .card:hover {
+    transform: rotate(0deg) translateY(-6px);
+    border-color: var(--accent);
+    box-shadow: 0 14px 0 -4px rgba(255, 210, 84, .16);
+  }
   .card .ico {
-    width: 40px; height: 40px; border-radius: 11px; margin-bottom: 16px;
+    width: 52px; height: 52px; border-radius: 16px; margin-bottom: 16px;
     display: grid; place-items: center;
-    background: rgba(255, 205, 66, .1); border: 1px solid rgba(255, 205, 66, .2);
+    background: rgba(255, 210, 84, .12); border: 2px solid rgba(255, 210, 84, .26);
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
   }
-  .card .ico svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .card h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; letter-spacing: -.015em; }
-  .card p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.62; }
+  .card:hover .ico { transform: rotate(-9deg) scale(1.06); }
+  .card .ico svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .card:nth-child(2) .ico { background: rgba(255,144,173,.12); border-color: rgba(255,144,173,.28); }
+  .card:nth-child(2) .ico svg { stroke: var(--pink); }
+  .card:nth-child(4) .ico { background: rgba(95,230,240,.1); border-color: rgba(95,230,240,.26); }
+  .card:nth-child(4) .ico svg { stroke: var(--cyan); }
+  .card:nth-child(6) .ico { background: rgba(255,171,107,.12); border-color: rgba(255,171,107,.28); }
+  .card:nth-child(6) .ico svg { stroke: var(--peach); }
+  .card h3 { margin: 0 0 8px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.68; }
 
   /* ---------- showcase ---------- */
   .shots { display: flex; flex-direction: column; gap: 26px; }
   .shot {
     display: grid; grid-template-columns: .92fr 1.08fr; gap: 40px; align-items: center;
-    background: linear-gradient(180deg, #1c1e25 0%, #191b21 100%);
-    border: 1px solid var(--border-soft); border-radius: 22px;
+    background: var(--surface);
+    border: 2px solid var(--border-soft); border-radius: 28px;
     padding: 40px;
+    transition: border-color .25s ease;
   }
-  .shot.flip .shot-text { order: 2; }
-  /* 그리드 자식의 기본 min-width:auto가 이미지 고유 크기 아래로 줄어드는 걸 막아
-     좁은 화면에서 가로 스크롤이 생긴다. */
   .shot > * { min-width: 0; }
-  .shot h3 { margin: 0 0 12px; font-size: clamp(20px, 2.3vw, 25px); font-weight: 720; letter-spacing: -.022em; }
+  .shot:hover { border-color: var(--border); }
+  .shot.flip .shot-text { order: 2; }
+  .shot h3 { margin: 0 0 12px; font-size: clamp(21px, 2.4vw, 27px); }
   .shot p { margin: 0; color: var(--muted); font-size: 15px; }
   .shot-media {
     display: grid; place-items: center;
-    background: radial-gradient(circle at 50% 46%, rgba(255, 205, 66, .09), transparent 64%);
-    border-radius: 16px; padding: 18px; min-height: 210px;
+    background: radial-gradient(circle at 50% 46%, rgba(255, 210, 84, .1), transparent 64%);
+    border-radius: 20px; padding: 18px; min-height: 210px;
   }
   .shot-media img { filter: drop-shadow(0 16px 26px rgba(0,0,0,.5)); }
-  .shot-media.framed img {
-    border-radius: 12px; border: 1px solid var(--border);
-    box-shadow: 0 20px 44px rgba(0,0,0,.55);
-  }
-  .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
+  .shot-media.framed img { border-radius: 14px; border: 2px solid var(--border); box-shadow: 0 20px 44px rgba(0,0,0,.5); }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
   .tag {
-    font-size: 12.5px; color: var(--muted); background: var(--surface-2);
-    border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px;
+    font-size: 13px; color: var(--muted); background: var(--surface-2);
+    border: 1.5px solid var(--border); border-radius: 999px; padding: 5px 13px;
+    transition: transform .2s cubic-bezier(.34,1.56,.64,1), color .18s ease, border-color .18s ease;
   }
+  .tag:hover { transform: translateY(-2px) rotate(-1.5deg); color: var(--text); border-color: var(--pink); }
+
+  /* ---------- privacy ---------- */
+  .privacy { background: var(--bg-2); }
+  .privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .p-card {
+    background: var(--surface); border: 2px solid var(--border-soft);
+    border-radius: 22px; padding: 26px;
+    transition: transform .26s cubic-bezier(.34,1.56,.64,1), border-color .2s ease;
+  }
+  .p-card:nth-child(2) { transform: rotate(-.6deg); }
+  .p-card:hover { transform: translateY(-5px) rotate(0deg); border-color: var(--cyan); }
+  .p-card .ico {
+    width: 46px; height: 46px; border-radius: 14px; margin-bottom: 15px; display: grid; place-items: center;
+    background: rgba(95, 230, 240, .1); border: 2px solid rgba(95, 230, 240, .26);
+  }
+  .p-card .ico svg { width: 21px; height: 21px; stroke: var(--cyan); fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .p-card h3 { margin: 0 0 7px; font-size: 17px; }
+  .p-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.66; }
 
   /* ---------- keys ---------- */
   .keys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
   .key-row {
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 13px 2px; border-bottom: 1px dashed var(--border-soft);
-    font-size: 14.5px;
+    padding: 14px 4px; border-bottom: 2px dotted var(--border-soft); font-size: 15px;
   }
   .key-row span:first-child { color: var(--muted); }
   kbd {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 12.5px; color: var(--text);
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-bottom-width: 2px; border-radius: 7px; padding: 4px 9px; white-space: nowrap;
+    background: var(--surface-2); border: 2px solid var(--border);
+    border-bottom-width: 4px; border-radius: 9px; padding: 4px 10px; white-space: nowrap;
   }
-
-  /* ---------- privacy ---------- */
-  .privacy { background: var(--bg-2); border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
-  .privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-  .p-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 24px; }
-  .p-card .ico { width: 36px; height: 36px; border-radius: 10px; margin-bottom: 14px; display: grid; place-items: center;
-    background: rgba(57, 165, 192, .12); border: 1px solid rgba(57, 165, 192, .24); }
-  .p-card .ico svg { width: 18px; height: 18px; stroke: var(--teal); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .p-card h3 { margin: 0 0 7px; font-size: 15.5px; font-weight: 700; }
-  .p-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
   /* ---------- faq ---------- */
-  .faq { display: grid; gap: 10px; max-width: 820px; }
+  .faq { display: grid; gap: 12px; max-width: 820px; margin: 0 auto; }
   details {
-    background: var(--surface); border: 1px solid var(--border-soft);
-    border-radius: 13px; padding: 4px 20px; transition: border-color .18s ease;
+    background: var(--surface); border: 2px solid var(--border-soft);
+    border-radius: 20px; padding: 4px 22px; transition: border-color .2s ease;
   }
-  details[open] { border-color: var(--border); }
+  details[open] { border-color: var(--accent); }
   summary {
-    cursor: pointer; list-style: none; padding: 16px 0;
-    font-size: 15.5px; font-weight: 620;
+    cursor: pointer; list-style: none; padding: 17px 0;
+    font-family: var(--display); font-size: 17px;
     display: flex; align-items: center; justify-content: space-between; gap: 14px;
   }
   summary::-webkit-details-marker { display: none; }
   summary::after {
-    content: ""; width: 9px; height: 9px; flex: none;
-    border-right: 1.8px solid var(--muted); border-bottom: 1.8px solid var(--muted);
-    transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s ease;
+    content: ""; width: 20px; height: 20px; flex: none; border-radius: 50%;
+    background: var(--surface-2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3.2L5 7L9 3.2' stroke='%23b3a8bf' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat center;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
   }
-  details[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
-  details p { margin: 0 0 18px; color: var(--muted); font-size: 14.5px; }
+  details[open] summary::after { transform: rotate(180deg); }
+  details p { margin: 0 0 19px; color: var(--muted); font-size: 14.5px; }
 
   /* ---------- download band ---------- */
-  .band { padding: 96px 0; }
+  .band { padding: 92px 0 100px; }
   .band-inner {
     position: relative; overflow: hidden;
-    background: linear-gradient(140deg, #23252e 0%, #1b1d24 62%);
-    border: 1px solid var(--border); border-radius: 24px;
+    background: linear-gradient(150deg, #2a2338 0%, #1f1a2a 62%);
+    border: 2px solid var(--border); border-radius: 32px;
     padding: 56px 48px; text-align: center;
   }
   .band-inner::before {
-    content: ""; position: absolute; inset: -60% 0 auto 0; height: 340px;
-    background: radial-gradient(420px 210px at 50% 100%, rgba(255, 205, 66, .17), transparent 70%);
+    content: ""; position: absolute; inset: -60% 0 auto 0; height: 360px;
+    background: radial-gradient(440px 220px at 50% 100%, rgba(255, 210, 84, .18), transparent 70%);
     pointer-events: none;
   }
   .band-inner > * { position: relative; }
+  .band-pet { width: 92px; margin: 0 auto 14px; animation: bob 4s ease-in-out infinite; }
   .band h2 { margin-bottom: 12px; }
   .band p { margin: 0 auto 28px; color: var(--muted); max-width: 34em; }
   .dl-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-  .dl-meta { margin-top: 20px; font-size: 13px; color: var(--muted-2); }
+  .dl-meta { margin-top: 22px; font-size: 13px; color: var(--muted-2); }
 
   /* ---------- footer ---------- */
-  footer { border-top: 1px solid var(--border-soft); padding: 40px 0 56px; }
-  .foot {
-    display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;
-    font-size: 13.5px; color: var(--muted-2);
-  }
+  footer { border-top: 2px dotted var(--border-soft); padding: 40px 0 56px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; font-size: 13.5px; color: var(--muted-2); }
   .foot-links { display: flex; flex-wrap: wrap; gap: 20px; }
   .foot-links a { color: var(--muted); transition: color .18s ease; }
-  .foot-links a:hover { color: var(--text); }
+  .foot-links a:hover { color: var(--pink); }
 
   /* ---------- reveal ---------- */
-  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s cubic-bezier(.34,1.4,.64,1); }
   .reveal.in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
 
   /* ---------- responsive ---------- */
   @media (max-width: 980px) {
-    .hero-inner { grid-template-columns: 1fr; gap: 24px; }
-    .hero-art { order: -1; min-height: 300px; }
-    .hero-art .pet { width: 200px; }
+    .hero-inner { grid-template-columns: 1fr; gap: 20px; }
+    .hero-art { order: -1; min-height: 320px; }
+    .pet-stage .pet { width: 200px; }
+    .bubble { font-size: 15px; padding: 7px 14px; }
     .features { grid-template-columns: repeat(2, 1fr); }
     .privacy-grid { grid-template-columns: 1fr; }
     .shot { grid-template-columns: 1fr; gap: 26px; padding: 30px; }
     .shot.flip .shot-text { order: 0; }
     .keys-grid { grid-template-columns: 1fr; gap: 0; }
     .nav-links { display: none; }
+    .sparkle { display: none; }
   }
   @media (max-width: 620px) {
-    section { padding: 68px 0; }
-    .hero { padding: 56px 0 68px; }
+    section { padding: 64px 0; }
+    .hero { padding: 48px 0 64px; }
     .features { grid-template-columns: 1fr; }
-    .band-inner { padding: 40px 24px; }
+    .card:nth-child(n) { transform: none; }
+    .band-inner { padding: 40px 22px; }
     .wrap { padding: 0 18px; }
     .shot { padding: 24px 20px; }
     .shot-media { padding: 8px; }
@@ -361,14 +449,19 @@
 </nav>
 
 <header class="hero" id="top">
+  <span class="sparkle t" style="top: 14%; left: 6%;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z"/></svg></span>
+  <span class="sparkle t2" style="top: 62%; left: 3%; color: var(--pink);"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z"/></svg></span>
+  <span class="sparkle t3" style="top: 8%; right: 8%; color: var(--cyan);"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z"/></svg></span>
+  <span class="sparkle t2" style="bottom: 16%; right: 5%;"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z"/></svg></span>
+
   <div class="wrap hero-inner">
     <div>
-      <span class="eyebrow"><span class="dot"></span><span data-i18n="hero.eyebrow">Windows 데스크톱 펫</span></span>
+      <span class="eyebrow">🐾 <span data-i18n="hero.eyebrow">Windows 데스크톱 펫</span></span>
       <h1 data-i18n-html="hero.title">일하는 옆자리에,<br><span class="hl">작은 고양이</span> 한 마리.</h1>
       <p class="lead" data-i18n="hero.lead">마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아합니다. 평소에는 클릭이 그대로 통과되니 작업을 방해하지 않습니다.</p>
       <div class="cta">
         <a class="btn btn-primary btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re/releases/latest">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span data-i18n="hero.ctaPrimary">Windows용 다운로드</span>
         </a>
         <a class="btn btn-ghost btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re">
@@ -380,34 +473,35 @@
     </div>
     <div class="hero-art">
       <div class="glow"></div>
-      <img class="pet" src="media/pet.png" alt="Dangorobo">
-      <div class="shadow"></div>
+      <div class="pet-stage" id="petStage" title="쓰다듬어 보세요">
+        <span class="bubble" id="bubble" data-i18n="hero.hello">안녕!</span>
+        <img class="pet" id="petImg" src="media/pet.png" alt="Dangorobo">
+        <div class="shadow"></div>
+      </div>
     </div>
   </div>
 </header>
 
-<div class="wrap"><div class="divider"></div></div>
-
-<section id="features">
+<section id="features" style="padding-bottom: 40px;">
   <div class="wrap">
     <div class="section-head reveal">
-      <div class="kicker" data-i18n="features.kicker">Features</div>
+      <div class="kicker">✨ <span data-i18n="features.kicker">이런 걸 합니다</span></div>
       <h2 data-i18n="features.title">그냥 떠 있기만 하지 않습니다</h2>
       <p data-i18n="features.lead">반응하고, 꾸며지고, 일할 때 필요한 것들을 옆에서 챙겨줍니다.</p>
     </div>
     <div class="features">
       <article class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10" r="1.2" fill="currentColor" stroke="none"/><path d="M9 14.5c1.8 1.4 4.2 1.4 6 0"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="14.5" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M9 14.5c1.8 1.4 4.2 1.4 6 0"/></svg></div>
         <h3 data-i18n="f1.title">살아 있는 반응</h3>
         <p data-i18n="f1.body">커서 방향으로 고개를 돌리고, 빠르게 칠수록 꼬리를 크게 흔듭니다. 쓰다듬으면 기뻐하고, 오래 두면 잠이 듭니다.</p>
       </article>
       <article class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 5 5.6.7-4 3.9 1 5.4L12 15.5 6.9 18l1-5.4-4-3.9 5.6-.7z"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.4-7.5-9.4A4.1 4.1 0 0 1 12 8.6a4.1 4.1 0 0 1 7.5 2.5c0 5-7.5 9.4-7.5 9.4z"/></svg></div>
         <h3 data-i18n="f2.title">내 마음대로 꾸미기</h3>
         <p data-i18n="f2.body">부위별 색, 귀·꼬리·머리 장식 파츠, 눈·입 모양까지 고릅니다. 마음에 드는 조합은 프리셋으로 저장하세요.</p>
       </article>
       <article class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v14"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 9h18M8 4v14"/></svg></div>
         <h3 data-i18n="f3.title">레트로 화면 효과</h3>
         <p data-i18n="f3.body">픽셀 아트, 색 단계 제한, 디더링 8종, 외곽선과 선 떨림. 옛 게임 같은 질감을 직접 만듭니다.</p>
       </article>
@@ -417,7 +511,7 @@
         <p data-i18n="f4.body">N분마다·정시·매일 알람을 여러 개 등록하고, 체크리스트로 오늘 할 일을 관리합니다. 시간이 되면 펫이 만세하며 알려줍니다.</p>
       </article>
       <article class="card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="4" r="1.6"/><circle cx="12" cy="20" r="1.6"/><circle cx="4" cy="12" r="1.6"/><circle cx="20" cy="12" r="1.6"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="4" r="1.7"/><circle cx="12" cy="20" r="1.7"/><circle cx="4" cy="12" r="1.7"/><circle cx="20" cy="12" r="1.7"/></svg></div>
         <h3 data-i18n="f5.title">즐겨찾기 실행기</h3>
         <p data-i18n="f5.body">자주 쓰는 프로그램을 최대 12개. 단축키를 누른 자리에 부채꼴 메뉴가 펼쳐집니다.</p>
       </article>
@@ -430,7 +524,7 @@
   </div>
 </section>
 
-<section id="showcase" style="padding-top: 0;">
+<section id="showcase" style="padding-top: 46px;">
   <div class="wrap">
     <div class="shots">
       <article class="shot reveal">
@@ -488,16 +582,17 @@
   </div>
 </section>
 
-<section class="privacy">
+<svg class="wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 24c120-22 240-22 360 0s240 22 360 0 240-22 360 0 240 22 360 0v22H0z"/></svg>
+<section class="privacy" style="padding-top: 56px;">
   <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker" data-i18n="privacy.kicker">Privacy</div>
+    <div class="section-head mid reveal">
+      <div class="kicker">🔒 <span data-i18n="privacy.kicker">약속</span></div>
       <h2 data-i18n="privacy.title">읽지 않고, 보내지 않습니다</h2>
       <p data-i18n="privacy.lead">전역 입력을 다루는 프로그램인 만큼, 무엇을 하지 않는지 분명히 적어둡니다.</p>
     </div>
     <div class="privacy-grid">
       <div class="p-card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg></div>
         <h3 data-i18n="p1.title">타이핑 내용은 저장하지 않습니다</h3>
         <p data-i18n="p1.body">무엇을 눌렀는지는 기록하지 않고, 최근 몇 초 동안 몇 번 눌렸는지만 세서 꼬리 속도에 씁니다.</p>
       </div>
@@ -507,18 +602,19 @@
         <p data-i18n="p2.body">설정·할 일·기록은 모두 내 컴퓨터의 앱 폴더에 남습니다. 서버로 올라가지 않습니다.</p>
       </div>
       <div class="p-card reveal">
-        <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
         <h3 data-i18n="p3.title">API 키는 암호화 보관</h3>
         <p data-i18n="p3.body">대화 기능을 쓸 때 넣는 키는 Windows 보안 저장소에 암호화해 두고, 설정 백업 파일에도 들어가지 않습니다.</p>
       </div>
     </div>
   </div>
 </section>
+<svg class="wave flip" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 24c120-22 240-22 360 0s240 22 360 0 240-22 360 0 240 22 360 0v22H0z"/></svg>
 
 <section>
   <div class="wrap">
     <div class="section-head reveal">
-      <div class="kicker" data-i18n="keys.kicker">Shortcuts</div>
+      <div class="kicker">⌨️ <span data-i18n="keys.kicker">단축키</span></div>
       <h2 data-i18n="keys.title">손 떼지 않고</h2>
       <p data-i18n="keys.lead">종료를 뺀 나머지는 원하는 조합으로 바꾸거나 개별로 끌 수 있습니다.</p>
     </div>
@@ -536,8 +632,8 @@
 
 <section id="faq" style="padding-top: 0;">
   <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker">FAQ</div>
+    <div class="section-head mid reveal">
+      <div class="kicker">💬 FAQ</div>
       <h2 data-i18n="faq.title">자주 묻는 것</h2>
     </div>
     <div class="faq reveal">
@@ -568,11 +664,12 @@
 <section class="band">
   <div class="wrap">
     <div class="band-inner reveal">
+      <img class="band-pet" src="media/pet.png" alt="">
       <h2 data-i18n="band.title">지금 데려가세요</h2>
       <p data-i18n="band.lead">Windows 10 · 11에서 동작합니다. 계정도, 결제도 필요 없습니다.</p>
       <div class="dl-row">
         <a class="btn btn-primary btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re/releases/latest">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span data-i18n="band.cta">최신 버전 받기</span>
         </a>
         <a class="btn btn-ghost btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re#readme" data-i18n="band.docs">사용 설명 읽기</a>
@@ -602,11 +699,13 @@ const I18N = {
   ko: {
     "nav.features": "기능", "nav.showcase": "화면", "nav.faq": "FAQ", "nav.download": "다운로드",
     "hero.eyebrow": "Windows 데스크톱 펫",
+    "hero.hello": "안녕!",
     "hero.title": "일하는 옆자리에,<br><span class=\"hl\">작은 고양이</span> 한 마리.",
     "hero.lead": "마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아합니다. 평소에는 클릭이 그대로 통과되니 작업을 방해하지 않습니다.",
     "hero.ctaPrimary": "Windows용 다운로드", "hero.ctaSecondary": "GitHub에서 보기",
     "hero.note": "Windows 10 · 11  |  설치본과 무설치(portable) 두 가지",
-    "features.kicker": "Features",
+    "hero.petTitle": "쓰다듬어 보세요",
+    "features.kicker": "이런 걸 합니다",
     "features.title": "그냥 떠 있기만 하지 않습니다",
     "features.lead": "반응하고, 꾸며지고, 일할 때 필요한 것들을 옆에서 챙겨줍니다.",
     "f1.title": "살아 있는 반응",
@@ -633,7 +732,7 @@ const I18N = {
     "s4.title": "원하는 만큼 세밀하게",
     "s4.body": "크기·꼬리 속도부터 조명의 색과 방향까지. 만지다 마음에 안 들면 “외형 기본값으로 초기화” 한 번이면 됩니다.",
     "s4.t1": "한국어 · English · 日本語", "s4.t2": "설정 백업 · 복원",
-    "privacy.kicker": "Privacy",
+    "privacy.kicker": "약속",
     "privacy.title": "읽지 않고, 보내지 않습니다",
     "privacy.lead": "전역 입력을 다루는 프로그램인 만큼, 무엇을 하지 않는지 분명히 적어둡니다.",
     "p1.title": "타이핑 내용은 저장하지 않습니다",
@@ -642,7 +741,7 @@ const I18N = {
     "p2.body": "설정·할 일·기록은 모두 내 컴퓨터의 앱 폴더에 남습니다. 서버로 올라가지 않습니다.",
     "p3.title": "API 키는 암호화 보관",
     "p3.body": "대화 기능을 쓸 때 넣는 키는 Windows 보안 저장소에 암호화해 두고, 설정 백업 파일에도 들어가지 않습니다.",
-    "keys.kicker": "Shortcuts", "keys.title": "손 떼지 않고",
+    "keys.kicker": "단축키", "keys.title": "손 떼지 않고",
     "keys.lead": "종료를 뺀 나머지는 원하는 조합으로 바꾸거나 개별로 끌 수 있습니다.",
     "k.chat": "펫과 대화", "k.fav": "즐겨찾기", "k.check": "체크리스트",
     "k.doc": "문서 요약", "k.trans": "번역", "k.img": "이미지 크기 바꾸기", "k.quit": "종료",
@@ -668,11 +767,13 @@ const I18N = {
   en: {
     "nav.features": "Features", "nav.showcase": "Screens", "nav.faq": "FAQ", "nav.download": "Download",
     "hero.eyebrow": "Windows desktop pet",
+    "hero.hello": "hi!",
     "hero.title": "A <span class=\"hl\">little cat</span><br>beside your work.",
     "hero.lead": "It follows your cursor, wags its tail as you type, and loves being petted. Clicks pass right through it, so it never gets in your way.",
     "hero.ctaPrimary": "Download for Windows", "hero.ctaSecondary": "View on GitHub",
     "hero.note": "Windows 10 · 11  |  Installer and portable builds",
-    "features.kicker": "Features",
+    "hero.petTitle": "give it a pat",
+    "features.kicker": "what it does",
     "features.title": "More than something floating there",
     "features.lead": "It reacts, it dresses up, and it keeps an eye on the things you need while you work.",
     "f1.title": "Alive and reactive",
@@ -699,7 +800,7 @@ const I18N = {
     "s4.title": "As fine-grained as you like",
     "s4.body": "From scale and tail speed to the colour and direction of each light. If you go too far, one “reset appearance” button puts it all back.",
     "s4.t1": "한국어 · English · 日本語", "s4.t2": "Backup · restore settings",
-    "privacy.kicker": "Privacy",
+    "privacy.kicker": "our promise",
     "privacy.title": "It doesn't read, and it doesn't send",
     "privacy.lead": "Since this program hooks global input, here is exactly what it does not do.",
     "p1.title": "Keystrokes are never stored",
@@ -708,7 +809,7 @@ const I18N = {
     "p2.body": "Settings, tasks and logs all live in an app folder on your own computer. Nothing is uploaded to a server.",
     "p3.title": "API keys stay encrypted",
     "p3.body": "The key you enter for chat is encrypted in Windows' credential store, and never appears in settings backups.",
-    "keys.kicker": "Shortcuts", "keys.title": "Without leaving the keyboard",
+    "keys.kicker": "shortcuts", "keys.title": "Without leaving the keyboard",
     "keys.lead": "Everything except Quit can be rebound to any combination, or switched off individually.",
     "k.chat": "Talk to pet", "k.fav": "Favourites", "k.check": "Checklist",
     "k.doc": "Summarise document", "k.trans": "Translate", "k.img": "Resize image", "k.quit": "Quit",
@@ -734,11 +835,13 @@ const I18N = {
   ja: {
     "nav.features": "機能", "nav.showcase": "画面", "nav.faq": "FAQ", "nav.download": "ダウンロード",
     "hero.eyebrow": "Windows デスクトップペット",
+    "hero.hello": "やあ！",
     "hero.title": "作業のとなりに、<br><span class=\"hl\">小さな猫</span>を一匹。",
     "hero.lead": "マウスを目で追い、タイピングに合わせて尻尾を振り、撫でると喜びます。普段はクリックがそのまま通り抜けるので作業の邪魔になりません。",
     "hero.ctaPrimary": "Windows版をダウンロード", "hero.ctaSecondary": "GitHub で見る",
     "hero.note": "Windows 10 · 11  |  インストーラー版とポータブル版",
-    "features.kicker": "Features",
+    "hero.petTitle": "撫でてみてください",
+    "features.kicker": "できること",
     "features.title": "ただ浮かんでいるだけではありません",
     "features.lead": "反応して、着せ替えて、作業に必要なものをそばで気にかけてくれます。",
     "f1.title": "生きているような反応",
@@ -765,7 +868,7 @@ const I18N = {
     "s4.title": "好きなだけ細かく",
     "s4.body": "大きさや尻尾の速さから、光の色と向きまで。触りすぎて気に入らなくなったら「外見を初期値に戻す」を一度押すだけです。",
     "s4.t1": "한국어 · English · 日本語", "s4.t2": "設定のバックアップ · 復元",
-    "privacy.kicker": "Privacy",
+    "privacy.kicker": "約束",
     "privacy.title": "読み取らず、送信しません",
     "privacy.lead": "グローバル入力を扱うプログラムなので、何をしないのかをはっきり書いておきます。",
     "p1.title": "入力内容は保存しません",
@@ -774,7 +877,7 @@ const I18N = {
     "p2.body": "設定・やること・履歴はすべて自分のPCのアプリフォルダーに残ります。サーバーへは送られません。",
     "p3.title": "APIキーは暗号化して保管",
     "p3.body": "会話機能で入れるキーは Windows の資格情報ストアに暗号化して保管し、設定のバックアップファイルにも含まれません。",
-    "keys.kicker": "Shortcuts", "keys.title": "手を離さずに",
+    "keys.kicker": "ショートカット", "keys.title": "手を離さずに",
     "keys.lead": "終了以外は好きな組み合わせに変更でき、個別にオフにもできます。",
     "k.chat": "ペットと会話", "k.fav": "お気に入り", "k.check": "チェックリスト",
     "k.doc": "文書要約", "k.trans": "翻訳", "k.img": "画像サイズ変更", "k.quit": "終了",
@@ -813,6 +916,8 @@ function applyLang(lang) {
     const value = dict[el.dataset.i18nHtml];
     if (value !== undefined) el.innerHTML = value;
   });
+  const stage = document.getElementById("petStage");
+  if (stage && dict["hero.petTitle"]) stage.title = dict["hero.petTitle"];
   if (latestVersion) showVersion(lang);
   try { localStorage.setItem("dangorobo-lang", lang); } catch (e) { /* 사생활 보호 모드 등 */ }
 }
@@ -856,6 +961,47 @@ const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
 onScroll();
 window.addEventListener("scroll", onScroll, { passive: true });
 
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// 히어로의 펫이 커서를 살짝 따라본다 — 앱의 대표 동작을 페이지에서도 보여준다.
+const stage = document.getElementById("petStage");
+const petImg = document.getElementById("petImg");
+if (stage && petImg && !reduceMotion) {
+  window.addEventListener("pointermove", (event) => {
+    const box = stage.getBoundingClientRect();
+    const dx = (event.clientX - (box.left + box.width / 2)) / window.innerWidth;
+    const dy = (event.clientY - (box.top + box.height / 2)) / window.innerHeight;
+    const max = 13;
+    petImg.style.transform =
+      `translate(${Math.max(-max, Math.min(max, dx * 34)).toFixed(1)}px,`
+      + ` ${Math.max(-8, Math.min(8, dy * 18)).toFixed(1)}px) rotate(${(dx * 3.4).toFixed(2)}deg)`;
+  }, { passive: true });
+}
+
+// 쓰다듬으면(클릭) 눌리면서 하트가 뜬다.
+const HEARTS = ["💛", "💚", "💙", "🩷", "✨"];
+let heartSeed = 0;
+if (stage) {
+  stage.addEventListener("click", () => {
+    if (!reduceMotion) {
+      stage.classList.remove("squish");
+      void stage.offsetWidth;
+      stage.classList.add("squish");
+    }
+    for (let index = 0; index < 3; index += 1) {
+      const heart = document.createElement("span");
+      heart.className = "heart";
+      heart.textContent = HEARTS[heartSeed++ % HEARTS.length];
+      heart.style.left = `${34 + index * 22}%`;
+      heart.style.top = "26%";
+      heart.style.setProperty("--dx", `${(index - 1) * 30}px`);
+      heart.style.animationDelay = `${index * 90}ms`;
+      stage.appendChild(heart);
+      setTimeout(() => heart.remove(), 1400);
+    }
+  });
+}
+
 // 등장 애니메이션
 const io = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
@@ -866,7 +1012,7 @@ const io = new IntersectionObserver((entries) => {
   });
 }, { rootMargin: "0px 0px -8% 0px" });
 document.querySelectorAll(".reveal").forEach((el, index) => {
-  el.style.transitionDelay = `${Math.min(index % 3, 2) * 70}ms`;
+  el.style.transitionDelay = `${Math.min(index % 3, 2) * 80}ms`;
   io.observe(el);
 });
 </script>

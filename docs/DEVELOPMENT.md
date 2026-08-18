@@ -266,9 +266,14 @@ npm run dist -- --publish always
 `main` 브랜치의 `/docs`로 지정하면 `https://huzithehuzi.github.io/Dangorobo_re/`로 열린다.
 `docs/.nojekyll`은 Jekyll 전처리를 건너뛰게 해서 파일을 그대로 서빙시킨다.
 
-- **의존성 없는 단일 HTML이다.** CSS·JS가 파일 안에 들어 있고 외부 요청은 웹폰트(Pretendard CDN)와
-  최신 릴리스 태그를 읽는 GitHub API 하나뿐이다. 둘 다 실패해도 페이지는 그대로 뜬다(폰트는
-  시스템 글꼴로, 버전 문구는 정적 문구로 떨어진다).
+- **의존성 없는 단일 HTML이다.** CSS·JS가 파일 안에 들어 있고 외부 요청은 웹폰트(Pretendard,
+  Google Fonts의 Jua·M PLUS Rounded 1c)와 최신 릴리스 태그를 읽는 GitHub API뿐이다. 전부 실패해도
+  페이지는 그대로 뜬다(폰트는 시스템 글꼴로, 버전 문구는 정적 문구로 떨어진다).
+- **제목용 폰트 Jua는 400 한 굵기만 있다.** 그래서 이 폰트를 쓰는 선택자에는 `font-weight: 400`을
+  못박아 뒀다 — 굵기를 올리면 브라우저가 합성 볼드를 그려 획이 뭉개진다. 한글·라틴은 Jua가,
+  일본어는 다음 순위인 M PLUS Rounded 1c가 글리프별로 받는다.
+- **움직임은 모두 `prefers-reduced-motion`으로 끈다.** 커서 추적·하트·둥실 애니메이션·반짝임이
+  대상이다. 새 움직임을 넣으면 이 가드에도 같이 넣는다.
 - **한국어·영어·일본어를 페이지 안에서 전환한다.** 문구는 `<script>`의 `I18N` 객체 한 곳에 모여
   있고 `data-i18n`(텍스트)·`data-i18n-html`(태그 포함) 속성으로 꽂힌다. 문구를 고칠 때는 세 언어를
   같이 고친다 — README 3종과 같은 규칙이다.
