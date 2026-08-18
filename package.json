@@ -1,6 +1,6 @@
 {
   "name": "dangorobo",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "private": true,
   "type": "commonjs",
   "description": "마우스를 바라보고 휴식을 알려주는 레트로 감성 데스크톱 펫 Dangorobo",
@@ -59,7 +59,10 @@
       "output": "release"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "assets/app-icon.ico"
     },
     "nsis": {
@@ -92,5 +95,9 @@
       "THIRD_PARTY_NOTICES.md"
     ]
   },
-  "author": "huzi"
+  "author": "huzi",
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true,
+    "uiohook-napi@1.5.5": true
+  }
 }

@@ -22,4 +22,4 @@ The packaged app also includes transitive npm dependencies required by the libra
 
 These per-character speech sounds were created by Josh Simmons (Acedio): https://github.com/Acedio
 
-The alarm and click sound files in `assets/sounds/` are intended to use public domain or similarly permissive sources. Before public distribution, keep the exact source URL and license/public-domain marker for each individual file with this notice.
+The alarm and click sound files in `assets/sounds/` (`alarm1-5.*`, `click1-6.*`) are public domain.
