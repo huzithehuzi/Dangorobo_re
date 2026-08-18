@@ -287,7 +287,9 @@ npm run dist -- --publish always
   그 JSON은 반드시 `DEFAULT_SETTINGS`에서 파생한다 — 키를 손으로 골라 담으면 빠진 키 때문에
   멀쩡한 코드가 고장처럼 보인다. `settings-schema.js`는 평가 중 `app.getLocale()`만 쓰므로
   `test/settings-normalize.test.js`와 같은 최소 electron 스텁으로 순수 Node에서 require할 수 있다.
-  프리셋 이름은 앱과 같아야 하니 `src/shared/i18n.js`의 `customization.builtinPreset.*`를 따른다.
+- **페이지 문구에서 제품을 종(고양이/cat/猫)으로 부르지 않는다.** 파츠와 색을 바꾸면 고양이가
+  아니게 되므로 "펫"으로 쓴다. 앱 안의 파츠 이름("고양이 귀" 등)은 카탈로그 용어라 그대로 두고,
+  페이지 문구에만 적용되는 규칙이다.
 - 화면 캡처에는 한국어 UI 문구가 박혀 있어 영어·일본어로 전환해도 그대로다. 의도적으로 감수한
   부분이다(언어별로 캡처 세트를 3벌 유지하는 비용이 더 크다).
 

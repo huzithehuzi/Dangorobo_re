@@ -6,7 +6,7 @@
 <title>Dangorobo — 바탕화면 데스크톱 펫</title>
 <meta name="description" content="마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아하는 Windows 로우폴리 데스크톱 펫.">
 <meta property="og:title" content="Dangorobo">
-<meta property="og:description" content="바탕화면 한쪽에 사는 로우폴리 고양이. Windows 데스크톱 펫.">
+<meta property="og:description" content="바탕화면 한쪽에 사는 로우폴리 펫. 마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔듭니다.">
 <meta property="og:image" content="media/pet.png">
 <meta property="og:type" content="website">
 <link rel="icon" href="media/icon.png">
@@ -251,7 +251,7 @@
   .preset {
     position: relative; text-align: center;
     background: var(--surface); border: 2px solid var(--border-soft);
-    border-radius: 26px; padding: 26px 20px 24px;
+    border-radius: 26px; padding: 24px 20px;
     transition: transform .28s cubic-bezier(.34,1.56,.64,1), border-color .2s ease;
   }
   .preset:nth-child(1) { transform: rotate(-1.1deg); --tint: var(--pink); }
@@ -259,18 +259,16 @@
   .preset:nth-child(3) { transform: rotate(1.1deg); --tint: var(--mint); }
   .preset:hover { transform: rotate(0deg) translateY(-7px); border-color: var(--tint); }
   .preset .disc {
-    width: 168px; height: 168px; margin: 0 auto 16px; border-radius: 50%;
-    display: grid; place-items: end center; padding-bottom: 6px;
-    background: radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--tint) 22%, transparent), transparent 68%);
+    width: 190px; height: 190px; margin: 0 auto; border-radius: 50%;
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 56%, color-mix(in srgb, var(--tint) 22%, transparent), transparent 68%);
   }
   .preset .disc img {
-    max-height: 152px; width: auto;
+    max-height: 176px; width: auto;
     filter: drop-shadow(0 12px 18px rgba(0,0,0,.45));
     transition: transform .3s cubic-bezier(.34,1.56,.64,1);
   }
   .preset:hover .disc img { transform: translateY(-5px) rotate(-2.5deg); }
-  .preset h3 { margin: 0 0 5px; font-size: 20px; color: var(--tint); }
-  .preset p { margin: 0; font-size: 13.5px; color: var(--muted); }
 
   /* ---------- showcase ---------- */
   .shots { display: flex; flex-direction: column; gap: 26px; }
@@ -422,12 +420,10 @@
     /* 프리셋은 좁아져도 3개를 나란히 둔다 — 서로 견주는 게 이 단락의 전부라 세로로
        쌓으면 "이만큼 달라진다"가 안 보인다. */
     .presets { gap: 10px; }
-    .preset { padding: 16px 8px 14px; border-radius: 20px; }
+    .preset { padding: 12px 8px; border-radius: 20px; }
     .preset:nth-child(n) { transform: none; }
-    .preset .disc { width: 100%; height: auto; aspect-ratio: 1; margin-bottom: 10px; }
-    .preset .disc img { max-height: none; max-width: 88%; }
-    .preset h3 { font-size: 15px; }
-    .preset p { font-size: 11px; line-height: 1.45; }
+    .preset .disc { width: 100%; height: auto; aspect-ratio: 1; }
+    .preset .disc img { max-height: none; max-width: 92%; }
     .band-inner { padding: 40px 22px; }
     .wrap { padding: 0 18px; }
     .shot { padding: 24px 20px; }
@@ -469,7 +465,7 @@
   <div class="wrap hero-inner">
     <div>
       <span class="eyebrow">🐾 <span data-i18n="hero.eyebrow">Windows 데스크톱 펫</span></span>
-      <h1 data-i18n-html="hero.title">일하는 옆자리에,<br><span class="hl">작은 고양이</span> 한 마리.</h1>
+      <h1 data-i18n-html="hero.title">일하는 옆자리에,<br><span class="hl">작은 펫</span> 한 마리.</h1>
       <p class="lead" data-i18n="hero.lead">마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아합니다. 평소에는 클릭이 그대로 통과되니 작업을 방해하지 않습니다.</p>
       <div class="cta">
         <a class="btn btn-primary btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re/releases/latest">
@@ -539,24 +535,18 @@
   <div class="wrap">
     <div class="section-head mid reveal">
       <div class="kicker">🎨 <span data-i18n="presets.kicker">기본으로 들어 있는 3종</span></div>
-      <h2 data-i18n="presets.title">같은 고양이, 다른 얼굴</h2>
+      <h2 data-i18n="presets.title">같은 펫, 다른 얼굴</h2>
       <p data-i18n="presets.lead">색과 파츠를 바꾸면 이만큼 달라집니다. 설치하면 이 세 조합이 이미 들어 있고, 직접 만든 조합도 이름 붙여 저장할 수 있습니다.</p>
     </div>
     <div class="presets">
       <article class="preset reveal">
         <div class="disc"><img src="media/preset-cherry.png" alt=""></div>
-        <h3 data-i18n="presets.cherry">체리</h3>
-        <p data-i18n="presets.cherryParts">토끼 귀 · 리본 · 안테나 꼬리</p>
       </article>
       <article class="preset reveal">
         <div class="disc"><img src="media/preset-miro.png" alt=""></div>
-        <h3 data-i18n="presets.miro">미로</h3>
-        <p data-i18n="presets.miroParts">고양이 귀 · 초커 · 고양이 꼬리</p>
       </article>
       <article class="preset reveal">
         <div class="disc"><img src="media/preset-loro.png" alt=""></div>
-        <h3 data-i18n="presets.loro">로로</h3>
-        <p data-i18n="presets.loroParts">곰 귀 · 둥근 안경 · 둥근 꼬리</p>
       </article>
     </div>
   </div>
@@ -734,7 +724,7 @@ const I18N = {
   ko: {
     "nav.features": "기능", "nav.showcase": "화면", "nav.faq": "FAQ", "nav.download": "다운로드",
     "hero.eyebrow": "Windows 데스크톱 펫",
-    "hero.title": "일하는 옆자리에,<br><span class=\"hl\">작은 고양이</span> 한 마리.",
+    "hero.title": "일하는 옆자리에,<br><span class=\"hl\">작은 펫</span> 한 마리.",
     "hero.lead": "마우스를 따라 보고, 타이핑에 맞춰 꼬리를 흔들고, 쓰다듬으면 좋아합니다. 평소에는 클릭이 그대로 통과되니 작업을 방해하지 않습니다.",
     "hero.ctaPrimary": "Windows용 다운로드", "hero.ctaSecondary": "GitHub에서 보기",
     "hero.note": "Windows 10 · 11  |  설치본과 무설치(portable) 두 가지",
@@ -754,11 +744,8 @@ const I18N = {
     "f6.title": "펫과 대화하기",
     "f6.body": "Gemini API 키를 직접 넣으면 대화·번역·문서 요약까지 씁니다. 기본은 꺼져 있습니다.",
     "presets.kicker": "기본으로 들어 있는 3종",
-    "presets.title": "같은 고양이, 다른 얼굴",
+    "presets.title": "같은 펫, 다른 얼굴",
     "presets.lead": "색과 파츠를 바꾸면 이만큼 달라집니다. 설치하면 이 세 조합이 이미 들어 있고, 직접 만든 조합도 이름 붙여 저장할 수 있습니다.",
-    "presets.cherry": "체리", "presets.cherryParts": "토끼 귀 · 리본 · 안테나 꼬리",
-    "presets.miro": "미로", "presets.miroParts": "고양이 귀 · 초커 · 고양이 꼬리",
-    "presets.loro": "로로", "presets.loroParts": "곰 귀 · 둥근 안경 · 둥근 꼬리",
     "s1.title": "펫 옆에서 바로 색을 고릅니다",
     "s1.body": "이름만 보고 고르기 어려울 때, 부위별 색 카드가 실제 위치와 선으로 이어져 펫 좌우에 뜹니다. 보면서 누르면 바로 반영됩니다.",
     "s1.t1": "부위별 색", "s1.t2": "귀 5종 · 꼬리 3종", "s1.t3": "머리 장식 8종", "s1.t4": "프리셋 저장",
@@ -805,7 +792,7 @@ const I18N = {
   en: {
     "nav.features": "Features", "nav.showcase": "Screens", "nav.faq": "FAQ", "nav.download": "Download",
     "hero.eyebrow": "Windows desktop pet",
-    "hero.title": "A <span class=\"hl\">little cat</span><br>beside your work.",
+    "hero.title": "A <span class=\"hl\">little pet</span><br>beside your work.",
     "hero.lead": "It follows your cursor, wags its tail as you type, and loves being petted. Clicks pass right through it, so it never gets in your way.",
     "hero.ctaPrimary": "Download for Windows", "hero.ctaSecondary": "View on GitHub",
     "hero.note": "Windows 10 · 11  |  Installer and portable builds",
@@ -825,11 +812,8 @@ const I18N = {
     "f6.title": "Talk to your pet",
     "f6.body": "Add your own Gemini API key for chat, translation and document summaries. Off by default.",
     "presets.kicker": "three included by default",
-    "presets.title": "Same cat, different faces",
+    "presets.title": "Same pet, different faces",
     "presets.lead": "This is how far colours and parts take it. All three ship with the app, and you can name and save your own combinations too.",
-    "presets.cherry": "Cherry", "presets.cherryParts": "Bunny ears · ribbon · antenna tail",
-    "presets.miro": "Miro", "presets.miroParts": "Cat ears · choker · cat tail",
-    "presets.loro": "Loro", "presets.loroParts": "Bear ears · round glasses · round tail",
     "s1.title": "Pick colours right beside the pet",
     "s1.body": "When names alone aren't enough, colour cards float on both sides of the pet, each connected by a line to the part it paints. Tap one and it applies instantly.",
     "s1.t1": "Per-part colours", "s1.t2": "5 ears · 3 tails", "s1.t3": "8 headgear", "s1.t4": "Presets",
@@ -876,7 +860,7 @@ const I18N = {
   ja: {
     "nav.features": "機能", "nav.showcase": "画面", "nav.faq": "FAQ", "nav.download": "ダウンロード",
     "hero.eyebrow": "Windows デスクトップペット",
-    "hero.title": "作業のとなりに、<br><span class=\"hl\">小さな猫</span>を一匹。",
+    "hero.title": "作業のとなりに、<br><span class=\"hl\">小さなペット</span>を一匹。",
     "hero.lead": "マウスを目で追い、タイピングに合わせて尻尾を振り、撫でると喜びます。普段はクリックがそのまま通り抜けるので作業の邪魔になりません。",
     "hero.ctaPrimary": "Windows版をダウンロード", "hero.ctaSecondary": "GitHub で見る",
     "hero.note": "Windows 10 · 11  |  インストーラー版とポータブル版",
@@ -896,11 +880,8 @@ const I18N = {
     "f6.title": "ペットと会話",
     "f6.body": "自分の Gemini API キーを入れると、会話・翻訳・文書要約まで使えます。初期状態ではオフです。",
     "presets.kicker": "最初から入っている3種",
-    "presets.title": "同じ猫、違う顔",
+    "presets.title": "同じペット、違う顔",
     "presets.lead": "色とパーツを変えるとこれだけ変わります。この3つの組み合わせは最初から入っていて、自分で作った組み合わせも名前を付けて保存できます。",
-    "presets.cherry": "チェリー", "presets.cherryParts": "うさぎ耳 · リボン · アンテナ尻尾",
-    "presets.miro": "ミロ", "presets.miroParts": "猫耳 · チョーカー · 猫の尻尾",
-    "presets.loro": "ロロ", "presets.loroParts": "くま耳 · 丸眼鏡 · 丸い尻尾",
     "s1.title": "ペットのそばで色を選べます",
     "s1.body": "名前だけでは選びにくいとき、部位ごとの色カードが実際の位置と線でつながってペットの左右に浮かびます。見ながら押せばすぐ反映されます。",
     "s1.t1": "部位ごとの色", "s1.t2": "耳5種 · 尻尾3種", "s1.t3": "頭の飾り8種", "s1.t4": "プリセット保存",
