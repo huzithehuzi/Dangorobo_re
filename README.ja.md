@@ -242,10 +242,12 @@ npm run dist
 ```
 
 作業ルールは [`AGENTS.md`](./AGENTS.md) にあります。プロジェクト構成、各機能の実装場所、
-パーツ・アセットの追加方法は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)
-（韓国語のみ）を参照してください。
+パーツ・アセットの追加方法は [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)、紹介ページの
+管理は [`docs/SITE.md`](./docs/SITE.md)（どちらも韓国語のみ）を参照してください。
 
 ## クレジット
+
+制作 : huzi / プログラミング協力・監修 : Nyabi
 
 会話効果音の1文字ごとの発話音は Josh Simmons（https://github.com/Acedio）が制作しました。
 その他のオープンソースライブラリおよび外部アセットのクレジットは

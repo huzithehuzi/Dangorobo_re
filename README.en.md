@@ -258,9 +258,12 @@ npm run dist
 
 Working rules are documented in [`AGENTS.md`](./AGENTS.md). The project structure, feature
 locations, and instructions for adding parts and assets are in
-[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) (Korean only).
+[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md), and how to maintain the landing page is in
+[`docs/SITE.md`](./docs/SITE.md) (both Korean only).
 
 ## Credits
+
+Created by huzi / Programming help & review by Nyabi
 
 The per-character speaking sound effect for talking sound effects was created by Josh Simmons
 (https://github.com/Acedio).

@@ -206,5 +206,7 @@ npm run dist
 
 ## 고지
 
+제작 : huzi / 프로그래밍 도움 및 검수 : Nyabi
+
 대화 효과음의 글자별 발화음은 Josh Simmons(https://github.com/Acedio)가 제작했습니다.
 그 외 오픈소스 라이브러리와 외부 에셋 고지는 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)를 참고하세요.
