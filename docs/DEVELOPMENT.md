@@ -259,6 +259,25 @@ npm run dist -- --publish always
 - 다운로드된 `latest.yml`이 실제 버전과 SHA512를 담고 있는지, 설치본(0.9.0 등 이전 버전)에서
   실행 시 새 버전 다운로드 다이얼로그가 뜨는지까지 실기로 확인해야 "퍼블리시 성공"으로 본다.
 
+### 소개 페이지(GitHub Pages)
+
+`docs/index.html`이 GitHub Pages로 서비스되는 소개 페이지다. GitHub Pages는 발행 소스로 저장소
+루트와 `/docs`만 받으므로 개발 문서와 같은 폴더에 있다 — 저장소 Settings → Pages에서 소스를
+`main` 브랜치의 `/docs`로 지정하면 `https://huzithehuzi.github.io/Dangorobo_re/`로 열린다.
+`docs/.nojekyll`은 Jekyll 전처리를 건너뛰게 해서 파일을 그대로 서빙시킨다.
+
+- **의존성 없는 단일 HTML이다.** CSS·JS가 파일 안에 들어 있고 외부 요청은 웹폰트(Pretendard CDN)와
+  최신 릴리스 태그를 읽는 GitHub API 하나뿐이다. 둘 다 실패해도 페이지는 그대로 뜬다(폰트는
+  시스템 글꼴로, 버전 문구는 정적 문구로 떨어진다).
+- **한국어·영어·일본어를 페이지 안에서 전환한다.** 문구는 `<script>`의 `I18N` 객체 한 곳에 모여
+  있고 `data-i18n`(텍스트)·`data-i18n-html`(태그 포함) 속성으로 꽂힌다. 문구를 고칠 때는 세 언어를
+  같이 고친다 — README 3종과 같은 규칙이다.
+- **`docs/media/`의 이미지는 QA 캡처 하네스 산출물이다.** 손으로 찍지 말고 `--capture-*`로 다시
+  뽑는다(인자 목록의 원본은 `src/main/qa-capture.ts`). 투명 여백은 잘라서 넣는다. 펫 외형이나
+  설정창 UI가 크게 바뀌면 이 이미지들도 다시 찍어야 실제 앱과 어긋나지 않는다.
+- 화면 캡처에는 한국어 UI 문구가 박혀 있어 영어·일본어로 전환해도 그대로다. 의도적으로 감수한
+  부분이다(언어별로 캡처 세트를 3벌 유지하는 비용이 더 크다).
+
 `src/main.ts`의 첫 import는 `src/main/legacy-user-data.ts`다. 이 side effect가 예전 userData
 경로를 먼저 선택한 뒤에만 다른 main 모듈이 평가돼야 한다.
 

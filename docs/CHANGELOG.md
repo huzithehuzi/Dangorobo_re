@@ -5,6 +5,17 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-18
 
+- **GitHub Pages 소개 페이지 추가**: 저장소를 public으로 전환한 김에 배포용 소개 페이지를
+  `docs/index.html`에 만들었다. 외부 의존성 없는 단일 HTML(웹폰트 CDN과 최신 릴리스 태그를 읽는
+  GitHub API 호출만 있고, 둘 다 실패해도 페이지는 그대로 뜬다)이고, 앱과 같은 한국어·영어·일본어
+  3개 언어를 페이지 안에서 전환한다. 화면 이미지는 손으로 찍지 않고 QA 캡처 하네스(`--capture`,
+  `--capture-rest`, `--capture-customize`, `--capture-favorites-dock`, `--capture-settings`)로
+  뽑아 투명 여백을 잘라 `docs/media/`에 넣었다 — 펫 외형이나 설정창이 바뀌면 같은 방법으로 다시
+  찍는다. 발행 소스는 GitHub Pages가 루트와 `/docs`만 받아서 개발 문서와 같은 폴더를 쓴다.
+  좁은 화면에서 쇼케이스 이미지의 고정 폭이 그리드 안에서 줄어들지 않아 가로 스크롤이 생기던
+  것은 `min-width: 0`과 `width: min(Npx, 100%)`로 고쳤고, 375px 뷰포트에서 가로 오버플로가
+  사라진 것을 확인했다. 자세한 계약은 `DEVELOPMENT.md`의 "소개 페이지(GitHub Pages)" 참고.
+
 - **전체화면 방해금지 모드 새 설치 기본값을 켬으로 변경**: 전체화면 게임 중 펫이 창 뒤로
   가라앉아 z-order를 흐트러뜨리던 사례(2026-08-15 수정)가 애초에 이 기능이 꺼져 있어야만
   체감되는 문제였다는 점에 착안해, `fullscreenDndEnabled`의 `DEFAULT_SETTINGS` 기본값을
