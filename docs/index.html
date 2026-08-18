@@ -401,6 +401,7 @@
   /* ---------- footer ---------- */
   footer { border-top: 2px dotted var(--border-soft); padding: 40px 0 56px; }
   .foot { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; font-size: 13.5px; color: var(--muted-2); }
+  .credits { margin-top: 5px; font-size: 12.5px; color: var(--muted-2); }
   .foot-links { display: flex; flex-wrap: wrap; gap: 20px; }
   .foot-links a { color: var(--muted); transition: color .18s ease; }
   .foot-links a:hover { color: var(--pink); }
@@ -722,8 +723,11 @@
 <footer>
   <div class="wrap foot">
     <div>
-      <strong style="color: var(--muted);">Dangorobo</strong>
-      <span data-i18n="foot.by"> · 개인이 취미로 만드는 프로그램입니다</span>
+      <div>
+        <strong style="color: var(--muted);">Dangorobo</strong>
+        <span data-i18n="foot.by"> · 개인이 취미로 만드는 프로그램입니다</span>
+      </div>
+      <div class="credits" data-i18n="foot.credits">제작 : huzi / 프로그래밍 도움 및 검수 : Nyabi</div>
     </div>
     <div class="foot-links">
       <a href="https://github.com/huzithehuzi/Dangorobo_re">GitHub</a>
@@ -803,6 +807,7 @@ const I18N = {
     "band.meta": "GitHub Releases에서 설치본과 portable을 함께 받을 수 있습니다.",
     "band.metaVer": "최신 버전 {v} · 설치본과 portable을 함께 받을 수 있습니다.",
     "foot.by": " · 개인이 취미로 만드는 프로그램입니다",
+    "foot.credits": "제작 : huzi / 프로그래밍 도움 및 검수 : Nyabi",
     "foot.releases": "릴리스", "foot.issues": "문의 · 버그 제보", "foot.notices": "고지"
   },
   en: {
@@ -872,6 +877,7 @@ const I18N = {
     "band.meta": "Installer and portable builds are both on GitHub Releases.",
     "band.metaVer": "Latest {v} · installer and portable builds included.",
     "foot.by": " · a hobby project by one person",
+    "foot.credits": "Created by huzi / Programming help & review by Nyabi",
     "foot.releases": "Releases", "foot.issues": "Issues", "foot.notices": "Notices"
   },
   ja: {
@@ -941,6 +947,7 @@ const I18N = {
     "band.meta": "GitHub Releases でインストーラー版とポータブル版の両方を入手できます。",
     "band.metaVer": "最新版 {v} · インストーラー版とポータブル版を同梱。",
     "foot.by": " · 個人が趣味で作っているプログラムです",
+    "foot.credits": "制作 : huzi / プログラミング協力・監修 : Nyabi",
     "foot.releases": "リリース", "foot.issues": "問い合わせ · 不具合報告", "foot.notices": "表記"
   }
 };
