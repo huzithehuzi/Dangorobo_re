@@ -118,7 +118,7 @@ function summarizeHarness(response) {
   return { summarize, bodies };
 }
 
-test("요약 요청은 질문·번역과 달리 thinkingLevel low + 토큰 4096이다", async () => {
+test("요약 요청은 번역과 달리 thinkingLevel low + 토큰 4096이다", async () => {
   const { summarize, bodies } = summarizeHarness();
   const result = await summarize("원문 문서");
 
