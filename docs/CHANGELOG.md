@@ -5,6 +5,17 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-19
 
+- **AI 대화가 언어 지시를 놓치고 한국어로 답하는 사례를 완화했다**: 앱 언어를 영어·일본어로
+  설정한 사용자도 질문·펫대화(`ask-gemini.ts`) 답변이 한국어로 오는 현상이 보고됐다. 프롬프트
+  앞부분의 `assistant.languageDirective`(질문의 언어를 최우선으로 따르라는 지시, 2026-08-02에
+  이미 한 차례 강화됨)와 질문 바로 앞의 `assistant.languageReminder`는 그대로인데, 생성
+  설정의 `thinkingConfig.thinkingLevel`이 `minimal`이라 모델이 긴 지시문 사이에 낀 언어
+  지시를 놓치는 것으로 보인다. 문서 요약 경로(`document-summary.ts`)가 "모델이 다이어그램을
+  생략할 수 있다"는 같은 이유로 이미 `low`를 쓰고 있어, 질문·펫대화 경로도 `low`로 올렸다.
+  번역 경로(`translate.ts`)는 지시가 훨씬 짧아 그대로 `minimal`로 남겼다. 실제 Gemini 응답으로
+  재현·검증하지는 못했다(로컬에 API 키 재현 환경 없음) — 불완전할 수 있으니 재발 시 추가
+  보고가 필요하다.
+
 - **커스텀 템플릿 ZIP을 저장소 산출물로 편입했다**: 지금까지 `custom_template.zip`은 로컬 폴더에만
   있어 1.0.0 릴리스에서 통째로 빠졌다(사후에 릴리스 에셋으로 직접 올려 채웠다). 원본 PNG 8장을
   `assets/custom-template/`에 넣고 `scripts/custom-template-archive.js`가 `predist`에서 구성을
