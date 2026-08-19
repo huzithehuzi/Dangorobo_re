@@ -273,6 +273,20 @@ npm run dist -- --publish always
   `POST uploads.github.com/repos/{owner}/{repo}/releases/{id}/assets?name=custom_template.zip`로
   직접 올린다(1.0.0에서 이 단계를 빠뜨려 사후에 채웠다). 퍼블리시를 마쳤으면 릴리스의 에셋
   목록에 설치본 3종·`latest.yml`·`custom_template.zip`이 모두 있는지 확인한다.
+- **릴리스 설명(release body)을 매번 아래 문구로 채운다** — electron-builder는 본문을 채우지
+  않으므로 `PATCH /repos/{owner}/{repo}/releases/{id}`에 `{"body": "..."}`로 직접 넣는다.
+  `Setup.exe` 파일명 부분의 버전 번호만 이번 릴리스 버전으로 바꾸고 나머지는 그대로 쓴다(한·영·일 순):
+
+  ```
+  recommend installing via Dangorobo-{version}-Setup.exe as it enables automatic updates.
+  You can create a custom image by editing the files within the custom_template.zip
+
+  Dangorobo-{version}-Setup.exe 으로 설치 시 자동 업데이트가 적용되므로 권장드립니다.
+  custom_template.zip 압축 파일 내의 파일을 편집해서 커스텀 이미지를 만들 수 있습니다.
+
+  Dangorobo-{version}-Setup.exeでのインストールは自動更新が適用されるため、推奨いたします。
+  custom_template.zip圧縮ファイル内のファイルを編集して、カスタムイメージを作成できます。
+  ```
 
 ### 소개 페이지(GitHub Pages)
 
