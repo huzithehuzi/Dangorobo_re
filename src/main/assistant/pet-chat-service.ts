@@ -128,7 +128,7 @@ function createPetChatService(deps: PetChatServiceDeps) {
     const instructionKey = topic.continuity ? "petChat.continuityInstruction" : "petChat.varietyInstruction";
     return {
       topicKey: topic.key,
-      prompt: `${t(lang, "petChat.intro")} ${t(lang, instructionKey)} ${topic.hint})${recentOpenersNote()}`
+      prompt: `${t(lang, "petChat.intro")} ${t(lang, instructionKey)} ${topic.hint})${recentOpenersNote()}\n\n${t(lang, "petChat.answerLanguageDirective")}`
     };
   }
 
@@ -138,7 +138,7 @@ function createPetChatService(deps: PetChatServiceDeps) {
     const lang = deps.getSettings().language;
     return {
       topicKey: "petChat.pettedTopic",
-      prompt: `${t(lang, "petChat.pettedIntro")} ${t(lang, "petChat.varietyInstruction")}${recentOpenersNote()}`
+      prompt: `${t(lang, "petChat.pettedIntro")} ${t(lang, "petChat.varietyInstruction")}${recentOpenersNote()}\n\n${t(lang, "petChat.answerLanguageDirective")}`
     };
   }
 

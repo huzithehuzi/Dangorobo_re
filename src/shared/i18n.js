@@ -981,6 +981,18 @@
       en: "Vary how you open, the kind of question you ask, and the rhythm of the sentence every time. This time take your subject from the memories and past conversations given above, but avoid subjects you already brought up recently and pick one you haven't revisited. Never invent a conversation or memory that is not given above; if the given material is thin, keep it short and stay within it.",
       ja: "切り出し方、質問の形、文のリズムは毎回変えてください。今回は上に与えられた記憶と過去の会話から話題を取り、最近すでに持ち出した話題は避けて、まだ再び話していないものを選んでください。上にない会話や記憶を絶対に作らず、与えられた内容が乏しい場合はその範囲内で短く話してください。"
     },
+    // languageDirective("질문의 언어를 감지해서 맞추라")는 실제 사용자 발화가 있을 때는 잘
+    // 통했지만, 펫이 먼저 말 거는 오프너("부르기"/자동 주기/쓰다듬기 반응)는 사용자 발화가
+    // 아니라 앱이 만든 지시문 자체를 "질문"으로 넘기기 때문에 모델이 감지할 실제 언어 신호가
+    // 없다 — languageDirective 문구에도 이 경우 앱 언어로 답하라고 이미 적혀 있지만, "감지해서
+    // 맞추라"는 추론에 기대는 지시라 오프너 경로에서는 실제로 안 지켜지는 사례가 보고됐다
+    // (2026-08-19, 앱 언어를 영어로 바꿔도 오프너만 한국어로 나옴 — 일반 질문·답변은 정상).
+    // 그래서 오프너 프롬프트에는 감지가 아니라 앱 언어를 이름으로 직접 못박아 명령한다.
+    "petChat.answerLanguageDirective": {
+      ko: "이번 답변은 반드시 한국어로 쓰세요.",
+      en: "You must write this reply in English.",
+      ja: "この返信は必ず日本語で書いてください。"
+    },
 
     "documentSummary.textLabel": { ko: "요약할 문서", en: "Document to summarize", ja: "要約する文書" },
     "documentSummary.characterCount": { ko: "{{count}} / 1500자", en: "{{count}} / 1500 characters", ja: "{{count}} / 1500文字" },
