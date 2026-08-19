@@ -3,6 +3,19 @@
 Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·기능 계약·제약과 향후 과제는
 [`DEVELOPMENT.md`](./DEVELOPMENT.md)를 기준으로 삼고, 세부 작업 과정은 Git 이력에서 확인한다.
 
+## 2026-08-19
+
+- **커스텀 템플릿 ZIP을 저장소 산출물로 편입했다**: 지금까지 `custom_template.zip`은 로컬 폴더에만
+  있어 1.0.0 릴리스에서 통째로 빠졌다(사후에 릴리스 에셋으로 직접 올려 채웠다). 원본 PNG 8장을
+  `assets/custom-template/`에 넣고 `scripts/custom-template-archive.js`가 `predist`에서 구성을
+  검증한 뒤 `postdist`에서 `release/custom_template.zip`을 만들도록 배선해, 다음 릴리스부터는
+  빌드가 이 파일을 항상 함께 낸다. 얼굴 파일의 표정 키가 `custom-face.ts`의
+  `CUSTOM_FACE_EXPRESSION_KEYS`와 어긋나거나 원본이 빠지면 `test/custom-template-archive.test.js`가
+  실패한다(키 목록을 한 개 바꾸는 변이로 네 테스트가 모두 무는 것을 확인했다). 이 PNG들은 앱
+  실행에 쓰이지 않아 electron-builder `files`에서 제외했고, 생성된 ZIP의 각 항목이 1.0.0에
+  올린 파일과 SHA256까지 같은 것을 확인했다. electron-builder는 이 ZIP을 자동으로 올리지 않으므로
+  퍼블리시 절차에 수동 업로드 단계를 명시했다.
+
 ## 2026-08-18
 
 - **1.0.0 릴리스**: `package.json`·`package-lock.json`·README 3종의 버전을 0.9.1에서 1.0.0으로

@@ -114,9 +114,9 @@ test("실제 저장소의 소스 목록은 빌드 입력을 포함하고 제자�
   assert.equal(packageJson.scripts.prestart, "npm run ui:build && npm run build:runtime");
   assert.equal(
     packageJson.scripts.predist,
-    "npm run source:verify && npm run ui:build && npm run build:runtime"
+    "npm run source:verify && npm run template:verify && npm run ui:build && npm run build:runtime"
   );
-  assert.equal(packageJson.scripts.postdist, "npm run source:dist");
+  assert.equal(packageJson.scripts.postdist, "npm run source:dist && npm run template:dist");
 });
 
 test("소스 ZIP은 화이트리스트 파일만 단일 버전 폴더 아래에 생성한다", (context) =>
