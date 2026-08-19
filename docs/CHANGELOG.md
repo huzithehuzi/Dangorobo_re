@@ -39,7 +39,10 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
   ("You must write this reply in English." 등)를 새로 만들어 오프너 프롬프트 맨 끝(생성
   지점에 가장 가까운 자리)에 추가했다(`buildOpenerPrompt`/`buildPettingOpenerPrompt`). 이번에도
   실제 Gemini 응답으로는 재현·검증하지 못했다 — 여전히 재발하면 오프너 경로 자체를 실제
-  프롬프트/응답 로그로 다시 봐야 한다.
+  프롬프트/응답 로그로 다시 봐야 한다. **사용자가 실기로 재확인해 해결을 확인했다.**
+
+- **1.1.0 릴리스**: 위 AI 대화 언어 수정 3건을 담아 `package.json`·`package-lock.json`·README
+  3종의 버전을 1.0.0에서 1.1.0으로 올렸다.
 
 - **커스텀 템플릿 ZIP을 저장소 산출물로 편입했다**: 지금까지 `custom_template.zip`은 로컬 폴더에만
   있어 1.0.0 릴리스에서 통째로 빠졌다(사후에 릴리스 에셋으로 직접 올려 채웠다). 원본 PNG 8장을

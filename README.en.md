@@ -1,6 +1,6 @@
 *[한국어](./README.md) · English · [日本語](./README.ja.md)*
 
-# Dangorobo 1.0.0
+# Dangorobo 1.1.0
 
 A retro-flavoured desktop pet that lives in a corner of your screen. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even
