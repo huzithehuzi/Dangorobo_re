@@ -307,26 +307,28 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
 .favorite-icon-preview-icon { display: block; width: 100%; height: 100%; }
 .favorite-icon-preview-icon svg { width: 100%; height: 100%; display: block; }
 
-/* 아이콘 선택 팝오버 — 아이콘 버튼 기준으로 아래에, 창 밖으로 나가면 위로 뒤집는다. */
+/* 아이콘·색상 선택 팝오버 — 네이티브 popover라 최상위 레이어에 뜬다(2026-08-20).
+   예전에는 카드 안의 `position: absolute`였는데 스크롤 패널과 형제 카드에 잘려서, 안에 든
+   색 선택기를 펼치면 클릭조차 못 하는 경우가 있었다("아이콘·색상 선택 말풍선이 잘려서 못
+   선택함" 리포트). 최상위 레이어는 어떤 조상의 overflow·스태킹에도 잘리지 않고, 바깥 클릭·
+   Esc 닫기도 브라우저가 해 준다 — 카드에 z-index를 얹던 우회와 JS 뒤집기 계산이 사라졌다.
+   **버튼에 붙이지 않고 화면 가운데에 띄운다.** anchor 배치로 버튼 아래에 붙이면 팝오버
+   높이가 "앵커 아래 남은 공간"으로 깎여서(fit-content가 inset으로 제한된다) 색 선택기를
+   펼친 순간 다시 잘린다 — 아래쪽 항목일수록 심하다. 가운데 띄우면 창 높이 전체를 쓴다. */
 .favorite-icon-picker {
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 0;
-  z-index: 6;
   width: 288px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  margin: auto;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--settings-accent) 32%, var(--settings-border));
   border-radius: 11px;
   background: color-mix(in srgb, var(--settings-bg) 90%, black 10%);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: var(--text);
 }
-/* .favorite-items가 display:grid라 각 .favorite-item이 암묵적으로 독립 스태킹 컨텍스트가
-   된다(그리드/플렉스 아이템은 z-index:auto라도 position:relative처럼 취급됨) — 팝오버의
-   z-index:6은 자기 카드 안에서만 유효해서, 카드 밖으로 넘치는 부분(다음 카드와 겹치는
-   영역)이 다음 형제 카드 뒤로 깔려버린다(2026-08-08, "호버하면 아이콘 선택창 순서가
-   이상해짐" 리포트). 팝오버가 열린 카드 자체에 z-index를 줘서 형제 카드보다 위로 올린다. */
-.favorite-item:has(.favorite-icon-picker.open) { z-index: 1; }
-.favorite-icon-picker.flip-up { top: auto; bottom: calc(100% + 7px); }
+.favorite-icon-picker::backdrop { background: rgba(0, 0, 0, 0.45); }
 .favorite-icon-picker-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .favorite-icon-picker-title { flex: none; color: var(--text-dim); font-size: 10px; }
 .favorite-icon-preview-label { overflow: hidden; color: var(--text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
@@ -345,10 +347,12 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
 .favorite-icon-choice:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
 .favorite-icon-choice.active { border-color: var(--settings-accent); background: color-mix(in srgb, var(--settings-accent) 22%, transparent); color: var(--settings-accent); }
 .favorite-target { overflow: hidden; padding-left: 2px; color: var(--text-dim); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.favorite-icon-color-group { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 9px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
+.favorite-icon-color-group { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-top: 9px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
 .favorite-icon-color-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-.favorite-icon-color { width: 26px; height: 26px; padding: 0; border: 1px solid var(--settings-border); border-radius: 6px; background: none; flex: none; cursor: pointer; }
-.favorite-icon-color:disabled { opacity: 0.4; cursor: not-allowed; }
+/* 공용 색 선택기(ColorField)의 호스트다. 예전 `<input type="color">` 시절의 26×26 상자
+   크기가 남아 있어서, 펼친 색 패널이 그 작은 상자를 넘쳐 잘려 보였다(2026-08-20).
+   호스트를 레이아웃에서 지워 피커가 제 크기대로 자리를 차지하게 한다. */
+.favorite-icon-color { display: contents; }
 .preset-item-actions { display: flex; gap: 6px; align-items: center; justify-content: center; }
 .preset-item-actions .secondary-action { width: auto; margin-top: 0; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
 

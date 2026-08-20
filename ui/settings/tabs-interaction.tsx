@@ -1,5 +1,5 @@
 // 알람과 조작 그룹 탭: 알람 / 단축키 / 바로가기 / 플레이어 (2026-08-10, 바닐라 settings.js 포팅).
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSettings } from "./App";
 import { ColorField, ShortcutRecorder } from "./components";
 import { NumberRow, Note, SelectRow, SettingRow, ToggleRow } from "./rows";
@@ -409,37 +409,11 @@ export function FavoritesTab() {
   const s = useSettings();
   const { d, set, tt } = s;
   const disabled = !d.favoritesEnabled;
+  // 아이콘 선택 팝오버는 네이티브 popover(최상위 레이어)다 — 스크롤 패널·형제 카드에
+  // 잘리지 않고, 바깥 클릭·Esc 닫기와 위/아래 뒤집기도 브라우저가 해 준다(2026-08-20).
+  // 안에 든 색 선택기를 펼치면 높이가 늘어나므로 위치 계산을 직접 하면 그때마다 다시
+  // 재야 한다 — CSS anchor 배치는 높이가 바뀌어도 알아서 따라간다.
   const [openPickerIndex, setOpenPickerIndex] = useState<number | null>(null);
-  const [flipUp, setFlipUp] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  // 팝오버 바깥 클릭·Esc로 닫기 (바닐라와 동일 — 문서 수준 리스너).
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Element && event.target.closest(".favorite-icon-slot")) return;
-      setOpenPickerIndex(null);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenPickerIndex(null);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
-  // 아래쪽 카드에서 팝오버가 창 밖이나 고정 저장 바 밑으로 들어가면 버튼 위로 뒤집는다.
-  useEffect(() => {
-    if (openPickerIndex === null || !pickerRef.current) return;
-    setFlipUp(false);
-    const picker = pickerRef.current;
-    const footerTop = document.querySelector(".settings-footer")?.getBoundingClientRect().top;
-    const limit = Math.min(window.innerHeight, footerTop || window.innerHeight);
-    if (picker.getBoundingClientRect().bottom > limit) setFlipUp(true);
-    picker.scrollIntoView({ block: "nearest" });
-  }, [openPickerIndex]);
 
   const updateItem = (index: number, patch: Partial<FavoriteEditItem>) => {
     const next = s.favoriteItems.slice();
@@ -503,7 +477,18 @@ export function FavoritesTab() {
                     <FavoriteIconPreview item={item} accentColor={accentColor} />
                   </button>
                   {pickerOpen && (
-                    <div ref={pickerRef} className={`favorite-icon-picker open${flipUp ? " flip-up" : ""}`}>
+                    <div
+                      className="favorite-icon-picker open"
+                      popover="auto"
+                      ref={(node) => {
+                        // popover 요소는 showPopover()를 부를 때까지 표시되지 않는다.
+                        if (node && !node.matches(":popover-open")) node.showPopover();
+                      }}
+                      onToggle={(event) => {
+                        // 바깥 클릭·Esc로 브라우저가 닫으면 React 상태도 닫힌 것으로 맞춘다.
+                        if (event.newState === "closed") setOpenPickerIndex(null);
+                      }}
+                    >
                       <div className="favorite-icon-picker-head">
                         <span className="favorite-icon-picker-title">{tt("settings.favorites.iconPickerLabel")}</span>
                         <span className="favorite-icon-preview-label">
