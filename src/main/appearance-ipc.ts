@@ -13,6 +13,7 @@ import {
   normalizeFacePatternIndex,
   normalizeHexColor,
   normalizeLighting,
+  normalizeOutlineColor,
   normalizePartVariations
 } from "./settings-schema.js";
 import type { Settings } from "./settings-schema.js";
@@ -126,6 +127,12 @@ function registerAppearanceIpcHandlers(
   ipcMain.on("settings:preview-part-variations", (event: AppearanceIpcEvent, value: unknown) => {
     if (!fromSettingsWindow(event)) return;
     deps.applyLivePreview({ partVariations: normalizePartVariations(value) });
+  });
+
+  // 외곽선 색은 커스터마이징 탭으로 옮겨졌다(2026-08-20) — 그 탭의 다른 값들처럼 즉시 미리보기한다.
+  ipcMain.on("settings:preview-outline-color", (event: AppearanceIpcEvent, value: unknown) => {
+    if (!fromSettingsWindow(event)) return;
+    deps.applyLivePreview({ outlineColor: normalizeOutlineColor(value) });
   });
 
   ipcMain.on("settings:preview-lighting", (event: AppearanceIpcEvent, value: unknown) => {
@@ -345,7 +352,6 @@ function registerAppearanceIpcHandlers(
     ditherPattern: DEFAULT_SETTINGS.ditherPattern,
     ditherAmount: DEFAULT_SETTINGS.ditherAmount,
     outlineEnabled: DEFAULT_SETTINGS.outlineEnabled,
-    outlineColor: DEFAULT_SETTINGS.outlineColor,
     outlineThickness: DEFAULT_SETTINGS.outlineThickness,
     lineWobbleEnabled: DEFAULT_SETTINGS.lineWobbleEnabled,
     lineWobbleFrequency: DEFAULT_SETTINGS.lineWobbleFrequency,

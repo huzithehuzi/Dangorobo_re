@@ -250,7 +250,6 @@ export function AppearanceTab() {
             set("ditherPattern", String(dd.ditherPattern || "none"));
             set("ditherAmount", String(dd.ditherAmount ?? ""));
             set("outlineEnabled", dd.outlineEnabled === true);
-            set("outlineColor", String(dd.outlineColor || "#000000"));
             set("outlineThickness", String(dd.outlineThickness ?? ""));
             set("lineWobbleEnabled", dd.lineWobbleEnabled === true);
             set("lineWobbleFrequency", String(dd.lineWobbleFrequency ?? ""));
@@ -328,14 +327,6 @@ export function AppearanceTab() {
         <NumberRow label={tt("settings.appearance.ditherAmountLabel")} value={d.ditherAmount} onChange={(value) => set("ditherAmount", value)} min={0} max={100} step={5} unit="%" disabled={!paletteOn || d.ditherPattern === "none"} />
         <Note>{tt("settings.appearance.ditherNote")}</Note>
         <ToggleRow checked={d.outlineEnabled} onChange={(checked) => set("outlineEnabled", checked)} label={tt("settings.appearance.outlineToggle")} />
-        <SettingRow asDiv label={tt("settings.appearance.outlineColorLabel")}>
-          {/* 외곽선 색은 예전에도 실시간 미리보기가 없었다(저장해야 반영) — 동작 유지 */}
-          <ColorField
-            value={d.outlineColor}
-            disabled={!d.outlineEnabled}
-            onCommit={(hex) => set("outlineColor", hex)}
-          />
-        </SettingRow>
         <NumberRow label={tt("settings.appearance.outlineThicknessLabel")} value={d.outlineThickness} onChange={(value) => set("outlineThickness", value)} min={1} max={8} step={1} unit="px" disabled={!d.outlineEnabled} />
         <ToggleRow checked={d.lineWobbleEnabled} onChange={(checked) => set("lineWobbleEnabled", checked)} label={tt("settings.appearance.lineWobbleToggle")} />
         <NumberRow label={tt("settings.appearance.lineWobbleFrequencyLabel")} value={d.lineWobbleFrequency} onChange={(value) => set("lineWobbleFrequency", value)} min={1} max={30} step={1} disabled={!d.lineWobbleEnabled} />
@@ -408,6 +399,7 @@ export function CustomizationTab() {
   const snapshot = () => ({
     bodyColors: s.bodyColors.map((entry) => ({ ...entry })),
     partVariations: s.partVariations.map((entry) => ({ ...entry })),
+    outlineColor: d.outlineColor,
     ...faceCustomizationPayload(d)
   });
 
@@ -518,6 +510,20 @@ export function CustomizationTab() {
           {tt("settings.customization.presetImportButton")}
         </button>
         <Note>{tt("settings.customization.presetsNote")}</Note>
+      </div>
+      <div className="settings-group">
+        <h2>{tt("settings.customization.outlineHeading")}</h2>
+        <SettingRow asDiv label={tt("settings.appearance.outlineColorLabel")}>
+          <ColorField
+            value={d.outlineColor}
+            disabled={!d.outlineEnabled}
+            onCommit={(hex) => {
+              set("outlineColor", hex);
+              window.desktopPet.previewOutlineColor(hex);
+            }}
+          />
+        </SettingRow>
+        <Note>{tt("settings.customization.outlineNote")}</Note>
       </div>
       <div className="settings-group">
         <h2>{tt("settings.customization.faceHeading")}</h2>

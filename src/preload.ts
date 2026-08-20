@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld("desktopPet", {
   exportCustomizationPreset: (preset: unknown) => ipcRenderer.invoke("settings:export-customization-preset", preset),
   importCustomizationPreset: () => ipcRenderer.invoke("settings:import-customization-preset"),
   activatePresetAssets: (id: unknown) => ipcRenderer.invoke("preset:activate-assets", id),
+  previewOutlineColor: (color: unknown) => ipcRenderer.send("settings:preview-outline-color", color),
   exportAllSettings: () => ipcRenderer.invoke("settings:export-all"),
   importAllSettings: () => ipcRenderer.invoke("settings:import-all"),
   saveSettings: (settings: unknown) => ipcRenderer.invoke("settings:save", settings),

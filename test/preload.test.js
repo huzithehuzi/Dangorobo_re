@@ -75,6 +75,7 @@ const SEND_CHANNELS = Object.freeze({
   previewBodyColors: "settings:preview-body-colors",
   previewPartVariations: "settings:preview-part-variations",
   previewLighting: "settings:preview-lighting",
+  previewOutlineColor: "settings:preview-outline-color",
   openPetCustomize: "settings:open-pet-customize",
   setCustomizeColor: "pet:customize-set-color",
   exitCustomizeMode: "pet:customize-exit",

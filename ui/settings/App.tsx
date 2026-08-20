@@ -259,8 +259,12 @@ export default function App() {
     setPartVariations(nextPartVariations);
     setDraft((prev) => {
       if (!prev) return prev;
+      const presetOutlineColor = /^#[0-9a-fA-F]{6}$/.test(String(preset.outlineColor || ""))
+        ? String(preset.outlineColor).toLowerCase()
+        : prev.outlineColor;
       const merged: Draft = {
         ...prev,
+        outlineColor: presetOutlineColor,
         facePattern: String(preset.facePattern ?? 0),
         faceCosmetic: String(preset.faceCosmetic ?? 0),
         faceEyeStyle: String(preset.faceEyeStyle ?? 1),
@@ -270,6 +274,7 @@ export default function App() {
         customBodyEnabled: preset.customBodyEnabled === true
       };
       window.desktopPet.previewFaceCustomization(faceCustomizationPayload(merged));
+      window.desktopPet.previewOutlineColor(presetOutlineColor);
       return merged;
     });
     window.desktopPet.previewBodyColors(nextBodyColors.map((entry) => ({ ...entry })));

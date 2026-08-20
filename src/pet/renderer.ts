@@ -839,6 +839,7 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
   const savedCameraQuaternion = camera.quaternion.clone();
   const savedCameraAspect = camera.aspect;
   const savedResolution = postProcessUniforms.uResolution.value.clone();
+  const savedOutlineColor = postProcessUniforms.uOutlineColor.value.clone();
   const savedDiffuse = postProcessUniforms.tDiffuse.value;
   const savedRenderTarget = renderer.getRenderTarget();
   const savedAutoClear = renderer.autoClear;
@@ -891,6 +892,12 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
       // 2단계: 프리셋별로 색·파츠·얼굴을 적용해 한 장씩 찍는다.
       for (const preset of list) {
         if (!preset?.id) continue;
+        // 외곽선 색은 프리셋에 저장된다(2026-08-20). 빈 값이면 지금 쓰는 색으로 그린다.
+        postProcessUniforms.uOutlineColor.value.set(
+          /^#[0-9a-fA-F]{6}$/.test(String(preset.outlineColor || ""))
+            ? preset.outlineColor
+            : savedOutlineColor
+        );
         applyBodyColors(preset);
         applyPartVariations(preset);
         applyFaceCustomization(preset);
@@ -910,6 +917,7 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
     () => { scene.overrideMaterial = savedOverrideMaterial; },
     () => { postProcessUniforms.tDiffuse.value = savedDiffuse; },
     () => { postProcessUniforms.uResolution.value.copy(savedResolution); },
+    () => { postProcessUniforms.uOutlineColor.value.copy(savedOutlineColor); },
     () => { camera.aspect = savedCameraAspect; },
     () => { camera.quaternion.copy(savedCameraQuaternion); },
     () => { camera.position.copy(savedCameraPosition); },

@@ -277,7 +277,9 @@ const DEFAULT_SETTINGS = {
       faceMouthStyle: 1,
       customFaceEnabled: false,
       bodyCostume: 5,
-      customBodyEnabled: false
+      customBodyEnabled: false,
+      // 빈 문자열은 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이다.
+      outlineColor: ""
     },
     {
       id: "preset-mshk2m8q-l3kylw",
@@ -306,7 +308,9 @@ const DEFAULT_SETTINGS = {
       faceMouthStyle: 1,
       customFaceEnabled: false,
       bodyCostume: 1,
-      customBodyEnabled: false
+      customBodyEnabled: false,
+      // 빈 문자열은 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이다.
+      outlineColor: ""
     },
     {
       id: "preset-mshkdmil-8b7aoj",
@@ -335,7 +339,9 @@ const DEFAULT_SETTINGS = {
       faceMouthStyle: 2,
       customFaceEnabled: false,
       bodyCostume: 4,
-      customBodyEnabled: false
+      customBodyEnabled: false,
+      // 빈 문자열은 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이다.
+      outlineColor: ""
     }
   ],
   lighting: {
@@ -464,6 +470,13 @@ function clampPaletteSteps(value: unknown) {
 function normalizeOutlineColor(value: unknown) {
   const color = String(value ?? "").trim();
   return /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : DEFAULT_SETTINGS.outlineColor;
+}
+
+// 프리셋에 담기는 외곽선 색은 "없으면 지금 색을 그대로 둔다"는 뜻의 빈 문자열을 허용한다 —
+// 이 기능(2026-08-20) 전에 저장된 프리셋을 적용할 때 외곽선 색이 기본값으로 튀지 않게 한다.
+function normalizeOptionalOutlineColor(value: unknown) {
+  const color = String(value ?? "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : "";
 }
 
 function clampOutlineThickness(value: unknown) {
@@ -883,7 +896,8 @@ function normalizeCustomizationPreset(value: unknown, language: string) {
     faceMouthStyle: normalizeFaceMouthStyleIndex(preset?.faceMouthStyle),
     customFaceEnabled: preset?.customFaceEnabled === true,
     bodyCostume: normalizeBodyCostumeIndex(preset?.bodyCostume),
-    customBodyEnabled: preset?.customBodyEnabled === true
+    customBodyEnabled: preset?.customBodyEnabled === true,
+    outlineColor: normalizeOptionalOutlineColor(preset?.outlineColor)
   };
 }
 
@@ -1315,6 +1329,7 @@ export {
   normalizeDitherPattern,
   clampDitherAmount,
   normalizeOutlineColor,
+  normalizeOptionalOutlineColor,
   clampOutlineThickness,
   clampLineWobbleFrequency,
   clampLineWobbleSpeed,

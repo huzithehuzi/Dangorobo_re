@@ -180,6 +180,8 @@ interface CustomizationPreset {
   bodyCostume?: number;
   customFaceEnabled?: boolean;
   customBodyEnabled?: boolean;
+  /** 빈 문자열이면 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이다. */
+  outlineColor?: string;
 }
 
 interface LightingEntry {
@@ -224,6 +226,7 @@ interface DesktopPetSettingsApi {
   previewPartVariations(partVariations: Array<{ id: string; variation: string }>): void;
   previewFaceCustomization(payload: Record<string, unknown>): void;
   previewLighting(lighting: Record<string, LightingEntry>): void;
+  previewOutlineColor(color: string): void;
   openPetCustomize(): void;
   onBodyColorsChanged(callback: (bodyColors: Array<{ id: string; color: string }>) => void): void;
   pickFavoriteTarget(): Promise<(OkResult & { id?: string; name?: string; target?: string }) | undefined>;

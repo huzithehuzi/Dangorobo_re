@@ -25,6 +25,7 @@ const SETTINGS_WINDOW_CHANNELS = [
   "settings:preview-body-colors",
   "settings:preview-part-variations",
   "settings:preview-lighting",
+  "settings:preview-outline-color",
   "settings:open-pet-customize"
 ];
 const PET_WINDOW_CHANNELS = [
