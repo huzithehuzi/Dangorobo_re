@@ -29,9 +29,18 @@ test("아이콘 선택 팝오버는 네이티브 popover로 띄운다", () => {
   assert.ok(tsx.includes('popover="auto"'), "popover 속성이 없으면 최상위 레이어에 뜨지 않는다");
   assert.ok(tsx.includes("showPopover()"), "showPopover()를 부르지 않으면 보이지 않는다");
   assert.ok(tsx.includes('event.newState === "closed"'), "브라우저가 닫았을 때 React 상태가 남는다");
+  const body = ruleBody(".favorite-icon-picker");
   assert.ok(
-    !ruleBody(".favorite-icon-picker").includes("position: absolute"),
+    !body.includes("position: absolute"),
     "카드 안 absolute로 되돌리면 스크롤 패널·형제 카드에 잘린다"
+  );
+  // 누른 버튼에 붙어 있어야 어느 항목을 편집하는 중인지 알 수 있고, 아래 공간이 좁으면
+  // most-block-size가 위로 뒤집어 준다(그 order가 없으면 좁은 쪽에 눌린 채로 남는다).
+  assert.ok(body.includes("position-anchor: --favorite-icon-anchor"), "팝오버가 버튼에 묶여 있지 않다");
+  assert.ok(body.includes("position-try-order: most-block-size"), "공간이 좁은 쪽에서 뒤집히지 않는다");
+  assert.ok(
+    ruleBody(".favorite-icon-button.picker-open").includes("anchor-name: --favorite-icon-anchor"),
+    "열린 버튼에 anchor-name이 없으면 팝오버가 앵커를 못 찾는다"
   );
 });
 

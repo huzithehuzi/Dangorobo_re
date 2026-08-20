@@ -472,7 +472,7 @@ export function FavoritesTab() {
                   <div className="favorite-icon-slot">
                     <button
                       type="button"
-                      className="favorite-icon-button"
+                      className={`favorite-icon-button${pickerOpen ? " picker-open" : ""}`}
                       aria-haspopup="true"
                       aria-expanded={pickerOpen}
                       disabled={disabled}
