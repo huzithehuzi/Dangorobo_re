@@ -23,6 +23,10 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 
 ## 현재 상태와 다음 작업
 
+- **1.2.0 릴리스 산출물까지 만들어 둔 상태다**(`release/Dangorobo-1.2.0-Setup.exe`,
+  `-Portable.exe`, `-Source.zip`, `latest.yml`). portable EXE는 임시 프로필로 실제 실행해
+  설정창까지 확인했고, **설치본 설치와 자동 업데이트(낮은 버전 설치 → 새 버전 배포 → 다운로드·
+  재시작)는 아직 확인하지 않았다** — 배포 전 남은 수동 검증이다.
 - Windows x64용 Electron 앱이며 현재 버전은 `package.json`을 기준으로 한다. NSIS 설치본과
   portable EXE 두 형태로 배포하고(`package.json`의 `build.win.target`), 설치본만
   `electron-updater`로 자동 업데이트를 확인한다 — portable 실행은 업데이트 채널이 없어
@@ -601,7 +605,12 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   관찰로 재발 여부를 확인한다. 펫이 가라앉는 것 자체(30초 `moveTop()` 워치독이 되돌린다)는
   별개 문제로 남아 있다.
 - 실제 Gemini 질문·번역·문서 요약과 기억 추출·open loop 판정은 API 키와 네트워크가 필요한
-  수동 검증 영역이다.
+  수동 검증 영역이다. 2026-08-20에 고친 두 가지(모델이 `thinkingConfig`를 모를 때의 호환
+  재시도, 오프너 프롬프트의 언어 고정)도 응답을 흉내 낸 테스트로만 확인했다 — 실제 키로
+  "부르기"를 눌러 영어·일본어 환경에서 첫마디 언어를 한 번 봐 두면 좋다.
+- 프리셋 갤러리 썸네일은 **머리만** 그리므로 프리셋별 커스텀 **바디** 이미지는 썸네일에
+  나타나지 않는다(적용하면 펫에는 반영된다). 표정도 normal 한 장만 보내므로 다른 표정의
+  커스텀 얼굴은 썸네일로 확인할 수 없다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.
 - HSV 축별 팔레트 양자화는 특정 경계에서 색 선택이 직관적으로 움직이지 않을 수 있다.
 - [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 알람·클릭 사운드의 정확한 출처 URL과
