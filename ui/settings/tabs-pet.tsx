@@ -229,7 +229,7 @@ export function AppearanceTab() {
 
   return (
     <>
-      <div className="settings-group no-top-divider">
+      <div className="settings-group">
         <button
           className="secondary-action"
           type="button"
@@ -273,12 +273,13 @@ export function AppearanceTab() {
         </button>
         <Note>{tt("settings.appearance.resetDefaultsNote")}</Note>
       </div>
-      <hr className="settings-divider" />
-      <h2>{tt("settings.appearance.modelHeading")}</h2>
-      <NumberRow label={tt("settings.appearance.scaleLabel")} value={d.petScalePercent} onChange={(value) => set("petScalePercent", value)} min={30} max={130} step={5} unit="%" />
-      <NumberRow label={tt("settings.appearance.tailSpeedLabel")} value={d.tailSpeedPercent} onChange={(value) => set("tailSpeedPercent", value)} min={25} max={350} step={5} unit="%" />
-      <ToggleRow checked={d.shadingEnabled} onChange={(checked) => set("shadingEnabled", checked)} label={tt("settings.appearance.shadingToggle")} />
-      <NumberRow label={tt("settings.appearance.pixelArtLabel")} value={d.pixelArtPercent} onChange={(value) => set("pixelArtPercent", value)} min={0} max={100} step={5} unit="%" />
+      <div className="settings-group">
+        <h2>{tt("settings.appearance.modelHeading")}</h2>
+        <NumberRow label={tt("settings.appearance.scaleLabel")} value={d.petScalePercent} onChange={(value) => set("petScalePercent", value)} min={30} max={130} step={5} unit="%" />
+        <NumberRow label={tt("settings.appearance.tailSpeedLabel")} value={d.tailSpeedPercent} onChange={(value) => set("tailSpeedPercent", value)} min={25} max={350} step={5} unit="%" />
+        <ToggleRow checked={d.shadingEnabled} onChange={(checked) => set("shadingEnabled", checked)} label={tt("settings.appearance.shadingToggle")} />
+        <NumberRow label={tt("settings.appearance.pixelArtLabel")} value={d.pixelArtPercent} onChange={(value) => set("pixelArtPercent", value)} min={0} max={100} step={5} unit="%" />
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.appearance.colorHeading")}</h2>
         <ToggleRow checked={d.paletteEnabled} onChange={(checked) => set("paletteEnabled", checked)} label={tt("settings.appearance.paletteToggle")} />
@@ -348,14 +349,14 @@ export function AppearanceTab() {
         <ToggleRow checked={d.sleepEnabled} onChange={(checked) => set("sleepEnabled", checked)} label={tt("settings.appearance.sleepToggle")} />
         <NumberRow label={tt("settings.appearance.sleepAfterLabel")} value={d.sleepAfterMinutes} onChange={(value) => set("sleepAfterMinutes", value)} min={1} max={120} step={1} unit={tt("settings.appearance.minutesUnit")} disabled={!d.sleepEnabled} />
         <Note>{tt("settings.appearance.sleepNote")}</Note>
-        <hr className="settings-divider" />
+      </div>
+      <div className="settings-group">
         <h2>{tt("settings.appearance.idleRoutineHeading")}</h2>
         <ToggleRow checked={d.idleRoutineEnabled} onChange={(checked) => set("idleRoutineEnabled", checked)} label={tt("settings.appearance.idleRoutineToggle")} />
         <NumberRow label={tt("settings.appearance.idleRoutineMinLabel")} value={d.idleRoutineMinSeconds} onChange={(value) => set("idleRoutineMinSeconds", value)} min={5} max={300} step={1} unit={tt("settings.appearance.secondsUnit")} disabled={!d.idleRoutineEnabled} />
         <NumberRow label={tt("settings.appearance.idleRoutineMaxLabel")} value={d.idleRoutineMaxSeconds} onChange={(value) => set("idleRoutineMaxSeconds", value)} min={5} max={300} step={1} unit={tt("settings.appearance.secondsUnit")} disabled={!d.idleRoutineEnabled} />
         <Note>{tt("settings.appearance.idleRoutineNote")}</Note>
       </div>
-      <hr className="settings-divider" />
       <div className="settings-group">
         <h2>{tt("settings.appearance.lightingHeading")}</h2>
         <Note>{tt("settings.appearance.lightingNote")}</Note>

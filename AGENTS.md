@@ -108,6 +108,11 @@ npm run dist
   `button,input,select,optgroup,textarea`에 걸어 주고(base 레이어라 유틸리티에 항상 진다),
   유틸리티로 쓰면 클래스에 적은 순서와 무관하게 `fs-*`보다 뒤에 정렬돼 크기를 루트 상속값으로
   되돌린다. 글자 크기는 `fs-<px>` 유틸리티만 쓴다.
+- **설정창의 한 소절은 `<div className="settings-group">` 카드다.** `h2`를 탭 프래그먼트에
+  바로 두면 그 소절만 카드 없이 떠 있어 보인다. 카드 안에서 소절을 더 나눌 때만
+  `<hr className="settings-divider">`를 쓰고, 카드끼리는 구분선을 넣지 않는다(카드 간격이 한다).
+- 설정창의 팝오버는 네이티브 `popover`로 띄운다. 스크롤 패널 안의 `position: absolute`는
+  잘리고, CSS anchor로 버튼에 붙이면 팝오버 높이가 앵커 아래 남은 공간으로 깎인다.
 - 앱의 색 선택은 `src/shared/color-picker.*`만 사용한다. 펫 창 위에 네이티브 팝업이나
   `<input type="color">` 대화상자를 띄우지 않는다.
 - 창 외형(말풍선 테마·UI 배율·글자 크기·폰트)을 `<html>`에 입히는 일은 `ui/lib/appearance.ts`의

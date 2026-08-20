@@ -34,14 +34,16 @@ export function GeneralTab() {
 
   return (
     <>
-      <h2>{tt("settings.general.languageLabel")}</h2>
-      <SelectRow
-        label={tt("settings.general.languageLabel")}
-        value={d.language}
-        onChange={(value) => set("language", window.PetI18n.normalizeLanguage(value))}
-        options={[{ value: "ko", label: "한국어" }, { value: "en", label: "English" }, { value: "ja", label: "日本語" }]}
-      />
-      <Note>{tt("settings.general.languageNote")}</Note>
+      <div className="settings-group">
+        <h2>{tt("settings.general.languageLabel")}</h2>
+        <SelectRow
+          label={tt("settings.general.languageLabel")}
+          value={d.language}
+          onChange={(value) => set("language", window.PetI18n.normalizeLanguage(value))}
+          options={[{ value: "ko", label: "한국어" }, { value: "en", label: "English" }, { value: "ja", label: "日本語" }]}
+        />
+        <Note>{tt("settings.general.languageNote")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.general.apiKeyHeading")}</h2>
         <label className="text-field">
@@ -206,52 +208,54 @@ export function UiTab() {
 
   return (
     <>
-      <h2>{tt("settings.ui.bubbleHeading")}</h2>
-      <SelectRow
-        label={tt("settings.ui.bubbleThemeLabel")}
-        value={d.bubbleTheme}
-        onChange={(value) => s.previewBubbleThemeNow({ bubbleTheme: value })}
-        options={BUBBLE_THEMES.map((theme) => ({ value: theme.id, label: tt(theme.labelKey) }))}
-      />
-      <Note>{tt("settings.ui.bubbleThemeNote")}</Note>
-      {d.bubbleTheme === "custom" && (
-        <div>
-          <SettingRow asDiv label={tt("settings.ui.customBgLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomBg}
-              placeholder="#20232b"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          <SettingRow asDiv label={tt("settings.ui.customAccentLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomAccent}
-              placeholder="#d75566"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          <SettingRow asDiv label={tt("settings.ui.customTextLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomText}
-              placeholder="#f7f7f9"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomText: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomText: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          {contrastLow && <Note className="missing">{tt("settings.ui.customContrastWarning")}</Note>}
-        </div>
-      )}
+      <div className="settings-group">
+        <h2>{tt("settings.ui.bubbleHeading")}</h2>
+        <SelectRow
+          label={tt("settings.ui.bubbleThemeLabel")}
+          value={d.bubbleTheme}
+          onChange={(value) => s.previewBubbleThemeNow({ bubbleTheme: value })}
+          options={BUBBLE_THEMES.map((theme) => ({ value: theme.id, label: tt(theme.labelKey) }))}
+        />
+        <Note>{tt("settings.ui.bubbleThemeNote")}</Note>
+        {d.bubbleTheme === "custom" && (
+          <div>
+            <SettingRow asDiv label={tt("settings.ui.customBgLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomBg}
+                placeholder="#20232b"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            <SettingRow asDiv label={tt("settings.ui.customAccentLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomAccent}
+                placeholder="#d75566"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            <SettingRow asDiv label={tt("settings.ui.customTextLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomText}
+                placeholder="#f7f7f9"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomText: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomText: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            {contrastLow && <Note className="missing">{tt("settings.ui.customContrastWarning")}</Note>}
+          </div>
+        )}
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.ui.fontHeading")}</h2>
         <ToggleRow checked={d.uiFontEnabled} onChange={(checked) => set("uiFontEnabled", checked)} label={tt("settings.ui.fontToggle")} />
@@ -299,8 +303,10 @@ export function TrayTab() {
   const { d, set, tt } = s;
   return (
     <>
-      <h2>{tt("settings.tray.heading")}</h2>
-      <Note>{tt("settings.tray.note")}</Note>
+      <div className="settings-group">
+        <h2>{tt("settings.tray.heading")}</h2>
+        <Note>{tt("settings.tray.note")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.tray.visibleItemsHeading")}</h2>
         {TRAY_ITEMS.map((item) => (
