@@ -820,7 +820,10 @@ const thumbnailUnionBox = new THREE.Box3();
 const thumbnailCenter = new THREE.Vector3();
 const thumbnailSize = new THREE.Vector3();
 
-function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
+function renderPresetThumbnails(
+  presets: Settings["customizationPresets"],
+  faceTexturesByPresetId: Record<string, THREE.Texture> = {}
+) {
   const list = Array.isArray(presets) ? presets : [];
   // 모델 로드 전(설정창을 앱 시작 직후에 연 경우)에는 아무것도 못 그린다.
   if (!list.length || !headPivot || !latestSettings) return {};
@@ -840,6 +843,7 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
   const savedCameraAspect = camera.aspect;
   const savedResolution = postProcessUniforms.uResolution.value.clone();
   const savedOutlineColor = postProcessUniforms.uOutlineColor.value.clone();
+  const savedCustomFaceTextureSet = customFaceTextureSet;
   const savedDiffuse = postProcessUniforms.tDiffuse.value;
   const savedRenderTarget = renderer.getRenderTarget();
   const savedAutoClear = renderer.autoClear;
@@ -890,8 +894,13 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
       postProcessUniforms.tDiffuse.value = sceneTarget.texture;
 
       // 2단계: 프리셋별로 색·파츠·얼굴을 적용해 한 장씩 찍는다.
+      // 커스텀 얼굴은 프리셋마다 다른 파일이다 — 그리는 동안만 그 프리셋 텍스처로 갈아끼우고
+      // 아래 복구 목록에서 라이브 세트로 되돌린다(setFaceExpressionKey가 이 값을 읽는다).
+      const liveCustomFaceTextureSet = customFaceTextureSet;
       for (const preset of list) {
         if (!preset?.id) continue;
+        const presetFace = faceTexturesByPresetId[preset.id];
+        customFaceTextureSet = presetFace ? { normal: presetFace } : liveCustomFaceTextureSet;
         // 외곽선 색은 프리셋에 저장된다(2026-08-20). 빈 값이면 지금 쓰는 색으로 그린다.
         postProcessUniforms.uOutlineColor.value.set(
           /^#[0-9a-fA-F]{6}$/.test(String(preset.outlineColor || ""))
@@ -918,6 +927,7 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
     () => { postProcessUniforms.tDiffuse.value = savedDiffuse; },
     () => { postProcessUniforms.uResolution.value.copy(savedResolution); },
     () => { postProcessUniforms.uOutlineColor.value.copy(savedOutlineColor); },
+    () => { customFaceTextureSet = savedCustomFaceTextureSet; },
     () => { camera.aspect = savedCameraAspect; },
     () => { camera.quaternion.copy(savedCameraQuaternion); },
     () => { camera.position.copy(savedCameraPosition); },
@@ -941,13 +951,42 @@ function renderPresetThumbnails(presets: Settings["customizationPresets"]) {
   ]);
 }
 
+/**
+ * 프리셋이 들고 온 커스텀 얼굴 이미지를 텍스처로 만든다. 썸네일 렌더는 동기라서 **그리기
+ * 전에** 이미지 디코드가 끝나 있어야 한다 — load 콜백을 안 기다리면 첫 렌더가 빈 판으로 나간다.
+ */
+function loadPresetFaceTextures(presets: PetThumbnailPreset[]) {
+  return Promise.all(
+    presets
+      .filter((preset) => preset?.id && typeof preset.customFaceTexture === "string" && preset.customFaceTexture)
+      .map((preset) => new Promise<[string, THREE.Texture] | null>((resolve) => {
+        textureLoader.load(
+          preset.customFaceTexture as string,
+          (loaded: THREE.Texture) => {
+            loaded.colorSpace = THREE.SRGBColorSpace;
+            loaded.magFilter = THREE.NearestFilter;
+            loaded.minFilter = THREE.LinearMipmapLinearFilter;
+            resolve([preset.id, loaded]);
+          },
+          undefined,
+          () => resolve(null)
+        );
+      }))
+  ).then((entries) => Object.fromEntries(entries.filter((entry) => entry != null) as Array<[string, THREE.Texture]>));
+}
+
 window.desktopPet.onRenderPresetThumbnails(async (payload: PetPresetThumbnailRequest) => {
   let thumbnails: Record<string, string> = {};
+  let faceTextures: Record<string, THREE.Texture> = {};
   try {
     await modelsReady;
-    thumbnails = renderPresetThumbnails(payload.presets);
+    faceTextures = await loadPresetFaceTextures(payload.presets);
+    thumbnails = renderPresetThumbnails(payload.presets, faceTextures);
   } catch (error) {
     console.error("💥 프리셋 썸네일 렌더 실패:", error);
+  } finally {
+    // 요청마다 새로 만드므로 그리고 나면 버린다(설정창을 여닫을 때마다 쌓이면 GPU 메모리가 는다).
+    for (const texture of Object.values(faceTextures)) texture.dispose();
   }
   window.desktopPet.sendPresetThumbnails({ requestId: payload.requestId, thumbnails });
 });

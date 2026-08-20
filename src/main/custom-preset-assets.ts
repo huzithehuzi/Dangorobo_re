@@ -164,6 +164,39 @@ function applyAssetZip(zipPath: string): PresetAssetActivation {
 }
 
 /**
+ * 프리셋 파일에 든 기본 표정(normal) 얼굴 이미지를 data URL로 읽는다.
+ * 프리셋 갤러리 썸네일을 그 프리셋의 얼굴로 그리기 위한 것이다(썸네일은 머리만, 표정은 normal).
+ */
+function readPresetFaceTextureDataUrl(id: string): string | null {
+  const zipPath = presetAssetZipPath(id);
+  if (!zipPath || !fs.existsSync(zipPath)) return null;
+  const zip = readZip(zipPath);
+  const data = zip ? zipEntryData(zip, faceEntryName("normal")) : null;
+  return isPng(data) ? `data:image/png;base64,${data.toString("base64")}` : null;
+}
+
+/**
+ * 이 기능(2026-08-20) 전에 저장된 프리셋에는 자기 이미지 파일이 없다. 그때는 모든 프리셋이
+ * 활성 이미지 한 벌을 공유했으므로, **커스텀 이미지를 쓰는 프리셋**에 한해 지금 활성 이미지를
+ * 그 프리셋의 파일로 한 번 복사해 준다 — 이걸 안 하면 옛 프리셋들만 계속 이미지를 공유해서
+ * "프리셋마다 따로 저장된다"는 규칙이 프리셋에 따라 다르게 보인다.
+ * 이미 파일이 있는 프리셋은 건드리지 않으므로 여러 번 불러도 안전하다.
+ */
+function seedLegacyPresetAssets(
+  presets: Array<{ id?: unknown; customFaceEnabled?: unknown; customBodyEnabled?: unknown }>
+): number {
+  if (!collectActiveAssets().length) return 0;
+  let seeded = 0;
+  for (const preset of Array.isArray(presets) ? presets : []) {
+    if (preset?.customFaceEnabled !== true && preset?.customBodyEnabled !== true) continue;
+    const zipPath = presetAssetZipPath(String(preset?.id ?? ""));
+    if (!zipPath || fs.existsSync(zipPath)) continue;
+    if (capturePresetAssets(String(preset.id))) seeded += 1;
+  }
+  return seeded;
+}
+
+/**
  * 프리셋 하나를 "세트" 파일로 내보낸다 — preset.json + 그 프리셋의 커스텀 이미지.
  * 프리셋 파일이 없으면(옛 프리셋) 지금 활성 이미지를 담는다 — 예전에는 모든 프리셋이
  * 활성 이미지를 공유했으므로 그것이 그 프리셋의 이미지다.
@@ -220,6 +253,8 @@ export {
   capturePresetAssets,
   deletePresetAssets,
   activatePresetAssets,
+  readPresetFaceTextureDataUrl,
+  seedLegacyPresetAssets,
   exportPresetSet,
   importPresetSet
 };

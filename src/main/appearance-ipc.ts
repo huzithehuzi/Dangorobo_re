@@ -56,6 +56,8 @@ type AppearanceIpcDependencies = {
   capturePresetAssets: (id: string) => void;
   deletePresetAssets: (id: string) => void;
   activatePresetAssets: (id: string) => PresetAssetActivation | null;
+  /** 프리셋 자기 얼굴 이미지(normal)의 data URL — 갤러리 썸네일을 그 프리셋 얼굴로 그린다. */
+  readPresetFaceTexture: (id: string) => string | null;
   exportPresetSet: (id: string, preset: unknown, targetPath: string) => void;
   importPresetSet: (filePath: string) => PresetSetImportResult;
   importCustomFaceZip: (filePath: string) => CustomFaceImportResult;
@@ -182,10 +184,16 @@ function registerAppearanceIpcHandlers(
     if (!fromSettingsWindow(event)) return {};
     if (!deps.hasPetWindow()) return {};
     const language = deps.getSettings().language;
+    // 커스텀 얼굴은 프리셋마다 다르므로 그 프리셋의 이미지를 함께 보낸다. 썸네일은 머리만,
+    // 표정은 normal 하나라 한 장이면 된다 — 표정 7종을 다 보내면 payload가 수십 MB가 된다.
     const presets = (Array.isArray(payload) ? payload : [])
       .slice(0, PRESET_LIMIT)
       .map((preset) => normalizeCustomizationPreset(preset, language))
-      .filter((preset) => preset.id);
+      .filter((preset) => preset.id)
+      .map((preset) => ({
+        ...preset,
+        customFaceTexture: preset.customFaceEnabled ? deps.readPresetFaceTexture(preset.id) : null
+      }));
     if (!presets.length) return {};
     const requestId = ++requestSeq;
     return new Promise<Record<string, unknown>>((resolve) => {

@@ -100,6 +100,7 @@ function createHarness(overrides = {}) {
     showOpenDialog: async () => ({ canceled: true, filePaths: [] }),
     capturePresetAssets: (/** @type {string} */ id) => { assetCalls.push({ kind: "capture", id }); },
     deletePresetAssets: (/** @type {string} */ id) => { assetCalls.push({ kind: "delete", id }); },
+    readPresetFaceTexture: (/** @type {string} */ id) => `data:image/png;base64,${id}`,
     activatePresetAssets: (/** @type {string} */ id) => {
       assetCalls.push({ kind: "activate", id });
       return { faceKeys: ["normal"], hasBody: true };
@@ -185,6 +186,19 @@ test("값을 돌려주는 채널도 설정창이 아닌 sender는 거부한다",
       assert.equal(result.ok, false, `${channel}이 거부인데 성공을 돌려줬다`);
     }
   }
+});
+
+test("썸네일 요청에는 커스텀 얼굴을 쓰는 프리셋의 자기 이미지가 실린다", () => {
+  const harness = createHarness();
+  harness.send("preset:render-thumbnails", harness.settingsSender, [
+    { id: "with-face", name: "가", customFaceEnabled: true },
+    { id: "plain", name: "나" }
+  ]);
+  const sent = harness.petMessages[0].payload.presets;
+  // 이미지가 프리셋마다 다르므로 썸네일도 그 프리셋 얼굴로 그려야 한다 — 안 실으면 갤러리의
+  // 모든 카드가 지금 활성 이미지 하나로 그려져서 "여전히 파일이 하나"로 보인다.
+  assert.equal(sent[0].customFaceTexture, "data:image/png;base64,with-face");
+  assert.equal(sent[1].customFaceTexture, null, "커스텀 얼굴을 안 쓰는 프리셋에는 안 실어야 한다");
 });
 
 test("프리셋 썸네일 요청은 requestId로 펫 창 응답과 짝을 맞춘다", async () => {

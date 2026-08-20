@@ -206,6 +206,8 @@ const {
   capturePresetAssets,
   deletePresetAssets,
   activatePresetAssets,
+  readPresetFaceTextureDataUrl,
+  seedLegacyPresetAssets,
   exportPresetSet,
   importPresetSet
 } = require("../src/main/custom-preset-assets.js");
@@ -307,4 +309,30 @@ test("예전 버전이 내보낸 JSON 파일도 계속 읽는다(이미지 없�
 test("preset.json이 없는 zip은 세트 파일로 인정하지 않는다", () => {
   const zipPath = writeZip("no-preset.zip", [["customface_normal.png", png("x")]]);
   assert.deepEqual(importPresetSet(zipPath), { ok: false, errorCode: "invalidFile" });
+});
+
+test("옛 프리셋에는 지금 활성 이미지를 한 번 채워 준다(있으면 건드리지 않는다)", () => {
+  const face = png("legacySeed");
+  importCustomFaceZip(writeZip("seed.zip", [["customface_normal.png", face]]));
+  capturePresetAssets("hasOwn");
+  const other = png("other");
+  importCustomFaceZip(writeZip("seed2.zip", [["customface_normal.png", other]]));
+
+  const presets = [
+    { id: "hasOwn", customFaceEnabled: true },
+    { id: "needsSeed", customFaceEnabled: true },
+    { id: "noCustom" }
+  ];
+  assert.equal(seedLegacyPresetAssets(presets), 1);
+  // 이미 자기 파일이 있는 프리셋은 덮어쓰지 않는다.
+  assert.equal(readPresetFaceTextureDataUrl("hasOwn"), `data:image/png;base64,${face.toString("base64")}`);
+  assert.equal(readPresetFaceTextureDataUrl("needsSeed"), `data:image/png;base64,${other.toString("base64")}`);
+  assert.equal(fs.existsSync(presetAssetZipPath("noCustom")), false);
+  // 두 번 불러도 아무것도 더 만들지 않는다.
+  assert.equal(seedLegacyPresetAssets(presets), 0);
+});
+
+test("활성 이미지가 없으면 옛 프리셋 채우기는 아무 일도 하지 않는다", () => {
+  assert.equal(seedLegacyPresetAssets([{ id: "p1", customFaceEnabled: true }]), 0);
+  assert.equal(readPresetFaceTextureDataUrl("p1"), null);
 });
