@@ -132,6 +132,76 @@ test("generateContent는 분리 전과 같은 URL·헤더·body를 만든다", a
   assert.deepEqual(calls.timeoutDelays, [22000]);
 });
 
+test("thinkingConfig를 모르는 모델은 그 필드만 떼고 한 번 다시 보낸다", async () => {
+  /** @type {string[]} */
+  const bodies = [];
+  const transport = createGeminiTransport({
+    getLanguage: () => "ko",
+    getModel: () => "gemini-old",
+    getApiKey: () => "k",
+    fetchImpl: /** @type {any} */ (async (/** @type {string} */ _url, /** @type {any} */ init) => {
+      bodies.push(init.body);
+      if (bodies.length === 1) {
+        return {
+          ok: false,
+          status: 400,
+          json: async () => ({ error: { message: "Thinking level is not supported for this model." } })
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({ candidates: [] }) };
+    })
+  });
+
+  const data = await transport.generateContent({
+    contents: [{ role: "user", parts: [{ text: "안녕" }] }],
+    generationConfig: { maxOutputTokens: 480, thinkingConfig: { thinkingLevel: "minimal" } },
+    safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }]
+  });
+
+  assert.deepEqual(data, { candidates: [] });
+  assert.equal(bodies.length, 2);
+  assert.ok(bodies[0].includes("thinkingConfig"));
+  // 재시도는 thinkingConfig만 빠지고 나머지 정책 값은 그대로다
+  assert.equal(bodies[1].includes("thinkingConfig"), false);
+  assert.ok(bodies[1].includes('"maxOutputTokens":480'));
+  assert.ok(bodies[1].includes("BLOCK_NONE"));
+});
+
+test("thinkingConfig가 없거나 다른 오류면 재시도하지 않는다", async () => {
+  let calls = 0;
+  const transport = createGeminiTransport({
+    getLanguage: () => "ko",
+    getModel: () => "gemini-old",
+    getApiKey: () => "k",
+    fetchImpl: /** @type {any} */ (async () => {
+      calls += 1;
+      return {
+        ok: false,
+        status: 400,
+        json: async () => ({ error: { message: "Thinking level is not supported for this model." } })
+      };
+    })
+  });
+  await assert.rejects(transport.generateContent({ generationConfig: { maxOutputTokens: 128 } }), /Thinking level/);
+  assert.equal(calls, 1);
+
+  let quotaCalls = 0;
+  const quota = createGeminiTransport({
+    getLanguage: () => "ko",
+    getModel: () => "gemini-old",
+    getApiKey: () => "k",
+    fetchImpl: /** @type {any} */ (async () => {
+      quotaCalls += 1;
+      return { ok: false, status: 429, json: async () => ({ error: { message: "quota exceeded" } }) };
+    })
+  });
+  await assert.rejects(
+    quota.generateContent({ generationConfig: { thinkingConfig: { thinkingLevel: "minimal" } } }),
+    /quota exceeded/
+  );
+  assert.equal(quotaCalls, 1);
+});
+
 test("모델 이름은 URL 인코딩한다", async () => {
   /** @type {string[]} */
   const urls = [];

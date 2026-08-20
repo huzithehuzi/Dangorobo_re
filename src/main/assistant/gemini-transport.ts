@@ -44,6 +44,18 @@ function extractErrorMessage(data: unknown): string {
   return typeof data.error.message === "string" ? data.error.message : "";
 }
 
+// thinkingConfig(thinkingLevel/thinkingBudget)는 일부 모델에만 있는 필드라, 모델 이름을
+// 사용자가 직접 입력하는 구조에서는 "Thinking level is not supported for this model." 400이
+// 나온다. 서버 메시지는 항상 영어라 문구로 판별한다.
+const THINKING_UNSUPPORTED_PATTERN = /thinking[ _]?(level|config|budget)[\s\S]{0,60}not supported/i;
+
+function bodyWithoutThinkingConfig(body: Record<string, unknown>): Record<string, unknown> | null {
+  const config = body.generationConfig;
+  if (!isObjectRecord(config) || !("thinkingConfig" in config)) return null;
+  const { thinkingConfig: _dropped, ...rest } = config;
+  return { ...body, generationConfig: rest };
+}
+
 type GeminiTransportDeps = {
   getLanguage: () => string;
   getModel: () => string;
@@ -90,12 +102,9 @@ function createGeminiTransport(deps: GeminiTransportDeps) {
     }
   }
 
-  /**
-   * generateContent 요청. body는 호출자가 만든 모양 그대로 직렬화한다.
-   */
-  function generateContent(
+  function postGenerateContent(
     body: Record<string, unknown>,
-    options: { timeoutMs?: number } = {}
+    options: { timeoutMs?: number }
   ) {
     const model = encodeURIComponent(deps.getModel());
     return fetchJson(`${GEMINI_API_BASE}/${model}:generateContent`, {
@@ -107,6 +116,27 @@ function createGeminiTransport(deps: GeminiTransportDeps) {
       timeoutMs: options.timeoutMs,
       body: JSON.stringify(body)
     });
+  }
+
+  /**
+   * generateContent 요청. body는 호출자가 만든 모양 그대로 직렬화한다.
+   * 단 thinkingConfig를 모르는 모델에 걸리면 그 필드만 떼고 한 번 다시 보낸다 —
+   * 값(경로별 thinkingLevel)은 호출자 소유이므로 여기서 통일하지 않고, 서버가 거부했을 때의
+   * 호환 재시도만 한다. 안 하면 사용자가 넣은 모델 이름 하나 때문에 AI 기능 전체가 400으로 죽는다.
+   */
+  async function generateContent(
+    body: Record<string, unknown>,
+    options: { timeoutMs?: number } = {}
+  ) {
+    try {
+      return await postGenerateContent(body, options);
+    } catch (error) {
+      const fallbackBody = error instanceof Error && THINKING_UNSUPPORTED_PATTERN.test(error.message)
+        ? bodyWithoutThinkingConfig(body)
+        : null;
+      if (!fallbackBody) throw error;
+      return await postGenerateContent(fallbackBody, options);
+    }
   }
 
   return { fetchJson, generateContent };

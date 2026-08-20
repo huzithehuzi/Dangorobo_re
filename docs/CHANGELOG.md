@@ -3,6 +3,18 @@
 Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·기능 계약·제약과 향후 과제는
 [`DEVELOPMENT.md`](./DEVELOPMENT.md)를 기준으로 삼고, 세부 작업 과정은 Git 이력에서 확인한다.
 
+## 2026-08-20
+
+- **thinkingConfig를 모르는 모델에서 AI 기능이 통째로 죽던 문제를 고쳤다**: 모델 이름은 설정에서
+  사용자가 직접 입력하는 자유 문자열인데, 질문·펫대화·번역·문서 요약 네 경로가 모두
+  `generationConfig.thinkingConfig`를 무조건 실어 보내고 있었다. 그 필드가 없는 모델을 넣으면
+  Gemini가 400 `Thinking level is not supported for this model.`로 요청 자체를 거절해 말풍선에
+  그 영어 문구가 그대로 떴다. `gemini-transport.ts`의 `generateContent()`에서 서버가 그 이유로
+  거절했을 때만 `thinkingConfig`를 떼고 한 번 다시 보낸다 — 경로별 `thinkingLevel` 값은 여전히
+  호출자 소유이므로(정책 비대칭 유지) 여기서 통일하지 않고, 거절당한 뒤의 호환 재시도만 한다.
+  `test/gemini-transport.test.js` 2개 추가, 판별 정규식 변이로 확인했다(재시도 분기 제거는
+  미사용 지역 변수로 빌드가 먼저 깨져 변이가 성립하지 않는다).
+
 ## 2026-08-18
 
 - **1.0.0 릴리스**: `package.json`·`package-lock.json`·README 3종의 버전을 0.9.1에서 1.0.0으로
