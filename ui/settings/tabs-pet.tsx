@@ -509,6 +509,9 @@ export function CustomizationTab() {
               if (!result.canceled) s.showError(result.error || tt("customization.importFailedError"));
               return;
             }
+            // 세트 파일에 딸려 온 커스텀 이미지는 main이 이미 활성 슬롯에 적용했다.
+            if (result?.faceKeys?.length) s.setCustomFaceKeys(result.faceKeys);
+            if (result?.hasBody) s.setCustomBodyHas(true);
             if (result?.preset) s.applyCustomizationSnapshot(result.preset);
           }}
         >

@@ -274,8 +274,17 @@ export default function App() {
     });
     window.desktopPet.previewBodyColors(nextBodyColors.map((entry) => ({ ...entry })));
     window.desktopPet.previewPartVariations(nextPartVariations.map((entry) => ({ ...entry })));
+    // 프리셋마다 커스텀 얼굴·바디 이미지를 따로 갖는다 — 그 프리셋의 이미지를 활성 슬롯으로
+    // 되돌린다. 이미지를 안 가진 프리셋(이 기능 전에 저장한 것)은 null이 와서 지금 이미지를 둔다.
+    window.desktopPet.activatePresetAssets(String(preset.id || ""))
+      .then((activation) => {
+        if (!activation) return;
+        if (activation.faceKeys.length) setCustomFaceKeys(activation.faceKeys);
+        if (activation.hasBody) setCustomBodyHas(true);
+      })
+      .catch((error) => console.error("[Settings] Activate preset assets failed:", error));
     markDirty();
-  }, [markDirty, setBodyColors, setPartVariations]);
+  }, [markDirty, setBodyColors, setPartVariations, setCustomFaceKeys, setCustomBodyHas]);
 
   const store = useMemo<SettingsStore | null>(() => {
     if (!d) return null;

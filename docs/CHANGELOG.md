@@ -5,6 +5,19 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-20
 
+- **커스텀 얼굴·바디 이미지를 프리셋마다 따로 갖게 하고, 내보내기를 세트 파일로 바꿨다**:
+  그전에는 프리셋에 `customFaceEnabled`/`customBodyEnabled` 플래그만 있고 이미지는
+  `custom-face/`·`custom-body/` 한 벌을 모든 프리셋이 공유해서, 프리셋을 여러 개 만들어도 얼굴
+  그림은 마지막에 불러온 것 하나였다. 새 모듈 `custom-preset-assets.ts`가 프리셋을 저장할 때
+  활성 이미지를 `custom-presets/<id>.zip`으로 굳히고, 적용할 때(`preset:activate-assets`)
+  활성 슬롯으로 되돌린다. 보관 형식을 zip으로 고른 것은 내보내는 세트 파일과 같은 형식이라
+  `importCustomFaceZip()`의 검증·원자적 교체를 그대로 재사용할 수 있기 때문이다 — 얼굴 이미지
+  검증 규칙이 두 벌로 갈리지 않는다. 내보내기는 `preset.json` + 이미지가 든 zip 한 개로 나가고,
+  가져오기는 그 zip과 예전 JSON 파일을 모두 받는다. 이 변경 전에 저장된 프리셋에는 zip이 없어
+  적용해도 활성 이미지를 건드리지 않는다(옛 동작·사용자 그림 보존). 프리셋 썸네일은 여전히 활성
+  커스텀 얼굴로 그려진다 — 프리셋별 텍스처는 렌더 전에 비동기 로드 단계가 필요해서 미뤘다.
+  `test/custom-assets.test.js` 8개, `test/appearance-ipc.test.js` 4개 추가, 변이로 확인했다.
+
 - **thinkingConfig를 모르는 모델에서 AI 기능이 통째로 죽던 문제를 고쳤다**: 모델 이름은 설정에서
   사용자가 직접 입력하는 자유 문자열인데, 질문·펫대화·번역·문서 요약 네 경로가 모두
   `generationConfig.thinkingConfig`를 무조건 실어 보내고 있었다. 그 필드가 없는 모델을 넣으면

@@ -235,7 +235,13 @@ interface DesktopPetSettingsApi {
   saveCustomizationPreset(preset: Record<string, unknown>): Promise<CustomizationPreset[]>;
   deleteCustomizationPreset(id: string): Promise<CustomizationPreset[]>;
   exportCustomizationPreset(preset: CustomizationPreset): Promise<OkResult | undefined>;
-  importCustomizationPreset(): Promise<(OkResult & { preset?: CustomizationPreset }) | undefined>;
+  importCustomizationPreset(): Promise<(OkResult & {
+    preset?: CustomizationPreset;
+    faceKeys?: string[];
+    hasBody?: boolean;
+  }) | undefined>;
+  /** 프리셋의 커스텀 얼굴·바디 이미지를 활성 슬롯으로 되돌린다. 이미지가 없는 프리셋은 null. */
+  activatePresetAssets(id: string): Promise<{ faceKeys: string[]; hasBody: boolean } | null>;
   renderPresetThumbnails(presets: CustomizationPreset[]): Promise<Record<string, string>>;
   exportAllSettings(): Promise<OkResult | undefined>;
   importAllSettings(): Promise<(OkResult & Record<string, unknown>) | undefined>;

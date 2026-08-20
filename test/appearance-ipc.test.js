@@ -39,6 +39,7 @@ const GUARDED_HANDLE_CHANNELS = [
   "settings:delete-customization-preset",
   "settings:export-customization-preset",
   "settings:import-customization-preset",
+  "preset:activate-assets",
   "customFace:import",
   "customBody:import"
 ];
@@ -72,8 +73,10 @@ function createHarness(overrides = {}) {
 
   /** @type {Array<{ channel: string, payload: any }>} */
   const petMessages = [];
-  /** @type {Array<{ path: string, text: string }>} */
+  /** @type {Array<{ path: string, text: string, id?: string }>} */
   const writtenFiles = [];
+  /** @type {Array<{ kind: string, id: string }>} */
+  const assetCalls = [];
   let saveCalls = 0;
 
   const deps = {
@@ -94,10 +97,16 @@ function createHarness(overrides = {}) {
     },
     showSaveDialog: async () => ({ canceled: true }),
     showOpenDialog: async () => ({ canceled: true, filePaths: [] }),
-    writeTextFile: (/** @type {string} */ path, /** @type {string} */ text) => {
-      writtenFiles.push({ path, text });
+    capturePresetAssets: (/** @type {string} */ id) => { assetCalls.push({ kind: "capture", id }); },
+    deletePresetAssets: (/** @type {string} */ id) => { assetCalls.push({ kind: "delete", id }); },
+    activatePresetAssets: (/** @type {string} */ id) => {
+      assetCalls.push({ kind: "activate", id });
+      return { faceKeys: ["normal"], hasBody: true };
     },
-    readTextFile: () => "{}",
+    exportPresetSet: (/** @type {string} */ id, /** @type {any} */ preset, /** @type {string} */ path) => {
+      writtenFiles.push({ path, text: JSON.stringify(preset), id });
+    },
+    importPresetSet: () => ({ ok: true, preset: {}, faceKeys: [], hasBody: false }),
     importCustomFaceZip: () => ({ ok: true, keys: ["happy"] }),
     readCustomFaceTextures: () => ({ happy: "data:image/png;base64,AA" }),
     importCustomBodyImage: () => ({ ok: true }),
@@ -114,6 +123,7 @@ function createHarness(overrides = {}) {
     customizeModes,
     petMessages,
     writtenFiles,
+    assetCalls,
     saveCalls: () => saveCalls,
     setSnapshot: (/** @type {any} */ value) => { snapshot = value; },
     send: (/** @type {string} */ channel, /** @type {unknown} */ sender, /** @type {unknown} */ payload) => {
@@ -167,6 +177,9 @@ test("값을 돌려주는 채널도 설정창이 아닌 sender는 거부한다",
     assert.deepEqual(harness.writtenFiles, [], `${channel}이 거부 후에도 파일을 썼다`);
     if (Array.isArray(result)) {
       assert.deepEqual(result, [{ id: "keep", name: "유지" }], `${channel}이 프리셋을 바꿨다`);
+    } else if (result === null) {
+      // preset:activate-assets는 거부하면 null이다(이미지를 건드리지 않았다는 뜻).
+      assert.deepEqual(harness.assetCalls, [], `${channel}이 거부 후에도 이미지를 건드렸다`);
     } else if (channel !== "preset:render-thumbnails") {
       assert.equal(result.ok, false, `${channel}이 거부인데 성공을 돌려줬다`);
     }
@@ -261,13 +274,55 @@ test("내보내기 파일 이름에서 경로 문자를 제거한다", async () 
   });
   assert.equal(result.ok, true);
   assert.equal(harness.writtenFiles.length, 1);
-  assert.match(harness.writtenFiles[0].path, /^a_b_c_d_e_f_g_h_i_j\.json$/);
+  assert.match(harness.writtenFiles[0].path, /^a_b_c_d_e_f_g_h_i_j\.zip$/);
+});
+
+test("프리셋 저장·삭제는 그 프리셋의 커스텀 이미지 파일도 함께 굳히고 지운다", async () => {
+  const harness = createHarness();
+  const presets = await harness.send("settings:save-customization-preset", harness.settingsSender, { name: "여우" });
+  const savedId = presets[presets.length - 1].id;
+  assert.deepEqual(harness.assetCalls, [{ kind: "capture", id: savedId }]);
+  await harness.send("settings:delete-customization-preset", harness.settingsSender, savedId);
+  assert.deepEqual(harness.assetCalls[1], { kind: "delete", id: savedId });
+});
+
+test("프리셋 적용은 그 프리셋의 이미지를 활성 슬롯으로 되돌리고 펫에 보낸다", async () => {
+  const harness = createHarness();
+  const activation = await harness.send("preset:activate-assets", harness.settingsSender, "p1");
+  assert.deepEqual(activation, { faceKeys: ["normal"], hasBody: true });
+  assert.deepEqual(harness.assetCalls, [{ kind: "activate", id: "p1" }]);
+  assert.deepEqual(harness.petMessages.map((message) => message.channel), [
+    "pet:custom-face-textures",
+    "pet:custom-body-texture"
+  ]);
+});
+
+test("이미지가 없는 프리셋을 적용하면 활성 이미지를 건드리지 않는다", async () => {
+  const harness = createHarness({ activatePresetAssets: () => null });
+  assert.equal(await harness.send("preset:activate-assets", harness.settingsSender, "p1"), null);
+  assert.deepEqual(harness.petMessages, []);
+});
+
+test("세트 파일을 가져오면 딸린 이미지 상태를 함께 돌려주고 펫에 보낸다", async () => {
+  const harness = createHarness({
+    showOpenDialog: async () => ({ canceled: false, filePaths: ["set.zip"] }),
+    importPresetSet: () => ({ ok: true, preset: { name: "여우" }, faceKeys: ["normal", "happy"], hasBody: true })
+  });
+  const result = await harness.send("settings:import-customization-preset", harness.settingsSender, undefined);
+  assert.equal(result.ok, true);
+  assert.equal(result.preset.name, "여우");
+  assert.deepEqual(result.faceKeys, ["normal", "happy"]);
+  assert.equal(result.hasBody, true);
+  assert.deepEqual(harness.petMessages.map((message) => message.channel), [
+    "pet:custom-face-textures",
+    "pet:custom-body-texture"
+  ]);
 });
 
 test("가져오기가 깨진 JSON이면 오류를 돌려준다", async () => {
   const harness = createHarness({
     showOpenDialog: async () => ({ canceled: false, filePaths: ["preset.json"] }),
-    readTextFile: () => "{깨진 JSON"
+    importPresetSet: () => ({ ok: false, errorCode: "invalidFile" })
   });
   const result = await harness.send("settings:import-customization-preset", harness.settingsSender, undefined);
   assert.equal(result.ok, false);

@@ -199,3 +199,112 @@ test("커스텀 바디 원자 교체 중 종료되면 rollback PNG를 복원한�
   assert.equal(fs.existsSync(filePath + ".tmp"), false);
   assert.equal(fs.existsSync(filePath + ".rollback-100-200-1"), false);
 });
+
+// ── 프리셋마다 별도 파일로 보관되는 커스텀 이미지 (2026-08-20) ──────────────
+const {
+  presetAssetZipPath,
+  capturePresetAssets,
+  deletePresetAssets,
+  activatePresetAssets,
+  exportPresetSet,
+  importPresetSet
+} = require("../src/main/custom-preset-assets.js");
+
+/** @param {string} label */
+function png(label) {
+  return Buffer.concat([pngSignature, Buffer.from(label)]);
+}
+
+test("프리셋 저장은 지금 활성 이미지를 그 프리셋 파일로 굳히고, 적용하면 되돌린다", () => {
+  const faceA = png("faceA");
+  const bodyA = png("bodyA");
+  importCustomFaceZip(writeZip("a.zip", [["customface_normal.png", faceA]]));
+  fs.writeFileSync(path.join(userDataDir, "a.png"), bodyA);
+  importCustomBodyImage(path.join(userDataDir, "a.png"));
+  assert.equal(capturePresetAssets("p1"), true);
+  assert.ok(fs.existsSync(presetAssetZipPath("p1")));
+
+  const faceB = png("faceB");
+  importCustomFaceZip(writeZip("b.zip", [["customface_normal.png", faceB]]));
+  assert.deepEqual(fs.readFileSync(customFacePngPath("normal")), faceB);
+
+  assert.deepEqual(activatePresetAssets("p1"), { faceKeys: ["normal"], hasBody: true });
+  assert.deepEqual(fs.readFileSync(customFacePngPath("normal")), faceA);
+  assert.deepEqual(fs.readFileSync(customBodyPngPath()), bodyA);
+});
+
+test("이미지가 없으면 프리셋 파일을 만들지 않고, 없는 프리셋 적용은 활성 이미지를 두고 null", () => {
+  assert.equal(capturePresetAssets("p1"), false);
+  assert.equal(fs.existsSync(presetAssetZipPath("p1")), false);
+
+  const face = png("face");
+  importCustomFaceZip(writeZip("only.zip", [["customface_normal.png", face]]));
+  assert.equal(activatePresetAssets("p1"), null);
+  assert.deepEqual(fs.readFileSync(customFacePngPath("normal")), face);
+});
+
+test("프리셋 삭제는 그 프리셋 파일만 지운다", () => {
+  importCustomFaceZip(writeZip("c.zip", [["customface_normal.png", png("face")]]));
+  capturePresetAssets("p1");
+  capturePresetAssets("p2");
+  deletePresetAssets("p1");
+  assert.equal(fs.existsSync(presetAssetZipPath("p1")), false);
+  assert.equal(fs.existsSync(presetAssetZipPath("p2")), true);
+});
+
+test("프리셋 id는 파일명에 안전한 문자만 남긴다", () => {
+  const zipPath = presetAssetZipPath("../../evil id");
+  assert.equal(path.basename(zipPath), "evilid.zip");
+  assert.equal(path.dirname(zipPath), path.join(userDataDir, "custom-presets"));
+  assert.equal(presetAssetZipPath("/../"), "");
+});
+
+test("내보낸 세트 파일에는 프리셋 값과 그 프리셋의 이미지가 함께 들어간다", () => {
+  const face = png("faceSet");
+  const body = png("bodySet");
+  importCustomFaceZip(writeZip("d.zip", [["customface_normal.png", face]]));
+  fs.writeFileSync(path.join(userDataDir, "d.png"), body);
+  importCustomBodyImage(path.join(userDataDir, "d.png"));
+  capturePresetAssets("p1");
+
+  // 내보낸 뒤 활성 이미지를 바꿔 둬야 "세트에서 되돌아왔는지"를 구분할 수 있다.
+  const setPath = path.join(userDataDir, "set.zip");
+  exportPresetSet("p1", { id: "p1", name: "여우" }, setPath);
+  importCustomFaceZip(writeZip("e.zip", [["customface_normal.png", png("other")]]));
+
+  const imported = importPresetSet(setPath);
+  assert.equal(imported.ok, true);
+  assert.deepEqual(imported.preset, { id: "p1", name: "여우" });
+  assert.deepEqual(imported.faceKeys, ["normal"]);
+  assert.equal(imported.hasBody, true);
+  assert.deepEqual(fs.readFileSync(customFacePngPath("normal")), face);
+  assert.deepEqual(fs.readFileSync(customBodyPngPath()), body);
+});
+
+test("이미지가 없는 옛 프리셋을 내보내면 지금 활성 이미지를 담는다", () => {
+  const face = png("legacy");
+  importCustomFaceZip(writeZip("f.zip", [["customface_normal.png", face]]));
+  const setPath = path.join(userDataDir, "legacy.zip");
+  exportPresetSet("없는프리셋", { id: "old", name: "옛것" }, setPath);
+  assert.deepEqual(
+    new AdmZip(setPath).getEntries().map((entry) => entry.entryName).sort(),
+    ["customface_normal.png", "preset.json"]
+  );
+});
+
+test("예전 버전이 내보낸 JSON 파일도 계속 읽는다(이미지 없음)", () => {
+  const jsonPath = path.join(userDataDir, "old-preset.json");
+  fs.writeFileSync(jsonPath, JSON.stringify({ id: "old", name: "옛것" }), "utf8");
+  assert.deepEqual(importPresetSet(jsonPath), {
+    ok: true,
+    preset: { id: "old", name: "옛것" },
+    faceKeys: [],
+    hasBody: false
+  });
+  assert.deepEqual(importPresetSet(path.join(userDataDir, "없는파일.zip")), { ok: false, errorCode: "invalidFile" });
+});
+
+test("preset.json이 없는 zip은 세트 파일로 인정하지 않는다", () => {
+  const zipPath = writeZip("no-preset.zip", [["customface_normal.png", png("x")]]);
+  assert.deepEqual(importPresetSet(zipPath), { ok: false, errorCode: "invalidFile" });
+});

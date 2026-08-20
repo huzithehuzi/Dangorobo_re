@@ -148,6 +148,13 @@ import { currentDateTimeContext } from "./main/assistant/date-time-context.js";
 import { runQaCaptureHarness } from "./main/qa-capture.js";
 import type { QaCaptureContext } from "./main/qa-capture.js";
 import { registerAppearanceIpcHandlers } from "./main/appearance-ipc.js";
+import {
+  activatePresetAssets,
+  capturePresetAssets,
+  deletePresetAssets,
+  exportPresetSet,
+  importPresetSet
+} from "./main/custom-preset-assets.js";
 import { registerFavoritesIpcHandlers } from "./main/windows/favorites-ipc.js";
 import { registerAssistantIpcHandlers } from "./main/assistant/assistant-ipc.js";
 import { registerSettingsIpcHandlers } from "./main/settings-ipc.js";
@@ -1655,8 +1662,11 @@ registerAppearanceIpcHandlers(ipcMain, {
     filters: options.filters,
     properties: options.properties as OpenDialogOptions["properties"]
   }),
-  writeTextFile: (filePath, text) => fs.writeFileSync(filePath, text, "utf8"),
-  readTextFile: (filePath) => fs.readFileSync(filePath, "utf8"),
+  capturePresetAssets,
+  deletePresetAssets,
+  activatePresetAssets,
+  exportPresetSet,
+  importPresetSet,
   importCustomFaceZip,
   readCustomFaceTextures,
   importCustomBodyImage,

@@ -359,7 +359,15 @@ sender만 호출할 수 있고, 실패하면 암호화 키·설정·전역 단�
 - 위치·창 상태: `pet-position.json`, `checklist.json`, `favorites-panels.json`
 - 대화: `assistant-logs.json`, `assistant-memory.json`, `assistant-episodes.json`,
   `assistant-memory.db`
-- 사용자 에셋·요약: `custom-face/`, `custom-body/`, `summaries/`
+- 사용자 에셋·요약: `custom-face/`, `custom-body/`, `custom-presets/`, `summaries/`
+
+`custom-face/`·`custom-body/`는 **지금 펫에 적용된** 커스텀 이미지고, `custom-presets/<id>.zip`은
+프리셋마다 굳혀 둔 그 프리셋의 이미지다(`custom-preset-assets.ts`). 프리셋을 저장할 때 활성
+이미지를 zip으로 굳히고, 적용할 때 되돌린다 — zip인 것은 내보내는 세트 파일과 같은 형식이라
+`importCustomFaceZip()`의 검증·원자적 교체를 그대로 쓰기 때문이다. 이 기능(2026-08-20) 전에
+저장된 프리셋에는 zip이 없어 적용해도 활성 이미지를 건드리지 않는다(옛 동작 유지). **프리셋
+썸네일은 활성 커스텀 얼굴로 그려진다** — 프리셋별 텍스처를 쓰려면 썸네일 렌더 전에 이미지를
+비동기로 로드하는 단계가 필요해서 지금은 하지 않는다.
 
 `assistant-keys.json`은 Windows 보안 저장소에 묶이므로 다른 PC에서 재사용하지 않는다.
 

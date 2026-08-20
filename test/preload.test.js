@@ -37,6 +37,7 @@ const INVOKE_CHANNELS = Object.freeze({
   deleteCustomizationPreset: "settings:delete-customization-preset",
   exportCustomizationPreset: "settings:export-customization-preset",
   importCustomizationPreset: "settings:import-customization-preset",
+  activatePresetAssets: "preset:activate-assets",
   exportAllSettings: "settings:export-all",
   importAllSettings: "settings:import-all",
   saveSettings: "settings:save",
