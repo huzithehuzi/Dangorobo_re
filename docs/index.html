@@ -711,7 +711,7 @@
         </a>
         <a class="btn btn-ghost btn-lg" href="https://github.com/huzithehuzi/Dangorobo_re#readme" data-i18n="band.docs">사용 설명 읽기</a>
       </div>
-      <p class="dl-meta"><span id="ver-line" data-i18n="band.meta">GitHub Releases에서 설치본과 portable을 함께 받을 수 있습니다.</span></p>
+      <p class="dl-meta"><span data-i18n="band.meta">GitHub Releases에서 설치본과 portable을 함께 받을 수 있습니다.</span></p>
     </div>
   </div>
 </section>
@@ -799,7 +799,6 @@ const I18N = {
     "band.lead": "Windows 10 · 11에서 동작합니다. 계정도, 결제도 필요 없습니다.",
     "band.cta": "최신 버전 받기", "band.docs": "사용 설명 읽기",
     "band.meta": "GitHub Releases에서 설치본과 portable을 함께 받을 수 있습니다.",
-    "band.metaVer": "최신 버전 {v} · 설치본과 portable을 함께 받을 수 있습니다.",
     "foot.by": " · 개인이 취미로 만드는 프로그램입니다",
     "foot.credits": "제작 : huzi / 프로그래밍 도움 및 검수 : Nyabi",
     "foot.releases": "릴리스", "foot.issues": "문의 · 버그 제보", "foot.notices": "고지"
@@ -867,7 +866,6 @@ const I18N = {
     "band.lead": "Runs on Windows 10 and 11. No account, no payment.",
     "band.cta": "Get the latest build", "band.docs": "Read the guide",
     "band.meta": "Installer and portable builds are both on GitHub Releases.",
-    "band.metaVer": "Latest {v} · installer and portable builds included.",
     "foot.by": " · a hobby project by one person",
     "foot.credits": "Created by huzi / Programming help & review by Nyabi",
     "foot.releases": "Releases", "foot.issues": "Issues", "foot.notices": "Notices"
@@ -935,15 +933,11 @@ const I18N = {
     "band.lead": "Windows 10 · 11 で動作します。アカウントも支払いも不要です。",
     "band.cta": "最新版を入手", "band.docs": "使い方を読む",
     "band.meta": "GitHub Releases でインストーラー版とポータブル版の両方を入手できます。",
-    "band.metaVer": "最新版 {v} · インストーラー版とポータブル版を同梱。",
     "foot.by": " · 個人が趣味で作っているプログラムです",
     "foot.credits": "制作 : huzi / プログラミング協力・監修 : Nyabi",
     "foot.releases": "リリース", "foot.issues": "問い合わせ · 不具合報告", "foot.notices": "表記"
   }
 };
-
-const REPO = "huzithehuzi/Dangorobo_re";
-let latestVersion = null;
 
 function applyLang(lang) {
   const dict = I18N[lang] || I18N.ko;
@@ -956,14 +950,7 @@ function applyLang(lang) {
     const value = dict[el.dataset.i18nHtml];
     if (value !== undefined) el.innerHTML = value;
   });
-  if (latestVersion) showVersion(lang);
   try { localStorage.setItem("dangorobo-lang", lang); } catch (e) { /* 사생활 보호 모드 등 */ }
-}
-
-function showVersion(lang) {
-  const dict = I18N[lang] || I18N.ko;
-  const line = document.getElementById("ver-line");
-  if (line && dict["band.metaVer"]) line.textContent = dict["band.metaVer"].replace("{v}", latestVersion);
 }
 
 function pickInitialLang() {
@@ -982,16 +969,6 @@ const initial = pickInitialLang();
 select.value = initial;
 applyLang(initial);
 select.addEventListener("change", () => applyLang(select.value));
-
-// 최신 릴리스 태그를 읽어 문구에 넣는다. 실패하면 정적 문구를 그대로 둔다.
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-  .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
-  .then((data) => {
-    if (!data || !data.tag_name) return;
-    latestVersion = String(data.tag_name);
-    showVersion(select.value);
-  })
-  .catch(() => { /* 레이트 리밋·오프라인 — 기본 문구 유지 */ });
 
 // 스크롤 시 헤더 경계선
 const nav = document.getElementById("nav");

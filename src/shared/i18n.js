@@ -781,19 +781,25 @@
     // 감지해서 그 언어로 답하도록 한다. 감지할 사용자 언어가 전혀 없을 때(펫이 먼저 말을
     // 걸었고 이전 대화 기록도 없는 경우)만 앱에 설정된 언어로 폴백한다(2026-08-02, 사용자
     // 피드백 — "대화 기능이 사용자 언어를 헷갈려하는거같은데, AI가 감지해서 대답하게").
+    // 2026-08-19: 앱 언어를 영어로 바꾼 뒤에도 계속 한국어로 답한다는 재현 사례가 또 나왔다 —
+    // 사용자가 짚은 원인은 "예전에 한국어로 대화한 기억(장기 기억·에피소드 요약·대화 이력)이
+    // 남아있어서"였다. 실제로 이 세 블록의 내용(기억 라벨/값, 요약문, 과거 질문·답변 원문)은
+    // 그 대화가 있었던 시점 언어 그대로 저장돼 있어, 지시문 이후에 한국어 텍스트가 잔뜩
+    // 이어지면 모델이 그 언어에 끌려간다. "이전 대화가 다른 언어였더라도"라는 기존 문구는
+    // 이걸 충분히 막지 못했다고 판단해, 아래에 기억·이력 자체의 언어는 무시하라는 문장을 추가했다.
     "assistant.languageDirective": {
-      ko: "무엇보다 먼저, 지금 사용자가 입력한 질문 자체의 언어로 답하세요(예: 일본어로 물으면 일본어로, 영어로 물으면 영어로) — 이전 대화가 다른 언어였더라도 이번 질문의 언어를 최우선으로 따르세요. 이번 질문만으로는 언어를 판단하기 어려울 만큼 짧거나 언어색이 없을 때만(예: 숫자·이모지뿐) 최근 대화 기록의 언어를 참고하세요. 참고할 사용자 언어가 정말 전혀 없는 경우에만(예: 펫이 먼저 말을 거는 상황이고 참고할 이전 대화 기록도 없을 때) 한국어로 답하세요.",
-      en: "Above all, respond in the language of the CURRENT question itself (e.g. if asked in Japanese, answer in Japanese; if in English, answer in English) — the language of this question takes priority even if earlier turns were in a different language. Only fall back to the recent conversation's language when this question alone is too short or language-neutral to judge (e.g. only numbers or emoji). Only fall back to English when there is truly no user language available at all (e.g. the pet is speaking first with no prior conversation to reference).",
-      ja: "何よりもまず、今ユーザーが入力した質問自体の言語で答えてください(例: 日本語で聞かれたら日本語で、英語で聞かれたら英語で)— 以前の会話が別の言語であっても、今回の質問の言語を最優先してください。今回の質問だけでは言語を判断しにくいほど短い、または言語色がない場合(例: 数字や絵文字のみ)にのみ、直近の会話履歴の言語を参考にしてください。参考にできるユーザーの言語が本当に何もない場合(例: ペットが先に話しかけていて過去の会話履歴もない場合)にのみ、日本語で答えてください。"
+      ko: "무엇보다 먼저, 지금 사용자가 입력한 질문 자체의 언어로 답하세요(예: 일본어로 물으면 일본어로, 영어로 물으면 영어로) — 이전 대화가 다른 언어였더라도 이번 질문의 언어를 최우선으로 따르세요. 이번 질문만으로는 언어를 판단하기 어려울 만큼 짧거나 언어색이 없을 때만(예: 숫자·이모지뿐) 최근 대화 기록의 언어를 참고하세요. 참고할 사용자 언어가 정말 전혀 없는 경우에만(예: 펫이 먼저 말을 거는 상황이고 참고할 이전 대화 기록도 없을 때) 한국어로 답하세요. 아래에 나오는 기억·에피소드 요약·대화 기록은 예전에 어떤 언어로 대화했었는지와 무관하게 그 안의 내용(사실)만 참고하고, 그 텍스트 자체가 어떤 언어로 적혀 있는지는 답변 언어를 정하는 데 절대 쓰지 마세요.",
+      en: "Above all, respond in the language of the CURRENT question itself (e.g. if asked in Japanese, answer in Japanese; if in English, answer in English) — the language of this question takes priority even if earlier turns were in a different language. Only fall back to the recent conversation's language when this question alone is too short or language-neutral to judge (e.g. only numbers or emoji). Only fall back to English when there is truly no user language available at all (e.g. the pet is speaking first with no prior conversation to reference). The memory, episode summaries, and conversation history shown below may be written in whatever language those past conversations happened to use — use them only for their factual content, and never let the language they happen to be written in influence what language you answer in now.",
+      ja: "何よりもまず、今ユーザーが入力した質問自体の言語で答えてください(例: 日本語で聞かれたら日本語で、英語で聞かれたら英語で)— 以前の会話が別の言語であっても、今回の質問の言語を最優先してください。今回の質問だけでは言語を判断しにくいほど短い、または言語色がない場合(例: 数字や絵文字のみ)にのみ、直近の会話履歴の言語を参考にしてください。参考にできるユーザーの言語が本当に何もない場合(例: ペットが先に話しかけていて過去の会話履歴もない場合)にのみ、日本語で答えてください。この下に出てくる記憶・エピソード要約・会話履歴は、過去にどの言語で会話していたかに関わらずその内容(事実)だけを参考にし、そのテキスト自体がどの言語で書かれているかを今回の返答言語の判断材料には絶対に使わないでください。"
     },
     // 프롬프트 맨 앞의 languageDirective만으로는(특히 이전 대화 기록이 길게 끼어 있을 때)
     // 모델이 지시를 놓치는 경우가 있어서(2026-08-02, 일본어 앱에서 "こんにちは"라고 물었는데
     // 한국어로 답한 실제 재현 사례), 실제 질문 바로 앞에 짧게 한 번 더 상기시킨다 — LLM은
     // 프롬프트 끝(생성 지점)에 가까운 지시를 더 잘 따르는 경향이 있다.
     "assistant.languageReminder": {
-      ko: "(바로 아래 질문과 같은 언어로 답하세요)",
-      en: "(Respond in the same language as the question right below)",
-      ja: "(すぐ下の質問と同じ言語で答えてください)"
+      ko: "(위에 어떤 언어의 텍스트가 있었든 무시하고, 바로 아래 질문과 같은 언어로 답하세요)",
+      en: "(Ignore whatever language appeared above and respond in the same language as the question right below)",
+      ja: "(上にどの言語のテキストがあったかは無視して、すぐ下の質問と同じ言語で答えてください)"
     },
     "assistant.memoryNote": {
       ko: "\n\n바로 아래에 최근 나눈 대화 기록이 참고용으로 주어질 수 있습니다. 이번 질문이 이전 대화와 이어지는 내용이면 자연스럽게 맥락을 이어가고, 전혀 다른 새로운 주제이면 이전 대화에 얽매이지 말고 새 주제에 자연스럽게 집중해서 답하세요.",
@@ -965,11 +971,6 @@
       en: "Ask one small, specific question the pet has honestly become curious about.",
       ja: "ペットがふと気になった、ささやかで具体的な質問を素直に聞いてください。"
     },
-    "petChat.languageInstruction": {
-      ko: "이 첫마디는 한국어로 쓰세요.",
-      en: "Write this opening line in English.",
-      ja: "この最初の一言は日本語で書いてください。"
-    },
     "petChat.varietyInstruction": {
       ko: "매번 대화의 소재뿐 아니라 시작 방식, 질문의 형태, 문장 리듬도 바꾸세요. 최근 문장과 같은 소재·예시·핵심 단어를 되풀이하지 말고, 정해진 힌트를 새롭고 구체적인 한마디로 풀어내세요.",
       en: "Vary not only the subject but also how you open, the kind of question you ask, and the rhythm of the sentence. Do not reuse the topic, examples, or key words from recent messages; turn the chosen hint into a fresh, specific opening.",
@@ -1009,6 +1010,18 @@
       ko: "시작 방식, 질문의 형태, 문장 리듬은 매번 바꾸세요. 이번에는 위에 주어진 기억과 지난 대화에서 소재를 가져오되, 최근에 이미 꺼낸 소재는 피하고 아직 다시 이야기하지 않은 것을 고르세요. 위에 없는 대화나 기억을 절대 지어내지 말고, 주어진 내용이 부족하면 그 범위 안에서만 짧게 말하세요.",
       en: "Vary how you open, the kind of question you ask, and the rhythm of the sentence every time. This time take your subject from the memories and past conversations given above, but avoid subjects you already brought up recently and pick one you haven't revisited. Never invent a conversation or memory that is not given above; if the given material is thin, keep it short and stay within it.",
       ja: "切り出し方、質問の形、文のリズムは毎回変えてください。今回は上に与えられた記憶と過去の会話から話題を取り、最近すでに持ち出した話題は避けて、まだ再び話していないものを選んでください。上にない会話や記憶を絶対に作らず、与えられた内容が乏しい場合はその範囲内で短く話してください。"
+    },
+    // languageDirective("질문의 언어를 감지해서 맞추라")는 실제 사용자 발화가 있을 때는 잘
+    // 통했지만, 펫이 먼저 말 거는 오프너("부르기"/자동 주기/쓰다듬기 반응)는 사용자 발화가
+    // 아니라 앱이 만든 지시문 자체를 "질문"으로 넘기기 때문에 모델이 감지할 실제 언어 신호가
+    // 없다 — languageDirective 문구에도 이 경우 앱 언어로 답하라고 이미 적혀 있지만, "감지해서
+    // 맞추라"는 추론에 기대는 지시라 오프너 경로에서는 실제로 안 지켜지는 사례가 보고됐다
+    // (2026-08-19, 앱 언어를 영어로 바꿔도 오프너만 한국어로 나옴 — 일반 질문·답변은 정상).
+    // 그래서 오프너 프롬프트에는 감지가 아니라 앱 언어를 이름으로 직접 못박아 명령한다.
+    "petChat.answerLanguageDirective": {
+      ko: "이번 답변은 반드시 한국어로 쓰세요.",
+      en: "You must write this reply in English.",
+      ja: "この返信は必ず日本語で書いてください。"
     },
 
     "documentSummary.textLabel": { ko: "요약할 문서", en: "Document to summarize", ja: "要約する文書" },

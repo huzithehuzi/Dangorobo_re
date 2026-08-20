@@ -19,6 +19,7 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 | 창 외형(테마·배율·글자 크기·폰트) 적용과 그 허용 범위 | `ui/lib/appearance.ts` |
 | 캡처·QA 실행 인자 | `src/main/qa-capture.ts` |
 | 소스 ZIP 구성 | `scripts/source-archive.js` |
+| 커스텀 템플릿 ZIP 구성 | `scripts/custom-template-archive.js` |
 | 회귀 범위와 현재 테스트 수 | `test/`, `npm test` 출력 |
 
 ## 현재 상태와 다음 작업
@@ -231,6 +232,15 @@ main·preload·pet 산출물을 감지해 종료한다.
 소스 ZIP은 반대로 원본 TS와 빌드 설정을 포함하고 제자리 emit, `dist`, `release`, 사용자
 데이터, 비밀값, 로그, temp·rollback을 제외한다.
 
+커스텀 얼굴·바디를 직접 그리려는 사용자에게 주는 `custom_template.zip`도 릴리스 산출물이다.
+원본 PNG는 `assets/custom-template/`에 두고 `scripts/custom-template-archive.js`가 폴더 없이
+평평한 ZIP으로 묶는다 — 커스텀 얼굴 가져오기가 폴더 구조를 무시하고 파일명만 보기 때문이다.
+`predist`가 `template:verify`로 구성을(파일 목록과 PNG 여부) 먼저 확인하고 `postdist`가
+`release/custom_template.zip`을 만든다. 이 PNG들은 앱 실행에 쓰이지 않으므로 electron-builder의
+`files`에서 `!assets/custom-template/**`로 빼 배포 EXE에는 넣지 않는다. 얼굴 파일 이름의
+표정 키는 `src/main/custom-face.ts`의 `CUSTOM_FACE_EXPRESSION_KEYS`와 같아야 하며,
+`test/custom-template-archive.test.js`가 두 목록이 어긋나거나 원본 파일이 빠지면 실패한다.
+
 `package.json`의 `build.publish`는 GitHub Releases(`huzithehuzi/Dangorobo_re`)를 가리킨다.
 `npm run dist`는 로컬 빌드만 하고 업로드하지 않는다 — `electron-builder --publish always`로
 직접 부르거나 CI에 `GH_TOKEN`을 넘겨야 실제로 릴리스에 올라간다. `electron-updater`는 릴리스에
@@ -263,6 +273,25 @@ npm run dist -- --publish always
   토큰이 필요하다 — 근본 원인(classic 토큰)과는 별개 문제였다.
 - 다운로드된 `latest.yml`이 실제 버전과 SHA512를 담고 있는지, 설치본(0.9.0 등 이전 버전)에서
   실행 시 새 버전 다운로드 다이얼로그가 뜨는지까지 실기로 확인해야 "퍼블리시 성공"으로 본다.
+- **`release/custom_template.zip`은 electron-builder가 올리지 않는다.** 자동 업로드 대상은
+  `build.win.target` 산출물과 `latest.yml`뿐이라, 커스텀 템플릿 ZIP은 릴리스 발행 뒤
+  `POST uploads.github.com/repos/{owner}/{repo}/releases/{id}/assets?name=custom_template.zip`로
+  직접 올린다(1.0.0에서 이 단계를 빠뜨려 사후에 채웠다). 퍼블리시를 마쳤으면 릴리스의 에셋
+  목록에 설치본 3종·`latest.yml`·`custom_template.zip`이 모두 있는지 확인한다.
+- **릴리스 설명(release body)을 매번 아래 문구로 채운다** — electron-builder는 본문을 채우지
+  않으므로 `PATCH /repos/{owner}/{repo}/releases/{id}`에 `{"body": "..."}`로 직접 넣는다.
+  `Setup.exe` 파일명 부분의 버전 번호만 이번 릴리스 버전으로 바꾸고 나머지는 그대로 쓴다(한·영·일 순):
+
+  ```
+  recommend installing via Dangorobo-{version}-Setup.exe as it enables automatic updates.
+  You can create a custom image by editing the files within the custom_template.zip
+
+  Dangorobo-{version}-Setup.exe 으로 설치 시 자동 업데이트가 적용되므로 권장드립니다.
+  custom_template.zip 압축 파일 내의 파일을 편집해서 커스텀 이미지를 만들 수 있습니다.
+
+  Dangorobo-{version}-Setup.exeでのインストールは自動更新が適用されるため、推奨いたします。
+  custom_template.zip圧縮ファイル内のファイルを編集して、カスタムイメージを作成できます。
+  ```
 
 ### 소개 페이지(GitHub Pages)
 

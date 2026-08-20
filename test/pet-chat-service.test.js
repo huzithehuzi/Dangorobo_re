@@ -301,7 +301,7 @@ test("자동 말걸기·부르기·쓰다듬기 오프너는 모두 앱 언어�
     assert.equal(calls.ask.length, 2, `${language}: 오프너를 두 번 보내지 않았다`);
     for (const call of calls.ask) {
       assert.ok(
-        call.prompt.includes(t(language, "petChat.languageInstruction")),
+        call.prompt.includes(t(language, "petChat.answerLanguageDirective")),
         `${language}: 오프너 프롬프트에 언어 지시가 없다`
       );
     }

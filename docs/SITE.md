@@ -52,8 +52,7 @@ const used = [...document.querySelectorAll('[data-i18n]')].map(e => e.dataset.i1
 ['ko','en','ja'].forEach(l => console.log(l, [...new Set(used)].filter(k => I18N[l][k] === undefined)));
 ```
 
-세 줄 모두 빈 배열이어야 한다. 반대로 `I18N`에만 있고 마크업에 없는 키는
-`band.metaVer`(스크립트가 직접 쓴다) 하나뿐이다.
+세 줄 모두 빈 배열이어야 한다.
 
 ### 표현 규칙
 
@@ -62,14 +61,10 @@ const used = [...document.querySelectorAll('[data-i18n]')].map(e => e.dataset.i1
   적용되는 규칙이다.
 - **"로우폴리"보다 "레트로 감성"을 앞세운다.** 픽셀·디더링·색 단계 제한으로 옛 게임 같은 질감을
   내는 쪽이 지금 이 앱의 성격에 더 가깝다. README 3종과 `package.json`의 `description`도 같은 표현을 쓴다.
-- 버전 번호를 문구에 직접 적지 않는다 — 아래 "버전 문구" 참고.
-
-### 버전 문구
-
-다운로드 배너 아래 한 줄은 GitHub API(`releases/latest`)로 최신 태그를 읽어
-`band.metaVer`의 `{v}`를 채운다. 레이트 리밋에 걸리거나 오프라인이면 정적 문구(`band.meta`)가
-그대로 남는다 — **그래서 두 문구를 다 손봐야 한다.** 이 방식이라 릴리스를 새로 내도 페이지를
-고칠 필요가 없다.
+- **버전 번호를 문구에 적지 않는다.** 자동 업데이터가 있어 설치본이 항상 최신을 따라가므로,
+  페이지에 특정 버전을 못박아도 의미가 없다(2026-08-19, 사용자 판단으로 GitHub API에서 최신
+  태그를 읽어 보여주던 `band.metaVer` 로직 자체를 제거했다). 다운로드 배너 아래 한 줄은
+  정적 문구(`band.meta`) 하나뿐이고, 릴리스를 새로 내도 페이지를 고칠 필요가 없다.
 
 ## 이미지 다시 찍기
 

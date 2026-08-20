@@ -68,7 +68,7 @@ test("프롬프트는 지시문·에피소드·기억·이력·원오프·리마
   assert.deepEqual(blockCalls.instructions, [{ includeDateTime: true }]);
   assert.deepEqual(blockCalls.memory, [longQuestion]);
   assert.equal(requests[0].body.generationConfig.maxOutputTokens, 1024);
-  assert.deepEqual(requests[0].body.generationConfig.thinkingConfig, { thinkingLevel: "minimal" });
+  assert.deepEqual(requests[0].body.generationConfig.thinkingConfig, { thinkingLevel: "low" });
   assert.deepEqual(requests[0].options, { timeoutMs: 22000 });
 });
 

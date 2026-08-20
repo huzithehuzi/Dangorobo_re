@@ -21,9 +21,11 @@
     "prestart": "npm run ui:build && npm run build:runtime",
     "source:verify": "node scripts/source-archive.js --verify",
     "source:dist": "node scripts/source-archive.js",
-    "predist": "npm run source:verify && npm run ui:build && npm run build:runtime",
+    "template:verify": "node scripts/custom-template-archive.js --verify",
+    "template:dist": "node scripts/custom-template-archive.js",
+    "predist": "npm run source:verify && npm run template:verify && npm run ui:build && npm run build:runtime",
     "dist": "electron-builder --win --x64",
-    "postdist": "npm run source:dist"
+    "postdist": "npm run source:dist && npm run template:dist"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",
@@ -88,6 +90,7 @@
       "!src/**/*.ts",
       "dist/**/*",
       "assets/**/*",
+      "!assets/custom-template/**",
       "package.json",
       "README.md",
       "README.en.md",

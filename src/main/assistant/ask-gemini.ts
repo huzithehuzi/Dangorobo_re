@@ -81,7 +81,10 @@ function createAskGemini(deps: AskGeminiDeps) {
                   : ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS
               )
             ),
-            thinkingConfig: { thinkingLevel: "minimal" }
+            // languageDirective가 프롬프트 앞부분에 있는데, minimal 사고 수준에서는 모델이
+            // 그 지시를 놓치고 기본 언어(한국어)로 답하는 사례가 보고됐다 — 다이어그램 생략과
+            // 같은 이유(document-summary.ts 참고)로 여기도 한 단계 올린다.
+            thinkingConfig: { thinkingLevel: "low" }
           },
           safetySettings: ASSISTANT_SAFETY_SETTINGS
         },
