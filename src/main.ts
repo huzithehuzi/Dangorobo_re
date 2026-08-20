@@ -1074,7 +1074,7 @@ const favoritesWindows = createFavoritesWindowController({
 
 function assistantInstructions(options: AssistantInstructionOptions = {}): string {
   const includeDateTime = options.includeDateTime !== false;
-  const dateTimeContext = includeDateTime ? currentDateTimeContext() : "";
+  const dateTimeContext = includeDateTime ? currentDateTimeContext(new Date(), settings.language) : "";
   return buildAssistantInstructions(settings, dateTimeContext, options);
 }
 

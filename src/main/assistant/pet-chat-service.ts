@@ -128,7 +128,9 @@ function createPetChatService(deps: PetChatServiceDeps) {
     const instructionKey = topic.continuity ? "petChat.continuityInstruction" : "petChat.varietyInstruction";
     return {
       topicKey: topic.key,
-      prompt: `${t(lang, "petChat.intro")} ${t(lang, instructionKey)} ${topic.hint})${recentOpenersNote()}`
+      // 펫이 먼저 거는 말에는 "사용자가 방금 쓴 언어"가 없다 — 앱 언어로 못박지 않으면
+      // 모델이 이력이나 프롬프트에 섞인 다른 언어를 골라잡는다(2026-08-20 재발 리포트).
+      prompt: `${t(lang, "petChat.intro")} ${t(lang, instructionKey)} ${topic.hint}) ${t(lang, "petChat.languageInstruction")}${recentOpenersNote()}`
     };
   }
 
@@ -138,7 +140,7 @@ function createPetChatService(deps: PetChatServiceDeps) {
     const lang = deps.getSettings().language;
     return {
       topicKey: "petChat.pettedTopic",
-      prompt: `${t(lang, "petChat.pettedIntro")} ${t(lang, "petChat.varietyInstruction")}${recentOpenersNote()}`
+      prompt: `${t(lang, "petChat.pettedIntro")} ${t(lang, "petChat.varietyInstruction")} ${t(lang, "petChat.languageInstruction")}${recentOpenersNote()}`
     };
   }
 

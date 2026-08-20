@@ -807,6 +807,26 @@
       en: "{{personality}}{{nicknameNote}}{{petNicknameNote}} {{commonStyle}} Answer with the key point first, suited to a desktop pet speech bubble, ideally within 200 characters. You may write more if the user explicitly asks for a detailed answer. Add a line break after every 1-2 sentences.",
       ja: "{{personality}}{{nicknameNote}}{{petNicknameNote}} {{commonStyle}} デスクトップペットの吹き出しに合わせて要点から答え、できれば200文字以内にまとめてください。ユーザーが詳しい説明を求めた場合はもっと書いても構いません。1〜2文ごとに改行を入れてください。"
     },
+    "assistant.dateTimeLocalLine": {
+      ko: "현재 PC 기준 날짜·시각: {{value}}",
+      en: "Current date and time on this PC: {{value}}",
+      ja: "現在のPCの日付・時刻: {{value}}"
+    },
+    "assistant.dateTimeZoneLine": {
+      ko: "현재 PC 시간대: {{zone}} ({{offset}})",
+      en: "Time zone of this PC: {{zone}} ({{offset}})",
+      ja: "このPCのタイムゾーン: {{zone}}({{offset}})"
+    },
+    "assistant.dateTimeUtcLine": {
+      ko: "UTC 기준 시각: {{value}}",
+      en: "Time in UTC: {{value}}",
+      ja: "UTC基準の時刻: {{value}}"
+    },
+    "assistant.dateTimeZoneUnknown": {
+      ko: "시스템 현지 시간대",
+      en: "system local time zone",
+      ja: "システムのローカルタイムゾーン"
+    },
     "assistant.dateTimeInstruction": {
       ko: "위 날짜·시각은 프로그램이 이번 질문을 보내는 순간 PC에서 읽은 값입니다. 오늘·내일·어제·현재 시각 같은 표현은 반드시 이 값을 기준으로 해석하세요. 날짜·시각 정보만으로 최신 뉴스·날씨·주가 같은 외부 실시간 정보를 안다고 가정하지 마세요.",
       en: "The date/time above is what the program read from the PC at the moment it sent this question. Interpret expressions like today/tomorrow/yesterday/current time strictly based on this value. Don't assume you know real-time external information like the latest news, weather, or stock prices just because you have the date/time.",
@@ -936,6 +956,11 @@
       ko: "펫이 문득 궁금해진 사소하고 구체적인 질문 하나를 솔직하게 물어보세요.",
       en: "Ask one small, specific question the pet has honestly become curious about.",
       ja: "ペットがふと気になった、ささやかで具体的な質問を素直に聞いてください。"
+    },
+    "petChat.languageInstruction": {
+      ko: "이 첫마디는 한국어로 쓰세요.",
+      en: "Write this opening line in English.",
+      ja: "この最初の一言は日本語で書いてください。"
     },
     "petChat.varietyInstruction": {
       ko: "매번 대화의 소재뿐 아니라 시작 방식, 질문의 형태, 문장 리듬도 바꾸세요. 최근 문장과 같은 소재·예시·핵심 단어를 되풀이하지 말고, 정해진 힌트를 새롭고 구체적인 한마디로 풀어내세요.",
