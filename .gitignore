@@ -59,6 +59,7 @@ pnpm-debug.log*
 /memories-*.json.*
 /custom-face/
 /custom-body/
+/custom-presets/
 /summaries/
 /user-data/
 /.dangorobo-user-data/

@@ -9,7 +9,7 @@ import {
 import { AppearanceTab, CustomizationTab } from "./tabs-pet";
 import { ConversationTab, MemoryTab } from "./tabs-talk";
 import { AlertsTab, ShortcutsTab, FavoritesTab, PlayerTab } from "./tabs-interaction";
-import { GeneralTab, UiTab, TrayTab } from "./tabs-app";
+import { GeneralTab, UiTab, TrayTab, PatchNotesTab } from "./tabs-app";
 import { DevTab } from "./tabs-dev";
 import { useCustomizationState } from "./use-customization-state";
 import { useSettingsLifecycle } from "./use-settings-lifecycle";
@@ -21,7 +21,7 @@ const TAB_GROUPS = [
   { labelKey: "settings.tabGroup.pet", tabs: [{ id: "appearance", labelKey: "settings.tab.appearance" }, { id: "customization", labelKey: "settings.tab.customization" }] },
   { labelKey: "settings.tabGroup.talk", tabs: [{ id: "conversation", labelKey: "settings.tab.conversation" }] },
   { labelKey: "settings.tabGroup.interaction", tabs: [{ id: "alerts", labelKey: "settings.tab.alerts" }, { id: "shortcuts", labelKey: "settings.tab.shortcuts" }, { id: "favorites", labelKey: "settings.tab.favorites" }, { id: "player", labelKey: "settings.tab.player" }] },
-  { labelKey: "settings.tabGroup.app", tabs: [{ id: "general", labelKey: "settings.tab.general" }, { id: "ui", labelKey: "settings.tab.ui" }, { id: "tray", labelKey: "settings.tab.tray" }] }
+  { labelKey: "settings.tabGroup.app", tabs: [{ id: "general", labelKey: "settings.tab.general" }, { id: "ui", labelKey: "settings.tab.ui" }, { id: "tray", labelKey: "settings.tab.tray" }, { id: "patchNotes", labelKey: "settings.tab.patchNotes" }] }
 ];
 
 export interface SettingsStore {
@@ -396,6 +396,7 @@ export default function App() {
           <section className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
           <section className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
           <section className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
+          <section className={`tab-panel${activeTab === "patchNotes" ? " active" : ""}`} hidden={activeTab !== "patchNotes"}><PatchNotesTab /></section>
           <section className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
         </div>
         <footer className="settings-footer">

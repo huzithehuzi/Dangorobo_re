@@ -3,6 +3,8 @@ import { useSettings } from "./App";
 import { ColorField } from "./components";
 import { NumberRow, Note, SelectRow, SettingRow, TextField, ToggleRow } from "./rows";
 import { BUBBLE_THEMES, CLICK_SOUND_OPTIONS } from "./store";
+import { PATCH_NOTES } from "./patch-notes";
+import type { PatchNoteLanguage } from "./patch-notes";
 // 입력 범위와 저장 전 미리보기의 클램프는 같아야 한다 — 어긋나면 창은 그 배율로 커지는데
 // 저장은 HTML 검증에 막힌다. 두 값의 원본은 창 공용 외형 모듈이다.
 import {
@@ -334,6 +336,29 @@ export function TrayTab() {
         />
         <Note>{tt("settings.favorites.trayItemsNote")}</Note>
       </div>
+    </>
+  );
+}
+
+// 패치 노트 탭(2026-08-20). 버전별 항목은 ui/settings/patch-notes.ts가 원본이고, 언어는
+// 설정창 언어를 따른다 — 설정값을 읽거나 저장하지 않는 읽기 전용 탭이다.
+export function PatchNotesTab() {
+  const { d, tt } = useSettings();
+  const language: PatchNoteLanguage = d.language === "ko" || d.language === "ja" ? d.language : "en";
+  return (
+    <>
+      <div className="settings-group">
+        <h2>{tt("settings.patchNotes.heading")}</h2>
+        <Note>{tt("settings.patchNotes.note")}</Note>
+      </div>
+      {PATCH_NOTES.map((note) => (
+        <div className="settings-group" key={note.version}>
+          <h2>{tt("settings.patchNotes.versionLabel", { version: note.version })}</h2>
+          <ul className="patch-note-list">
+            {note.lines[language].map((line) => <li key={line}>{line}</li>)}
+          </ul>
+        </div>
+      ))}
     </>
   );
 }

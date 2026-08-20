@@ -1,6 +1,6 @@
 *[한국어](./README.md) · English · [日本語](./README.ja.md)*
 
-# Dangorobo 1.0.0
+# Dangorobo 1.2.0
 
 A retro-flavoured desktop pet that lives in a corner of your screen. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even
@@ -224,6 +224,10 @@ PC.
 Settings, your checklist, and history are stored in the `%APPDATA%\dangorobo` folder, and never
 leave this PC. (If you were already using this app before its name changed, it keeps using the
 older folder, `%APPDATA%\low-poly-desktop-pet`.)
+
+## Patch notes
+
+The **Patch Notes** tab in settings lists what changed in this version.
 
 ## FAQ
 

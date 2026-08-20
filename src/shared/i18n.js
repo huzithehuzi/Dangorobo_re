@@ -388,6 +388,14 @@
     "settings.memory.importedAlert": { ko: "기억 {{n}}개를 불러왔습니다.", en: "Imported {{n}} memories.", ja: "記憶を{{n}}件読み込みました。" },
 
     "settings.tab.memory": { ko: "기억 관리", en: "Memory", ja: "メモリー" },
+    "settings.tab.patchNotes": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
+    "settings.patchNotes.heading": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
+    "settings.patchNotes.versionLabel": { ko: "v{{version}}", en: "v{{version}}", ja: "v{{version}}" },
+    "settings.patchNotes.note": {
+      ko: "이 버전에서 달라진 점입니다. 최신 버전이 맨 위에 있습니다.",
+      en: "What changed in this version. The newest version is at the top.",
+      ja: "このバージョンで変わった点です。最新のバージョンが一番上にあります。"
+    },
     "settings.tabGroup.pet": { ko: "펫", en: "Pet", ja: "ペット" },
     "settings.tabGroup.talk": { ko: "대화", en: "Talk", ja: "会話" },
     "settings.tabGroup.interaction": { ko: "알람과 조작", en: "Alarms & Input", ja: "アラームと操作" },

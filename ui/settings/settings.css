@@ -407,6 +407,11 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
    크기가 남아 있어서, 펼친 색 패널이 그 작은 상자를 넘쳐 잘려 보였다(2026-08-20).
    호스트를 레이아웃에서 지워 피커가 제 크기대로 자리를 차지하게 한다. */
 .favorite-icon-color { display: contents; }
+/* 패치 노트 목록(2026-08-20) — 기본 목록 스타일은 여백이 과하고 점이 글자와 붙는다. */
+.patch-note-list { margin: 0; padding-left: 18px; color: var(--text); font-size: calc(12.5px * var(--ui-font-size-scale)); line-height: 1.7; }
+.patch-note-list li { margin: 0 0 6px; padding-left: 2px; }
+.patch-note-list li::marker { color: var(--settings-accent); }
+.patch-note-list li:last-child { margin-bottom: 0; }
 .preset-item-actions { display: flex; gap: 6px; align-items: center; justify-content: center; }
 .preset-item-actions .secondary-action { width: auto; margin-top: 0; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
 

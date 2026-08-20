@@ -13,6 +13,7 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 | 설정 타입·기본값·정규화 | `src/main/settings-schema.ts` |
 | 커스터마이징·사운드·테마 목록 | `src/shared/*-catalog.*` |
 | 설정 UI 저장 payload | `ui/settings/store.ts` |
+| 설정창 패치 노트 내용 | `ui/settings/patch-notes.ts` |
 | 설정창 외형·커스터마이징 상태 | `ui/settings/use-customization-state.ts` |
 | 설정창 로드·수정·저장 수명주기 | `ui/settings/use-settings-lifecycle.ts` |
 | 창 외형(테마·배율·글자 크기·폰트) 적용과 그 허용 범위 | `ui/lib/appearance.ts` |
