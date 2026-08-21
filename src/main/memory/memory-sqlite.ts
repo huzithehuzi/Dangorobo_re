@@ -751,9 +751,18 @@ function closeOpenLoop(loopId: number, resolutionNotes: string): boolean {
 // "이야기하는 동안" 살아 있고 잊힌 일만 닫힌다.
 const OPEN_LOOP_ARCHIVE_AGE_DAYS = 14;
 
+// 정리 대상을 세는 조건. 마지막 언급 시각을 못 읽는 행은 남긴다 — 프롬프트 필터와 같은 판단이다.
+const STALE_OPEN_LOOP_CONDITION =
+  "is_closed = 0 AND last_mentioned_at IS NOT NULL AND last_mentioned_at < ?";
+
 /**
  * 기준일보다 오래 언급되지 않은 열린 주제를 닫는다. 이미 닫힌 주제는 건드리지 않으므로
- * 여러 번 불러도 안전하다(시작할 때 한 번 부른다). 닫은 개수를 돌려준다.
+ * 여러 번 불러도 안전하다(시작할 때와 기억 추출 뒤에 부른다). 닫은 개수를 돌려준다.
+ *
+ * **닫을 게 있는지 먼저 읽기 전용으로 확인하고, 있을 때만 트랜잭션에 들어간다.**
+ * `runPersistentMutation()`은 롤백용 스냅샷을 위해 DB 전체를 export하고 성공하면 파일을
+ * 통째로 다시 쓴다 — 아무것도 닫지 않는 호출까지 그 비용을 치르면 대화 몇 턴마다 DB를
+ * 헛되게 저장한다(호출 빈도를 올린 2026-08-21에 드러났다).
  */
 function archiveStaleOpenLoops(
   maxAgeDays = OPEN_LOOP_ARCHIVE_AGE_DAYS,
@@ -761,28 +770,33 @@ function archiveStaleOpenLoops(
 ): number {
   if (!db) return 0;
 
-  return runPersistentMutation("Archive stale open loops", 0, database => {
-    const now = new Date();
-    const cutoff = new Date(now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
-    // 마지막 언급 시각을 못 읽는 행은 남긴다 — 프롬프트 필터와 같은 판단이다.
-    const staleCondition =
-      `is_closed = 0 AND last_mentioned_at IS NOT NULL AND last_mentioned_at < ?`;
-    const pending = database.exec(
-      `SELECT COUNT(*) FROM open_loops WHERE ${staleCondition}`,
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+
+  let pendingCount = 0;
+  try {
+    const pending = db.exec(
+      `SELECT COUNT(*) FROM open_loops WHERE ${STALE_OPEN_LOOP_CONDITION}`,
       [cutoff]
     );
-    const archived = Number(pending[0]?.values[0][0]) || 0;
-    if (archived === 0) return 0;
+    pendingCount = Number(pending[0]?.values[0][0]) || 0;
+  } catch (error) {
+    console.error("[MemorySQLite] Count stale open loops failed:", error);
+    return 0;
+  }
+  if (pendingCount === 0) return 0;
+
+  return runPersistentMutation("Archive stale open loops", 0, database => {
     database.run(
       `UPDATE open_loops SET is_closed = 1, closed_at = ?, resolution_notes = ?
-       WHERE ${staleCondition}`,
+       WHERE ${STALE_OPEN_LOOP_CONDITION}`,
       [
         now.toISOString(),
         t(language, "memory.openLoopAutoArchivedNote", { days: maxAgeDays }),
         cutoff
       ]
     );
-    return archived;
+    return pendingCount;
   });
 }
 

@@ -492,6 +492,49 @@ test("자동 정리 기준일은 프롬프트 노출 상한보다 훨씬 길다"
   assert.ok(OPEN_LOOP_ARCHIVE_AGE_DAYS > OPEN_LOOP_PROMPT_MAX_AGE_DAYS * 4);
 });
 
+test("닫을 주제가 없으면 DB를 다시 쓰지 않는다", async (t) => {
+  // 정리는 대화 몇 턴마다 돈다. runPersistentMutation은 롤백 스냅샷을 위해 DB 전체를
+  // export하고 성공하면 파일을 통째로 다시 쓰므로, 헛돌 때까지 그 비용을 치르면 안 된다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  let writes = 0;
+  /**
+   * @param {string} filePath
+   * @param {string | Buffer} data
+   * @param {{ backup?: boolean }} [options]
+   */
+  function countingWriter(filePath, data, options) {
+    writes += 1;
+    writeFileAtomicSync(filePath, data, options);
+  }
+  const initializeOptions = /** @type {InitializeDatabaseOptions} */ ({
+    writeDatabaseFile: countingWriter
+  });
+  assert.equal(await initializeDatabase(initializeOptions), true);
+  const episodeId = insertEpisode({
+    session_id: "no-op-archive-session",
+    date: "2026-08-21",
+    summary: "헛도는 정리"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "아직 최근인 주제" }), true);
+
+  const writesBefore = writes;
+  // 기준이 아주 길면 닫을 게 없다 — 읽기만 하고 끝나야 한다.
+  assert.equal(archiveStaleOpenLoops(3650), 0);
+  assert.equal(writes, writesBefore, "닫을 게 없으면 파일을 쓰지 않는다");
+
+  // 닫을 게 있으면 그때만 쓴다.
+  assert.equal(archiveStaleOpenLoops(0), 1);
+  assert.ok(writes > writesBefore, "닫을 게 있으면 저장한다");
+});
+
 test("자동 정리 사유는 앱 언어를 따른다", async (t) => {
   // 예전에는 한국어로 하드코딩돼 영어·일본어 사용자의 기억 DB에도 한국어가 남았다.
   closeDatabase();
