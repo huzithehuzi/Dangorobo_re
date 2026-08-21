@@ -20,6 +20,8 @@ type MemoryIpcDependencies = {
   getMemoriesByCategory: (category: string) => unknown[];
   getAllMemories: () => unknown[];
   getOpenLoops: () => unknown[];
+  getForgottenMemories: () => unknown[];
+  restoreForgottenMemory: (id: number) => unknown;
   setMemoryVerified: (id: number, verified: boolean) => unknown;
   deleteMemory: (id: number) => unknown;
   closeOpenLoop: (id: number, notes: string) => unknown;
@@ -80,6 +82,28 @@ function registerMemoryIpcHandlers(
     } catch (error) {
       console.error("[Memory] Get open loops failed:", error);
       return [];
+    }
+  });
+
+  // 잊은 기억은 활성 목록(memory:get-all)에 없다 — 되살릴 수단이 없으면 잘못 잊은 사실을
+  // 영구히 다시 배우지 못한다.
+  ipcMain.handle("memory:get-forgotten", async (event) => {
+    if (!isAllowed(deps, event)) return [];
+    try {
+      return deps.getForgottenMemories();
+    } catch (error) {
+      console.error("[Memory] Get forgotten memories failed:", error);
+      return [];
+    }
+  });
+
+  ipcMain.handle("memory:restore-forgotten", async (event, id: unknown) => {
+    if (!isAllowed(deps, event) || !isPositiveInteger(id)) return false;
+    try {
+      return deps.restoreForgottenMemory(id);
+    } catch (error) {
+      console.error("[Memory] Restore forgotten memory failed:", error);
+      return false;
     }
   });
 

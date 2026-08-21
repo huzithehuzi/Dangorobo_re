@@ -58,6 +58,8 @@ const INVOKE_CHANNELS = Object.freeze({
   getMemoryStats: "memory:get-stats",
   getMemories: "memory:get-all",
   getOpenLoops: "memory:get-open-loops",
+  getForgottenMemories: "memory:get-forgotten",
+  restoreForgottenMemory: "memory:restore-forgotten",
   verifyMemory: "memory:verify",
   unverifyMemory: "memory:unverify",
   deleteMemory: "memory:delete",

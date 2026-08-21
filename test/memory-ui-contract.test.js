@@ -53,3 +53,41 @@ test("설정 UI는 장기 기억 전체 보관 실패를 성공으로 처리하�
     "preload의 성공 여부 계약이 unknown으로 넓어지면 UI가 실패 처리를 놓칠 수 있다"
   );
 });
+
+// ── 잊은 기억 되살리기 (2026-08-21) ────────────────────────────────────────────────
+//
+// is_forgotten은 자동 추출이 그 사실을 다시 배우지 못하게 막는다. 되살릴 수단이 UI에
+// 없으면 LLM이 잘못 고른 기억을 영구히 잃는다.
+
+test("설정 UI에 잊은 기억을 되살리는 경로가 있다", () => {
+  assert.match(
+    memoryTabSource,
+    /window\.desktopPet\.restoreForgottenMemory\(memory\.id\)/,
+    "되살리기 IPC를 실제로 부른다"
+  );
+  assert.match(
+    memoryTabSource,
+    /window\.desktopPet\.getForgottenMemories\(\)/,
+    "잊은 기억은 활성 목록에 없으므로 따로 읽어야 한다"
+  );
+  assert.match(
+    globalTypesSource,
+    /restoreForgottenMemory\(id: number\): Promise<boolean>;/,
+    "성공 여부 계약이 unknown으로 넓어지면 UI가 실패를 놓친다"
+  );
+});
+
+test("잊은 기억 문구는 자동 저장이 막힌다는 점을 세 언어로 알린다", () => {
+  // 이 점을 모르면 "다시 말했는데 왜 안 저장되냐"가 된다.
+  const blocked = {
+    ko: /자동으로 저장되지 않/,
+    en: /will not save them automatically/i,
+    ja: /自動保存されません/
+  };
+  for (const [language, pattern] of Object.entries(blocked)) {
+    assert.match(t(language, "settings.memory.forgottenNote"), pattern);
+    assert.notEqual(t(language, "settings.memory.forgottenHeading"), "settings.memory.forgottenHeading");
+    assert.notEqual(t(language, "settings.memory.restoreButton"), "settings.memory.restoreButton");
+    assert.notEqual(t(language, "settings.memory.confirmRestore"), "settings.memory.confirmRestore");
+  }
+});

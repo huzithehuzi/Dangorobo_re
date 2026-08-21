@@ -355,6 +355,22 @@
     "settings.memory.exportButton": { ko: "내보내기 (JSON)", en: "Export (JSON)", ja: "エクスポート (JSON)" },
     "settings.memory.importButton": { ko: "불러오기 (JSON)", en: "Import (JSON)", ja: "読み込み (JSON)" },
     "settings.memory.clearButton": { ko: "장기 기억 모두 삭제", en: "Delete All Long-term Memories", ja: "長期記憶をすべて削除" },
+    "settings.memory.forgottenHeading": {
+      ko: "잊은 기억",
+      en: "Forgotten memories",
+      ja: "忘れた記憶"
+    },
+    "settings.memory.forgottenNote": {
+      ko: "잊어달라고 요청한 기억입니다. 되살리기 전까지는 대화에 쓰이지 않고, 같은 사실을 다시 말해도 자동으로 저장되지 않습니다.",
+      en: "Memories you asked to forget. They are not used in conversation, and saying the same thing again will not save them automatically until you restore them.",
+      ja: "忘れてほしいと頼んだ記憶です。復元するまでは会話に使われず、同じことをもう一度話しても自動保存されません。"
+    },
+    "settings.memory.restoreButton": { ko: "되살리기", en: "Restore", ja: "復元" },
+    "settings.memory.confirmRestore": {
+      ko: "이 기억을 되살릴까요? 다시 대화에 쓰이고, 앞으로 자동 저장도 다시 됩니다.",
+      en: "Restore this memory? It will be used in conversation again and can be saved automatically from now on.",
+      ja: "この記憶を復元しますか? 再び会話に使われ、今後は自動保存もされます。"
+    },
     "settings.memory.openLoopsHeading": { ko: "미완료 주제", en: "Open Loops", ja: "未解決のトピック" },
     "settings.memory.noOpenLoops": { ko: "미완료 주제가 없습니다.", en: "No open loops.", ja: "未解決のトピックはありません。" },
     "settings.memory.note": { ko: "기억은 자동으로 저장되며, 앱을 다시 시작해도 유지됩니다. 장기 기억은 확인 후 검증 표시를 할 수 있습니다.", en: "Memories are saved automatically and persist after app restart. You can verify long-term memories after review.", ja: "メモリーは自動的に保存され、アプリを再起動しても保持されます。長期記憶はレビュー後に検証できます。" },

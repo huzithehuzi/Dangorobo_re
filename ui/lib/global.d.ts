@@ -252,6 +252,8 @@ interface DesktopPetSettingsApi {
   replyUnsavedCheck(isDirty: boolean): void;
   getMemoryStats(): Promise<{ memoryCount?: number; loopsCount?: number; episodesCount?: number }>;
   getMemories(category: string): Promise<MemoryRow[]>;
+  getForgottenMemories(): Promise<MemoryRow[]>;
+  restoreForgottenMemory(id: number): Promise<boolean>;
   verifyMemory(id: number): Promise<unknown>;
   unverifyMemory(id: number): Promise<unknown>;
   deleteMemory(id: number): Promise<unknown>;

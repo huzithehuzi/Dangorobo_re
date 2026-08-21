@@ -114,6 +114,7 @@ export function MemoryTab({ active }: { active: boolean }) {
   const [category, setCategory] = useState("");
   const [memories, setMemories] = useState<MemoryRow[]>([]);
   const [loops, setLoops] = useState<OpenLoopRow[]>([]);
+  const [forgotten, setForgotten] = useState<MemoryRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const categoryLabel = (value: string | undefined) => {
@@ -144,6 +145,16 @@ export function MemoryTab({ active }: { active: boolean }) {
     }
   }, [tt]);
 
+  // 잊은 기억은 활성 목록에 없으므로 따로 읽는다. 비어 있으면 섹션 자체를 감춘다 —
+  // 잊기를 쓰지 않는 사용자에게는 없는 개념이다.
+  const loadForgotten = useCallback(async () => {
+    try {
+      setForgotten((await window.desktopPet.getForgottenMemories()) || []);
+    } catch (error) {
+      console.error("[Settings] Load forgotten memories failed:", error);
+    }
+  }, []);
+
   const loadLoops = useCallback(async () => {
     try {
       setLoops((await window.desktopPet.getOpenLoops()) || []);
@@ -157,8 +168,9 @@ export function MemoryTab({ active }: { active: boolean }) {
     loadStats();
     loadMemories(category);
     loadLoops();
+    loadForgotten();
     // category는 자체 change 핸들러가 다시 읽으므로 여기 의존성에 넣지 않는다.
-  }, [s.refreshMemoryTick, active, loadStats, loadLoops]);
+  }, [s.refreshMemoryTick, active, loadStats, loadLoops, loadForgotten]);
 
   return (
     <>
@@ -282,6 +294,8 @@ export function MemoryTab({ active }: { active: boolean }) {
                   const imported = await window.desktopPet.importMemories(Array.isArray(parsed) ? parsed : []);
                   loadMemories(category);
                   loadStats();
+                  // 가져오기는 잊은 기억도 되살리므로 그 목록이 줄어들 수 있다.
+                  loadForgotten();
                   alert(tt("settings.memory.importedAlert", { n: imported }));
                 } catch (error) {
                   alert(tt("settings.memory.importFailed", { message: (error as Error).message }));
@@ -314,6 +328,36 @@ export function MemoryTab({ active }: { active: boolean }) {
           </button>
         </div>
       </div>
+      {forgotten.length > 0 && (
+        <div className="settings-group">
+          <h3>{tt("settings.memory.forgottenHeading")}</h3>
+          <Note>{tt("settings.memory.forgottenNote")}</Note>
+          <div className="memory-list" aria-live="polite">
+            {forgotten.map((memory) => (
+              <div key={memory.id} className="memory-item" data-category={String(memory.category || "")}>
+                <div className="memory-header">
+                  <span className="memory-label">{memory.memory_label}</span>
+                  <span className="memory-category">{categoryLabel(memory.category)}</span>
+                </div>
+                <div className="memory-value">{memory.memory_value}</div>
+                <div className="memory-meta">
+                  <button
+                    className="memory-chip-button"
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm(tt("settings.memory.confirmRestore"))) return;
+                      await window.desktopPet.restoreForgottenMemory(memory.id);
+                      await Promise.all([loadForgotten(), loadMemories(category), loadStats()]);
+                    }}
+                  >
+                    {tt("settings.memory.restoreButton")}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="settings-group">
         <h3>{tt("settings.memory.openLoopsHeading")}</h3>
         <div className="loops-list" aria-live="polite">
