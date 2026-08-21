@@ -342,6 +342,7 @@ npm run dist -- --publish always
 | 알람 예약·DND 보류 큐 | `alarm-scheduler.ts`, `alarm-queue.ts`, `dnd-monitor.ts` |
 | 자동 업데이트 확인·다운로드·재시작 확인 다이얼로그 | `auto-update-service.ts` |
 | 날씨(Open-Meteo, API 키 불필요) | `weather-service.ts`, `alarm-queue.ts`의 `resolveAlarmForDisplay`, `windows/pet-menu-model.ts`의 `check-weather` 항목 |
+| 한국 지명 보정(광역시 축약형·"시" 붙이기) | `weather-service.ts`의 `METRO_CITY_FORMAL_NAMES`, `citySuffixCandidate()`, `geocodeCity()` |
 | 체크리스트 | `windows/checklist.ts`, `checklist-ipc.ts`, `ui/checklist/` |
 | 즐겨찾기와 아이콘 | `windows/favorites-panels.ts`, `favorites-layout.ts`, `favorite-icon-service.ts`, `favorites-ipc.ts`, `ui/favorites-*/` |
 | 시스템 트레이·펫 우클릭 메뉴 | `windows/pet-menu-controller.ts`, `pet-menu-model.ts`, `ui/pet-context-menu/` |
@@ -656,6 +657,15 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   별개 문제로 남아 있다.
 - 실제 Gemini 질문·번역·문서 요약과 기억 추출·open loop 판정은 API 키와 네트워크가 필요한
   수동 검증 영역이다.
+- **Open-Meteo의 기상청 모델이 현재 값을 주지 않는다.** 2026-08-21 실측에서 서울·성남·부산
+  좌표 모두 `kma_seamless`·`kma_ldps`·`kma_gdps` 48시간 전부 null이었다(모델명 자체는 유효 —
+  없는 이름은 HTTP 400). `fetchHourlyForecast()`가 기본 모델로 물러나 사용자에게 보이는
+  문제는 없지만, "한국은 기상청 우선"은 지금 사실상 쉬는 경로다. 폴백이 발동하면 로그를
+  남기므로 데이터가 돌아왔는지는 로그로 확인한다. 진짜 기상청 데이터가 필요하면 공공데이터
+  포털 단기예보 API를 별도 경로로 붙여야 한다(키 발급·격자 좌표 변환·코드 매핑이 따라온다).
+- Open-Meteo 지오코딩(GeoNames)은 한국 지명 색인이 고르지 않다. 광역시 축약형과 접미사 없는
+  시 이름은 `geocodeCity()`가 보정하지만, 구·군 단위나 색인에 아예 없는 이름("용인")은 여전히
+  못 찾는다. 보정 목록에 없는 지명이 엉뚱한 곳으로 가는지는 실측으로만 알 수 있다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.
 - HSV 축별 팔레트 양자화는 특정 경계에서 색 선택이 직관적으로 움직이지 않을 수 있다.
 - [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 알람·클릭 사운드의 정확한 출처 URL과

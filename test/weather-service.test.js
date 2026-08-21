@@ -219,18 +219,65 @@ test("'도 시' 형태는 그대로 못 찾으면 도를 뗀 시 이름으로 �
   });
   const geo = await service.geocodeCity("경기도 성남시", "ko");
   assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
-  // 직접 조회(ko) 실패 → en 재시도 실패 → "성남시"(ko) 재시도 성공, 총 3회.
+  // 공백이 있어 "시" 붙이기 후보는 안 생긴다: 직접(ko) 실패 → en 실패 → "성남시"(ko) 성공.
   assert.equal(calledUrls.length, 3);
 });
 
-test("광역시 축약형(서울 등)은 못 찾으면 정식 명칭으로 재시도한다", async () => {
+// ── 한국 지명 보정 순서 (2026-08-21 실측으로 뒤집힌 계약) ─────────────────────────
+//
+// 예전 계약은 "축약형을 못 찾으면 정식 명칭으로 재시도"였다. 실제 실패 모드는 못 찾는 게
+// 아니라 **동명의 시골 마을을 성공적으로 찾는 것**이었고(부산 → 경상북도, 대구·전주·천안 →
+// 북한), 그래서 그 폴백은 영영 실행되지 않았다. 보정은 직접 조회보다 먼저 와야 한다.
+
+test("광역시 축약형은 직접 조회보다 먼저 정식 명칭으로 치환된다", async () => {
   const { service, calledUrls } = createService((url) => {
-    if (url.includes(encodeURIComponent("서울특별시"))) return jsonResponse(GEOCODE_KR);
-    return jsonResponse({ results: [] });
+    if (url.includes(encodeURIComponent("부산광역시"))) return jsonResponse(GEOCODE_KR);
+    // 동명의 시골 마을 — 예전에는 이쪽이 먼저 걸려서 보정이 돌지 않았다.
+    return jsonResponse({ results: [{ latitude: 36.38, longitude: 128.37, country_code: "KR" }] });
   });
-  const geo = await service.geocodeCity("서울", "ko");
+  const geo = await service.geocodeCity("부산", "ko");
   assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
-  assert.equal(calledUrls.length, 3);
+  assert.equal(calledUrls.length, 1, "보정이 먼저 성공하면 원문은 조회하지 않는다");
+  assert.ok(calledUrls[0].includes(encodeURIComponent("부산광역시")));
+});
+
+test("제주는 정식 도명이 색인에 없어 '제주시'로 치환한다", async () => {
+  const { service } = createService((url) => (
+    url.includes(encodeURIComponent("제주시")) ? jsonResponse(GEOCODE_KR) : jsonResponse({ results: [] })
+  ));
+  const geo = await service.geocodeCity("제주", "ko");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+});
+
+test("광역시가 아닌 지명도 '시'를 붙인 후보를 먼저 시도한다", async () => {
+  // "전주"는 평안북도(북한), "천안"은 강원도(북한)에 걸린다 — 시를 붙이면 정확해진다.
+  const { service, calledUrls } = createService((url) => {
+    if (url.includes(encodeURIComponent("전주시"))) return jsonResponse(GEOCODE_KR);
+    return jsonResponse({ results: [{ latitude: 40.45, longitude: 124.88, country_code: "KP" }] });
+  });
+  const geo = await service.geocodeCity("전주", "ko");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+  assert.equal(calledUrls.length, 1);
+});
+
+test("'시' 붙인 후보가 없으면 원문으로 돌아간다", async () => {
+  // 세종은 반대 경우다 — "세종"이 정확하고 "세종특별자치시"·"세종시"는 색인에 없다.
+  const { service, calledUrls } = createService((url) => (
+    url.includes(encodeURIComponent("세종시")) ? jsonResponse({ results: [] }) : jsonResponse(GEOCODE_KR)
+  ));
+  const geo = await service.geocodeCity("세종", "ko");
+  assert.deepEqual(geo, { latitude: 37.566, longitude: 126.9784, countryCode: "KR" });
+  assert.equal(calledUrls.length, 2, "보정 후보 1회 + 원문 1회");
+});
+
+test("이미 접미사가 붙은 지명과 라틴 문자 지명에는 '시'를 붙이지 않는다", async () => {
+  for (const city of ["성남시", "양평군", "강남구", "Seoul", "New York"]) {
+    const { service, calledUrls } = createService(() => jsonResponse(GEOCODE_KR));
+    const geo = await service.geocodeCity(city, "ko");
+    assert.ok(geo, `${city} 조회 실패`);
+    assert.equal(calledUrls.length, 1, `${city}에 불필요한 보정 조회가 붙었다`);
+    assert.ok(calledUrls[0].includes(encodeURIComponent(city)));
+  }
 });
 
 test("'시/도 구' 형태는 구를 떼어 재시도하지 않는다(동명 지역 오검색 방지)", async () => {
