@@ -69,6 +69,19 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
   탭을 넣는 조건과 그 탭에서 내보내는 조건이 갈리면 탭은 보이는데 머물 수 없으므로 같은
   값을 보게 묶고 회귀 테스트로 고정했다.
 
+- **1.3.0 배포·퍼블리시 완료**: NSIS 설치본·portable EXE·소스 ZIP·`custom_template.zip`·
+  `latest.yml`을 만들고 GitHub 릴리스 `v1.3.0`으로 발행했다. 소스 ZIP에 비밀값·사용자 데이터·
+  `node_modules`·`release/`·`.dev-deps.hash`가 없는지 확인하고, **패키지된 portable EXE를 임시
+  프로필로 실제 실행**해 설정 검색과 v1.3 패치 노트가 들어갔는지 캡처로 확인했다.
+  문서에 기록된 **중복 draft 레이스가 이번에도 재현됐다** — `creating GitHub release`가 두 번
+  찍히며 blockmap만 든 draft와 나머지 3개가 든 draft로 갈렸다. 절차대로 에셋이 적은 쪽을 지우고
+  살아남은 릴리스에 blockmap·Source.zip·`custom_template.zip`을 올린 뒤 본문(3개 언어)을 채워
+  발행했다. 게시된 `latest.yml`의 크기·SHA512가 실제 업로드된 Setup.exe와 일치하는지, blockmap이
+  같은 빌드의 것인지까지 확인했다(퍼블리시 실행이 산출물을 다시 만들므로 첫 `npm run dist`의
+  blockmap을 올리면 어긋난다 — 크기가 119053 → 119100으로 달라진다).
+  **설치본 설치와 자동 업데이트 실기 확인은 남아 있다**(이전 버전을 설치해 두고 그 위에서
+  다운로드·재시작 다이얼로그까지 거치는 절차).
+
 - **1.3.0으로 올렸다**: `package.json`·`package-lock.json`(`npm version`으로 갱신 — 수기 치환은
   같은 버전을 쓰는 의존성 항목까지 건드린다: lock 파일에 `1.2.0`이 4곳이었고 둘은
   `@mermaid-js/parser`·`gopd`였다)과 README 3종 제목을 맞췄다. 패치 노트 1.3 항목의 "3일"은

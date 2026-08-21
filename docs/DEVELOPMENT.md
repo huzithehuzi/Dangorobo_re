@@ -260,7 +260,12 @@ npm run dist -- --publish always
   Repository access·Contents 권한 화면에서 설정을 다 맞춰도 `403 Resource not accessible by
   personal access token`이 재현성 있게 났다(2026-08-18에 두 번 다른 fine-grained 토큰으로
   확인). 원인을 더 파기보다 classic + `repo` 한 번에 발급하는 쪽이 확실하고 빠르다.
-- **에셋 병렬 업로드 중 같은 태그로 draft 릴리스가 2개 생기는 레이스가 있다.** `electron-builder`가
+- **에셋 병렬 업로드 중 같은 태그로 draft 릴리스가 2개 생기는 레이스가 있다.** 1.3.0에서도
+  그대로 재현됐다(2026-08-21) — 일시적 문제가 아니라 매번 확인해야 하는 단계로 본다.
+  이때 **빠진 파일은 반드시 퍼블리시 실행이 만든 산출물로 올린다**: 퍼블리시가 EXE를 다시
+  빌드하므로 앞서 돌린 `npm run dist`의 blockmap을 올리면 게시된 Setup.exe와 어긋난다
+  (1.3.0에서 119053 → 119100으로 달라졌다). 발행 뒤 `latest.yml`의 크기·SHA512가 실제
+  업로드된 Setup.exe와 같은지 확인한다. `electron-builder`가
   `Setup.exe.blockmap`/`Setup.exe`/`Portable.exe`/`latest.yml`을 동시에 올리면서 "release
   doesn't exist" 판단을 두 번 내려 `v{version}` 태그의 draft를 두 개 만드는 경우가 있었다.
   퍼블리시 뒤에는 항상 `GET /repos/{owner}/{repo}/releases`로 같은 태그가 중복됐는지 확인하고,
