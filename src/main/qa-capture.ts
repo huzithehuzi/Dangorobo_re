@@ -284,6 +284,7 @@ function captureSettingsWindow(
       /* --capture-settings-press=<CSS 선택자>: 실제 누름 효과(파문·젤리 출렁임)를 찍는다.
          `--capture-settings-click`의 `el.click()`은 pointerdown을 만들지 않아서 ui-motion.js의
          누름 효과가 아예 돌지 않는다 — 그래서 그 경로로는 확인할 수 없다(2026-08-21 추가).
+         **pointerdown과 pointerup을 모두 보낸다** — 파문은 누를 때, 출렁임은 놓을 때 돈다.
          애니메이션 중간(≈120ms)에 찍으려고 클릭 경로보다 짧게 기다린다. */
       const pressSelector = argValue(argv, "--capture-settings-press=");
       if (pressSelector !== null) {
@@ -292,8 +293,10 @@ function captureSettingsWindow(
           + ` if (!el) return { found: false };`
           + ` el.scrollIntoView({ block: "center" });`
           + ` const rect = el.getBoundingClientRect();`
-          + ` el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0,`
-          + ` clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));`
+          + ` const options = { bubbles: true, button: 0,`
+          + ` clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };`
+          + ` el.dispatchEvent(new PointerEvent("pointerdown", options));`
+          + ` el.dispatchEvent(new PointerEvent("pointerup", options));`
           + ` return { found: true, size: [Math.round(rect.width), Math.round(rect.height)],`
           + ` className: el.className, ripples: document.querySelectorAll(".ui-ripple").length }; })()`
         );

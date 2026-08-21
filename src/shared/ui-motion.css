@@ -189,7 +189,14 @@ textarea:focus-visible,
 }
 
 /* ── 9. 누름 젤리 출렁임 ───────────────────────────────────────────────
-   ui-motion.js가 pointerdown에 .ui-jelly를 붙였다가 애니메이션이 끝나면 뗀다.
+   ui-motion.js가 **손을 뗄 때(pointerup)** .ui-jelly를 붙였다가 애니메이션이 끝나면 뗀다.
+
+   ⚠ pointerdown이 아니다. 누를 때 재생하면 짧게 톡 누른 경우 출렁임이 도는 도중에
+   `:active`의 scale(0.94)가 풀리면서(90ms transition) 두 움직임이 겹쳐 애니메이션이
+   잘린 것처럼 보인다 — "꾹 눌러야 다 재생된다"는 피드백(2026-08-21)이 이 증상이었다.
+   누르는 동안의 반응은 이미 `:active` 축소와 파문이 담당하므로, 출렁임은 **놓는 순간의
+   되돌아옴**만 맡는 게 물리적으로도 맞다(젤리를 눌렀다 떼면 그때 출렁인다).
+   덕분에 누른 시간과 무관하게 항상 전체 길이가 재생된다.
 
    ⚠ **`transform`이 아니라 독립 `scale` 속성을 애니메이션한다.** 키프레임의 값은 명시도와
    무관하게 일반 선언을 이기므로, transform으로 자리를 잡는 버튼(`.fab`·`.gradient-stop`·
@@ -208,7 +215,7 @@ textarea:focus-visible,
                   움직여서 출렁임이 아니라 딸깍거리는 느낌이 된다.
    더 키우려면 :active 축소(0.94)와 곱해지는 것을 기억할 것. 가로로 8% 늘어난 상태에서
    0.94가 곱해지면 실제로는 1.08 × 0.94 ≈ 1.02배다. 여기서 더 가면 옆 버튼과 겹쳐 보인다. */
-@keyframes ui-jelly-press {
+@keyframes ui-jelly-wobble {
   0% { scale: 1 1; }
   24% { scale: 1.08 0.89; }
   48% { scale: 0.95 1.065; }
@@ -216,7 +223,7 @@ textarea:focus-visible,
   86% { scale: 0.99 1.013; }
   100% { scale: 1 1; }
 }
-.ui-jelly { animation: ui-jelly-press 520ms cubic-bezier(0.22, 0.9, 0.3, 1); }
+.ui-jelly { animation: ui-jelly-wobble 520ms cubic-bezier(0.22, 0.9, 0.3, 1); }
 
 /* ── 10. 움직임 최소화 설정 존중 ───────────────────────────────────────
    Windows의 "애니메이션 표시" 끄기가 이 미디어 쿼리로 들어온다. 감성적인 효과라도
