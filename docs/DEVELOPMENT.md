@@ -355,6 +355,7 @@ npm run dist -- --publish always
 | 이미지 리사이즈 | `image-resize.ts` |
 | 설정 검색 | `ui/settings/search.tsx`, `App.tsx`의 `tabLabels`·`data-tab-panel` |
 | 캡처·QA 명령줄 하네스 | `qa-capture.ts`, `main.ts`의 `qaCaptureContext()` |
+| 개발 실행 런처(의존성 자동 설치 판정) | `개발용-실행.bat`, `.dev-deps.hash`(추적 안 함) |
 | 미디어·전체화면·폰트 | `media-monitor.ts`, `dnd-monitor.ts`, `fonts.ts` |
 | 방해 금지 시 창 숨김·복구 | `windows/dnd-visibility.ts` |
 | 펫 창 마우스 통과·포커스 판단 | `windows/pet-interaction-mode.ts` |
@@ -738,6 +739,10 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   못 찾는다. 보정 목록에 없는 지명이 엉뚱한 곳으로 가는지는 실측으로만 알 수 있다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.
 - HSV 축별 팔레트 양자화는 특정 경계에서 색 선택이 직관적으로 움직이지 않을 수 있다.
+- `.dev-deps.hash`는 `개발용-실행.bat`이 `npm ci` 뒤에 남기는 `package-lock.json`의 SHA256이다.
+  런처가 "의존성을 다시 설치할까"를 이 값으로 판단한다. 2026-08-21까지 추적되고 있었는데,
+  그러면 다른 컴퓨터의 값을 받아오는 순간 **바뀐 lock 파일과 해시가 이미 일치해 `npm ci`를
+  건너뛰고** node_modules가 낡은 채로 실행된다. 지금은 `.gitignore`에 있다.
 - 알람·클릭 사운드는 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 public domain으로
   명시돼 있다(파일별 출처 URL은 없다). 2026-08-21 확인 — 그 전까지 여기 "미보완"으로 남아
   있던 항목이라, 배포 게이트로 다시 올리기 전에 이 문장을 먼저 볼 것.
