@@ -116,6 +116,11 @@ npm run dist
   `button,input,select,optgroup,textarea`에 걸어 주고(base 레이어라 유틸리티에 항상 진다),
   유틸리티로 쓰면 클래스에 적은 순서와 무관하게 `fs-*`보다 뒤에 정렬돼 크기를 루트 상속값으로
   되돌린다. 글자 크기는 `fs-<px>` 유틸리티만 쓴다.
+- **설정창의 새 입력·버튼은 저장 폼 안에 놓인다.** Enter를 막지 않은 입력칸은 검색·필터 용도라도
+  누르는 순간 설정을 저장하고, `type="button"` 없는 `<button>`은 submit이 된다.
+- 설정 항목을 찾는 기능(검색 등)은 목록을 코드에 복사하지 말고 렌더된 DOM에서 만든다 —
+  복사본은 탭을 고칠 때 함께 고쳐지지 않아 새 설정이 조용히 빠진다. 패널의 `data-tab-panel`이
+  그 계약이고 `test/settings-search.test.js`가 목록 일치를 지킨다.
 - 앱의 색 선택은 `src/shared/color-picker.*`만 사용한다. 펫 창 위에 네이티브 팝업이나
   `<input type="color">` 대화상자를 띄우지 않는다.
 - 창 외형(말풍선 테마·UI 배율·글자 크기·폰트)을 `<html>`에 입히는 일은 `ui/lib/appearance.ts`의

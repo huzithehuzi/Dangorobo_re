@@ -13,6 +13,7 @@ import { GeneralTab, UiTab, TrayTab } from "./tabs-app";
 import { DevTab } from "./tabs-dev";
 import { useCustomizationState } from "./use-customization-state";
 import { useSettingsLifecycle } from "./use-settings-lifecycle";
+import { SettingsSearch } from "./search";
 // 창 외형을 <html>에 입히는 법은 창 공용 모듈이 갖는다. 설정창만 폼 값이 바뀔 때마다
 // 낱개로 반영해야 해서 묶음(applyWindowAppearance) 대신 낱개 함수를 쓴다.
 import { applyBubbleTheme, applyUiFont, applyUiFontSize, applyUiScale } from "../lib/appearance";
@@ -147,6 +148,16 @@ export default function App() {
     (key: string, vars?: Record<string, string | number>) => window.PetI18n.t(language, key, vars),
     [language]
   );
+
+  /* 검색 결과에 보여줄 탭 이름. tabGroups에서 파생하므로 숨겨진 탭(잠금 전 개발자 탭,
+     꺼진 기억 관리 탭)은 자동으로 빠진다 — 목록에 없는 탭이 결과로 나오면 눌러도 못 간다. */
+  const tabLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    for (const group of tabGroups) {
+      for (const tab of group.tabs) labels[tab.id] = tt(tab.labelKey);
+    }
+    return labels;
+  }, [tabGroups, tt]);
 
   const set = useCallback(<K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -367,6 +378,7 @@ export default function App() {
             <h1 onClick={handleTitleClick}>{tt("window.settingsTitle")}</h1>
             <p>{tt("settings.subtitle")}</p>
           </header>
+          <SettingsSearch tabLabels={tabLabels} onJump={activateTab} />
           <nav className="settings-tabs" role="tablist" aria-label={tt("settings.tabsAriaLabel")}>
             {tabGroups.map((group) => (
               <div key={group.labelKey} className="settings-tab-group">
@@ -389,18 +401,18 @@ export default function App() {
           </nav>
         </aside>
         <div className="settings-content">
-          <section className={`tab-panel${activeTab === "general" ? " active" : ""}`} hidden={activeTab !== "general"}><GeneralTab /></section>
-          <section className={`tab-panel${activeTab === "appearance" ? " active" : ""}`} hidden={activeTab !== "appearance"}><AppearanceTab /></section>
-          <section className={`tab-panel${activeTab === "player" ? " active" : ""}`} hidden={activeTab !== "player"}><PlayerTab /></section>
-          <section className={`tab-panel${activeTab === "customization" ? " active" : ""}`} hidden={activeTab !== "customization"}><CustomizationTab /></section>
-          <section className={`tab-panel${activeTab === "memory" ? " active" : ""}`} hidden={activeTab !== "memory"}><MemoryTab active={activeTab === "memory"} /></section>
-          <section className={`tab-panel${activeTab === "alerts" ? " active" : ""}`} hidden={activeTab !== "alerts"}><AlertsTab /></section>
-          <section className={`tab-panel${activeTab === "ui" ? " active" : ""}`} hidden={activeTab !== "ui"}><UiTab /></section>
-          <section className={`tab-panel${activeTab === "conversation" ? " active" : ""}`} hidden={activeTab !== "conversation"}><ConversationTab /></section>
-          <section className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
-          <section className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
-          <section className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
-          <section className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
+          <section data-tab-panel="general" className={`tab-panel${activeTab === "general" ? " active" : ""}`} hidden={activeTab !== "general"}><GeneralTab /></section>
+          <section data-tab-panel="appearance" className={`tab-panel${activeTab === "appearance" ? " active" : ""}`} hidden={activeTab !== "appearance"}><AppearanceTab /></section>
+          <section data-tab-panel="player" className={`tab-panel${activeTab === "player" ? " active" : ""}`} hidden={activeTab !== "player"}><PlayerTab /></section>
+          <section data-tab-panel="customization" className={`tab-panel${activeTab === "customization" ? " active" : ""}`} hidden={activeTab !== "customization"}><CustomizationTab /></section>
+          <section data-tab-panel="memory" className={`tab-panel${activeTab === "memory" ? " active" : ""}`} hidden={activeTab !== "memory"}><MemoryTab active={activeTab === "memory"} /></section>
+          <section data-tab-panel="alerts" className={`tab-panel${activeTab === "alerts" ? " active" : ""}`} hidden={activeTab !== "alerts"}><AlertsTab /></section>
+          <section data-tab-panel="ui" className={`tab-panel${activeTab === "ui" ? " active" : ""}`} hidden={activeTab !== "ui"}><UiTab /></section>
+          <section data-tab-panel="conversation" className={`tab-panel${activeTab === "conversation" ? " active" : ""}`} hidden={activeTab !== "conversation"}><ConversationTab /></section>
+          <section data-tab-panel="shortcuts" className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
+          <section data-tab-panel="tray" className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
+          <section data-tab-panel="favorites" className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
+          <section data-tab-panel="dev" className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
         </div>
         <footer className="settings-footer">
           {saveError && <div className="save-error">{saveError}</div>}

@@ -348,6 +348,7 @@ npm run dist -- --publish always
 | 시스템 트레이·펫 우클릭 메뉴 | `windows/pet-menu-controller.ts`, `pet-menu-model.ts`, `ui/pet-context-menu/` |
 | 전역 단축키·Mouse4/5 | `global-shortcut-manager.ts`, `main.ts` |
 | 이미지 리사이즈 | `image-resize.ts` |
+| 설정 검색 | `ui/settings/search.tsx`, `App.tsx`의 `tabLabels`·`data-tab-panel` |
 | 캡처·QA 명령줄 하네스 | `qa-capture.ts`, `main.ts`의 `qaCaptureContext()` |
 | 미디어·전체화면·폰트 | `media-monitor.ts`, `dnd-monitor.ts`, `fonts.ts` |
 | 방해 금지 시 창 숨김·복구 | `windows/dnd-visibility.ts` |
@@ -482,6 +483,30 @@ Gemini의 세 호출 경로는 의도적으로 다르다.
 기억 DB에 남기는 사람이 읽는 값(종료 사유·에피소드 요약)은 앱 언어로 만든다.
 이름과 예약 키는 기억에 저장하지 않는다.
 
+### 설정 검색
+
+탭이 13개(숨김 2개 포함)까지 늘어나 "기능이 있는데 못 찾는" 상황이 생겨 2026-08-21에 넣었다.
+실제로 "기억 관리 탭 표시" 토글이 그렇게 묻혀 있었다.
+
+**색인을 손으로 관리하지 않고 렌더된 DOM에서 그때그때 만든다.** 탭 패널은 전부 마운트된 상태로
+`hidden`만 토글되므로(`App.tsx`) 숨은 탭의 항목도 그대로 읽힌다. 설정 항목 목록을 검색 코드에
+복사해 두면 탭을 고칠 때마다 같이 고쳐야 하고, 안 고치면 새 설정이 조용히 검색에서 빠진다.
+그래서 각 패널에 `data-tab-panel`을 달고 `rows.tsx`의 세 행 종류(`.setting-row`·`.toggle-row`·
+`.text-field`)를 훑는다. 패널 하나라도 그 속성이 빠지면 그 탭이 통째로 검색에서 사라지므로
+`test/settings-search.test.js`가 목록 일치를 검사한다.
+
+주의할 점 셋:
+
+- **검색창은 저장 버튼이 있는 `<form>` 안에 있다.** Enter를 막지 않으면 검색하려다 설정이
+  저장된다. 결과 항목도 `type="button"`이 없으면 submit이 된다.
+- **결과에 DOM 노드를 담지 않는다.** 탭을 바꾸면 리렌더로 그 노드가 떨어져 스크롤이 안 먹는다.
+  탭 id와 라벨만 담고 이동 뒤 `requestAnimationFrame`에서 라벨로 다시 찾는다.
+- **라벨은 `textContent`가 아니다.** 입력 컨트롤을 떼고 읽는다 — 안 그러면 `<select>` 안의 모든
+  선택지 텍스트가 섞여 결과 줄을 읽을 수 없다.
+
+`tabLabels`는 실제로 보이는 탭 목록(`tabGroups`)에서 파생한다. 잠금 전 개발자 탭처럼 갈 수 없는
+탭이 결과에 나오면 눌러도 이동하지 못한다.
+
 ## 렌더링 계약
 
 - `src/vendor/three/`는 배포 패키지에서 Three examples가 빠지는 문제 때문에 둔 공식 사본이다.
@@ -580,6 +605,11 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
 렌더러 회귀 기본 행렬은 기본, 휴식, 스퀴시, 쓰다듬기, 이동, AI 질문, AI 답변, 즐겨찾기,
 커스터마이징, 커스터마이징 팔레트다. 커스터마이징 팔레트 플래그는
 `--capture-customize=<png>`와 함께 사용한다.
+
+**입력해야 나타나는 UI는 `--capture-settings-type=<선택자>::<문자열>`로 확인한다.** 설정 검색의
+결과 목록이 그렇다. React 제어 입력은 `value` 대입만으로는 `onChange`가 돌지 않아 화면에 글자는
+보이면서 결과는 안 뜨므로, 그 플래그가 프로토타입의 네이티브 setter로 넣는다. `--capture-settings-click`과
+함께 주면 입력 → 결과 클릭까지 한 번에 확인된다.
 
 **누름 효과(파문·젤리 출렁임)는 `--capture-settings-press=<선택자>`로만 확인된다.**
 `--capture-settings-click`이 부르는 `el.click()`은 `pointerdown`을 만들지 않아 `ui-motion.js`의
@@ -681,8 +711,9 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   못 찾는다. 보정 목록에 없는 지명이 엉뚱한 곳으로 가는지는 실측으로만 알 수 있다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.
 - HSV 축별 팔레트 양자화는 특정 경계에서 색 선택이 직관적으로 움직이지 않을 수 있다.
-- [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 알람·클릭 사운드의 정확한 출처 URL과
-  라이선스가 아직 보완되지 않았다. 배포 전 해결해야 할 법적 고지 항목이다.
+- 알람·클릭 사운드는 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 public domain으로
+  명시돼 있다(파일별 출처 URL은 없다). 2026-08-21 확인 — 그 전까지 여기 "미보완"으로 남아
+  있던 항목이라, 배포 게이트로 다시 올리기 전에 이 문장을 먼저 볼 것.
 
 ## 백로그
 
@@ -693,6 +724,13 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   자체는 줄었지만, 남은 차단은 여전히 원인 없는 실패로 보인다.
 - CI: 현재 정적 검사만 실행한다. `npm run dist`, portable EXE·소스 ZIP 구성 검사, 패키징
   artifact 업로드와 Electron QA 캡처·실행 smoke를 자동화할지 결정한다.
+- **앱의 자동 판단을 사용자에게 보여주기**: 2026-08-21에 같은 원인의 버그를 두 건 찾았다 —
+  날씨는 입력한 지명이 **어디로 해석됐는지** 화면에 없어서 "부산"이 경상북도 시골로 가는 걸
+  몇 년간 몰랐고, 기상청 폴백은 조용해서 그 모델을 쓰는지조차 알 수 없었다. 같은 종류가
+  더 있다: 기억 추출이 무엇을 저장했는지, 미완료 주제가 왜 닫혔는지(`resolution_notes`는
+  저장만 되고 화면에 안 나온다), 펫이 왜 그 화제로 말을 걸었는지. 기억 관리 탭에 "최근
+  판단" 같은 자리를 만들어 노출하면 이런 버그가 스스로 드러난다. 새 기능이라기보다 **관측
+  가능성**이고, 지금은 앱이 조용히 판단하고 사용자는 결과만 본다.
 - 문서 요약: 문서 유형별 Mermaid, 정량 차트, 이미지 생성 지원 검토
 - 장기 기억: 임베딩 기반 의미 검색·중복 판정, 다중 사용자 지원
 - TypeScript: 지원되는 parser가 준비되면 TS ESLint AST 규칙 검토

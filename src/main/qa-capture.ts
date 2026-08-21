@@ -306,6 +306,23 @@ function captureSettingsWindow(
         console.log("[QA] 누름 효과:", JSON.stringify(pressed));
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
+      /* --capture-settings-type=<선택자>::<문자열>: 입력칸에 값을 넣고 input 이벤트를 보낸다.
+         설정 검색처럼 "입력해야만 나타나는 UI"를 확인하는 용도(2026-08-21 추가). */
+      const typeRequest = argValue(argv, "--capture-settings-type=");
+      if (typeRequest !== null) {
+        const [typeSelector, ...textParts] = typeRequest.split("::");
+        const typedText = textParts.join("::");
+        await settingsCaptureWindow.webContents.executeJavaScript(
+          `(() => { const el = document.querySelector(${JSON.stringify(typeSelector)});`
+          + ` if (!el) return false; el.focus();`
+          /* React 제어 입력은 value를 직접 대입해도 onChange가 돌지 않는다(React가 값을
+             따로 추적한다). 프로토타입의 네이티브 setter로 넣어야 상태가 갱신된다. */
+          + ` const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;`
+          + ` setValue.call(el, ${JSON.stringify(typedText)});`
+          + ` el.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
       // --capture-settings-click=<CSS 선택자>로 찍기 직전에 아무 요소나 한 번 클릭할 수 있다.
       // 팝오버·아코디언처럼 펼쳐야만 보이는 UI를 확인하려고 2026-08-07에 추가.
       // "|"로 여러 선택자를 이으면 순서대로 짧은 간격을 두고 클릭한다(같은 선택자를 여러 번

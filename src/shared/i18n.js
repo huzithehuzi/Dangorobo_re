@@ -347,6 +347,17 @@
     "settings.memory.description": { ko: "펫이 기억한 장기 기억과 미완료 주제를 관리합니다.", en: "Manage the pet's long-term memories and unresolved topics.", ja: "ペットの長期記憶と未解決のトピックを管理します。" },
     "settings.memory.statsHeading": { ko: "통계", en: "Statistics", ja: "統計" },
     "settings.memory.totalMemories": { ko: "장기 기억", en: "Long-term memories", ja: "長期記憶" },
+    "settings.search.placeholder": { ko: "설정 검색", en: "Search settings", ja: "設定を検索" },
+    "settings.search.ariaLabel": {
+      ko: "설정 항목 검색",
+      en: "Search settings",
+      ja: "設定項目を検索"
+    },
+    "settings.search.noResults": {
+      ko: "일치하는 설정이 없습니다",
+      en: "No matching settings",
+      ja: "一致する設定がありません"
+    },
     "settings.memory.openLoops": { ko: "미완료 주제", en: "Open loops", ja: "未解決のトピック" },
     "settings.memory.episodes": { ko: "대화 기록", en: "Conversation sessions", ja: "会話記録" },
     "settings.memory.longTermHeading": { ko: "장기 기억", en: "Long-term Memory", ja: "長期記憶" },
