@@ -280,3 +280,94 @@ test("프롬프트에 보여줄 기존 기억 수에 상한이 있다", () => {
   assert.ok(Number.isInteger(EXISTING_MEMORIES_PROMPT_LIMIT));
   assert.ok(EXISTING_MEMORIES_PROMPT_LIMIT > 0);
 });
+
+// ── 잊어달라는 요청 감지와 응답 파싱 (2026-08-21) ──────────────────────────────────
+
+const {
+  detectForgetSignals,
+  buildForgetPrompt,
+  parseForgetResponse
+} = require("../src/main/memory/memory-extraction.js");
+
+const FORGET_MEMORIES = [
+  { id: 11, memory_label: "커피 취향", memory_value: "라떼를 좋아함" },
+  { id: 12, memory_label: "아침 운동", memory_value: "매일 달리기" }
+];
+const FORGET_LOOPS = [
+  { id: 21, topic: "자격증 시험 결과" },
+  { id: 22, topic: "이사 견적" }
+];
+
+test("잊어달라는 표현을 세 언어에서 걸러낸다", () => {
+  assert.equal(detectForgetSignals("그건 이제 잊어줘"), true);
+  assert.equal(detectForgetSignals("내 취향 기억하지 마"), true);
+  assert.equal(detectForgetSignals("please forget that"), true);
+  assert.equal(detectForgetSignals("それは忘れて"), true);
+  assert.equal(detectForgetSignals("消してほしい"), true);
+});
+
+test("평범한 대화는 잊기 판정을 부르지 않는다", () => {
+  assert.equal(detectForgetSignals("오늘 점심 뭐 먹을까?"), false);
+  assert.equal(detectForgetSignals("what should I do today?"), false);
+  assert.equal(detectForgetSignals(""), false);
+  assert.equal(detectForgetSignals(null), false);
+});
+
+test("잊기 프롬프트는 기억과 주제를 M/L 번호로 함께 보여준다", () => {
+  const prompt = buildForgetPrompt(
+    [{ question: "커피 취향 잊어줘", answer: "알겠어" }],
+    FORGET_MEMORIES,
+    FORGET_LOOPS,
+    "ko"
+  );
+  assert.ok(prompt.userPrompt.includes("M1. 커피 취향: 라떼를 좋아함"));
+  assert.ok(prompt.userPrompt.includes("L2. 이사 견적"));
+  // 두 표가 별개라 번호만 받으면 어느 표인지 알 수 없다.
+  assert.ok(prompt.userPrompt.includes('["M2", "L1"]'));
+  assert.ok(prompt.maxTokens > 0);
+});
+
+test("잊기 프롬프트는 언어를 따르고 빈 목록도 표시한다", () => {
+  const ko = buildForgetPrompt([], FORGET_MEMORIES, [], "ko");
+  const en = buildForgetPrompt([], FORGET_MEMORIES, [], "en");
+  assert.notEqual(ko.userPrompt, en.userPrompt);
+  assert.ok(ko.userPrompt.includes("(없음)"));
+  assert.ok(en.userPrompt.includes("(none)"));
+});
+
+test("M/L 토큰을 실제 행 id로 바꾼다", () => {
+  assert.deepEqual(
+    parseForgetResponse('["M2", "L1"]', FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [12], loopIds: [21] }
+  );
+});
+
+test("따옴표나 대괄호가 깨져도 지울 대상은 읽는다", () => {
+  // JSON 파싱에 의존하지 않는 이유 — 모델이 형식을 흘리는 편이 아무것도 못 지우는 것보다 낫다.
+  assert.deepEqual(
+    parseForgetResponse("M1, l2", FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [11], loopIds: [22] }
+  );
+});
+
+test("범위를 벗어난 번호와 중복은 버린다", () => {
+  assert.deepEqual(
+    parseForgetResponse('["M9", "L0", "M1", "M1"]', FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [11], loopIds: [] }
+  );
+});
+
+test("빈 배열이나 잡음에서는 아무것도 지우지 않는다", () => {
+  assert.deepEqual(
+    parseForgetResponse("[]", FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [], loopIds: [] }
+  );
+  assert.deepEqual(
+    parseForgetResponse("잊을 것이 없습니다", FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [], loopIds: [] }
+  );
+  assert.deepEqual(
+    parseForgetResponse(null, FORGET_MEMORIES, FORGET_LOOPS),
+    { memoryIds: [], loopIds: [] }
+  );
+});

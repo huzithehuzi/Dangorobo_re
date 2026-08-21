@@ -57,7 +57,7 @@ let SQL: SqlJsStatic | null = null;
 let db: Database | null = null;
 let writeDatabaseFile = writeFileAtomicSync;
 
-const MEMORY_SCHEMA_VERSION = 3;
+const MEMORY_SCHEMA_VERSION = 4;
 
 function getMemoryDbPath() {
   return path.join(app.getPath("userData"), "assistant-memory.db");
@@ -144,6 +144,7 @@ function createDomainTables() {
         conflict_notes TEXT,
         is_verified BOOLEAN DEFAULT 0,
         is_archived BOOLEAN DEFAULT 0,
+        is_forgotten BOOLEAN DEFAULT 0,
         source_episode_id INTEGER,
         tags TEXT,
         created_at TEXT NOT NULL
@@ -171,6 +172,7 @@ function createDomainTables() {
         resolution_notes TEXT,
         is_closed BOOLEAN DEFAULT 0,
         closed_at TEXT,
+        is_forgotten BOOLEAN DEFAULT 0,
         created_at TEXT NOT NULL
       );
   `);
@@ -261,10 +263,26 @@ function migrateToVersion3() {
   `);
 }
 
+// v4: "사용자가 잊어달라고 한 것"을 표시하는 열. 소프트 삭제(is_archived)와 주제 닫기
+// (is_closed)만으로는 부족하다 — insertMemory()는 같은 키를 다시 넣으면 아카이브를 풀어
+// 되살리고, insertOpenLoop()는 닫힌 주제를 중복으로 보지 않아 같은 주제를 새 행으로
+// 다시 만든다. 즉 표시가 없으면 대화 이력에 그 이야기가 남아 있는 동안 추출이 돌 때마다
+// 잊은 것이 조용히 돌아온다.
+function ensureVersion4Columns() {
+  ensureColumn("long_term_memory", "is_forgotten", "BOOLEAN DEFAULT 0");
+  ensureColumn("open_loops", "is_forgotten", "BOOLEAN DEFAULT 0");
+}
+
+function migrateToVersion4() {
+  migrateToVersion3();
+  ensureVersion4Columns();
+}
+
 const SCHEMA_MIGRATIONS = new Map<number, () => void>([
   [1, migrateToVersion1],
   [2, migrateToVersion2],
-  [3, migrateToVersion3]
+  [3, migrateToVersion3],
+  [4, migrateToVersion4]
 ]);
 
 function validateCurrentSchema() {
@@ -275,7 +293,7 @@ function validateCurrentSchema() {
     long_term_memory: [
       "id", "category", "memory_key", "memory_label", "memory_value", "importance",
       "first_detected_at", "last_updated_at", "mention_count", "conflict_notes",
-      "is_verified", "is_archived", "source_episode_id", "tags", "created_at"
+      "is_verified", "is_archived", "is_forgotten", "source_episode_id", "tags", "created_at"
     ],
     episodes: [
       "id", "session_id", "date", "summary", "key_topics", "importance",
@@ -284,7 +302,7 @@ function validateCurrentSchema() {
     open_loops: [
       "id", "episode_id", "topic", "mentioned_at", "last_mentioned_at",
       "mention_count", "expected_resolution_date", "resolution_notes", "is_closed",
-      "closed_at", "created_at"
+      "closed_at", "is_forgotten", "created_at"
     ]
   };
   for (const [tableName, expectedColumns] of Object.entries(requiredColumns)) {
@@ -447,7 +465,7 @@ function findDuplicateMemory(
   category: string,
   memoryKey: string,
   memoryValue: string
-): { id: number; importance: number } | null {
+): { id: number; importance: number; isForgotten: boolean } | null {
   if (!db) return null;
 
   try {
@@ -456,30 +474,32 @@ function findDuplicateMemory(
     // is_archived - otherwise re-saving a previously deleted key throws a UNIQUE
     // constraint error instead of reviving/updating that row.
     const keyMatch = db.exec(
-      `SELECT id, importance FROM long_term_memory WHERE memory_key = ?`,
+      `SELECT id, importance, is_forgotten FROM long_term_memory WHERE memory_key = ?`,
       [memoryKey]
     );
     const keyRow = keyMatch[0]?.values[0];
     if (keyRow) {
       return {
         id: Number(keyRow[0]),
-        importance: Number(keyRow[1])
+        importance: Number(keyRow[1]),
+        isForgotten: Boolean(keyRow[2])
       };
     }
 
     const result = db.exec(
-      `SELECT id, memory_value, importance FROM long_term_memory
+      `SELECT id, memory_value, importance, is_forgotten FROM long_term_memory
        WHERE category = ? AND is_archived = 0`,
       [category]
     );
 
     const rows = result[0]?.values || [];
     for (const row of rows) {
-      const [id, existingValue, importance] = row;
+      const [id, existingValue, importance, isForgotten] = row;
       if (detectConflict(memoryValue, existingValue).type === "duplicate") {
         return {
           id: Number(id),
-          importance: Number(importance)
+          importance: Number(importance),
+          isForgotten: Boolean(isForgotten)
         };
       }
     }
@@ -490,17 +510,34 @@ function findDuplicateMemory(
   }
 }
 
-function insertMemory(memoryData: MemoryData): true | null {
+/**
+ * 기억을 저장한다. 같은 키·같은 뜻의 행이 있으면 새로 만들지 않고 그 행을 갱신한다.
+ *
+ * **사용자가 잊어달라고 한 행(`is_forgotten`)은 자동 추출이 되살리지 못한다.** 잊으라고 한
+ * 사실은 잊은 뒤에도 대화 이력에 한동안 남아 있어서, 막지 않으면 다음 추출이 같은 사실을
+ * 다시 넣어 아카이브가 풀린다 — 사용자에게는 "잊어달라 했는데 안 잊는다"로 보인다.
+ * 사용자가 직접 하는 가져오기·복원은 `allowForgotten`으로 그 표시를 지우고 되살린다.
+ */
+function insertMemory(
+  memoryData: MemoryData,
+  options: { allowForgotten?: boolean } = {}
+): true | null {
   if (!db) return null;
 
   return runPersistentMutation("Insert memory", null, database => {
     const now = new Date().toISOString();
     const duplicate = findDuplicateMemory(memoryData.category, memoryData.memory_key, memoryData.memory_value);
 
+    if (duplicate?.isForgotten && options.allowForgotten !== true) {
+      // 성공으로 돌려준다 — 호출부(추출 러너)에는 실패가 아니고, 저장할 것이 없을 뿐이다.
+      return true;
+    }
+
     if (duplicate) {
       database.run(
         `UPDATE long_term_memory
-         SET memory_value = ?, memory_label = ?, importance = ?, last_updated_at = ?, mention_count = mention_count + 1, is_archived = 0
+         SET memory_value = ?, memory_label = ?, importance = ?, last_updated_at = ?,
+             mention_count = mention_count + 1, is_archived = 0, is_forgotten = 0
          WHERE id = ?`,
         [
           memoryData.memory_value,
@@ -619,6 +656,84 @@ function deleteMemory(memoryId: number): boolean {
   });
 }
 
+/**
+ * 사용자가 잊어달라고 한 기억. 소프트 삭제에 "되살리지 말라" 표시를 함께 세운다.
+ * 표시가 없으면 다음 추출이 같은 사실을 다시 넣어 아카이브가 풀린다(insertMemory 참고).
+ */
+function forgetMemory(memoryId: number): boolean {
+  if (!db) return false;
+
+  return runPersistentMutation("Forget memory", false, database => {
+    database.run(
+      `UPDATE long_term_memory SET is_archived = 1, is_forgotten = 1 WHERE id = ?`,
+      [memoryId]
+    );
+    return true;
+  });
+}
+
+/**
+ * 잊은 기억을 되살린다. 사용자가 기억 관리 탭에서 직접 부르는 경로 — 잘못 잊은 것을
+ * 되돌릴 수단이 없으면 `is_forgotten`이 영구히 그 사실을 다시 배우지 못하게 막는다.
+ */
+function restoreForgottenMemory(memoryId: number): boolean {
+  if (!db) return false;
+
+  return runPersistentMutation("Restore forgotten memory", false, database => {
+    database.run(
+      `UPDATE long_term_memory SET is_archived = 0, is_forgotten = 0, last_updated_at = ?
+       WHERE id = ?`,
+      [new Date().toISOString(), memoryId]
+    );
+    return true;
+  });
+}
+
+/** 잊은 기억 목록. 기억 관리 탭이 복원 버튼과 함께 보여준다. */
+function getForgottenMemories(limit = 100): MemoryRow[] {
+  if (!db) return [];
+
+  try {
+    const result = db.exec(
+      `SELECT id, category, memory_key, memory_label, memory_value, importance,
+              last_updated_at, mention_count, is_verified, created_at
+       FROM long_term_memory WHERE is_forgotten = 1 ORDER BY last_updated_at DESC LIMIT ?`,
+      [limit]
+    );
+
+    const rows = result[0]?.values || [];
+    return rows.map(row => ({
+      id: Number(row[0]),
+      category: String(row[1]),
+      memory_key: String(row[2]),
+      memory_label: String(row[3]),
+      memory_value: String(row[4]),
+      importance: Number(row[5]),
+      last_updated_at: String(row[6]),
+      mention_count: Number(row[7]),
+      is_verified: !!row[8],
+      created_at: String(row[9])
+    }));
+  } catch (error) {
+    console.error("[MemorySQLite] Get forgotten memories failed:", error);
+    return [];
+  }
+}
+
+function getForgottenMemoryCount(): number {
+  if (!db) return 0;
+
+  try {
+    const result = db.exec(
+      `SELECT COUNT(*) FROM long_term_memory WHERE is_forgotten = 1`
+    );
+    return Number(result[0]?.values[0][0]) || 0;
+  } catch (error) {
+    console.error("[MemorySQLite] Get forgotten memory count failed:", error);
+    return 0;
+  }
+}
+
 function setMemoryVerified(memoryId: number, verified: boolean): boolean {
   if (!db) return false;
   return runPersistentMutation("Set memory verified", false, database => {
@@ -679,9 +794,61 @@ function findDuplicateOpenLoop(topic: string): { id: number } | null {
   }
 }
 
+/**
+ * 사용자가 잊어달라고 해서 닫은 주제 중 같은 주제를 찾는다.
+ *
+ * `findDuplicateOpenLoop()`는 열린 주제만 본다 — 닫힌 주제는 중복으로 보지 않으므로
+ * 표시가 없으면 잊은 주제가 **새 행으로** 다시 만들어진다. 자동 정리로 닫힌 주제는
+ * 여기 걸리지 않는다(다시 이야기하면 되살아나는 게 맞다).
+ */
+function findForgottenOpenLoop(topic: string): { id: number } | null {
+  if (!db) return null;
+
+  try {
+    const result = db.exec(
+      `SELECT id, topic FROM open_loops WHERE is_closed = 1 AND is_forgotten = 1`
+    );
+
+    const rows = result[0]?.values || [];
+    for (const row of rows) {
+      const [id, existingTopic] = row;
+      if (detectConflict(topic, existingTopic).type === "duplicate") {
+        return { id: Number(id) };
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("[MemorySQLite] Find forgotten open loop failed:", error);
+    return null;
+  }
+}
+
+/**
+ * 사용자가 잊어달라고 한 미완료 주제를 닫는다. 자동 정리·해결 판정과 달리 "다시 만들지
+ * 말라" 표시를 함께 세운다 — 그 이야기가 대화 이력에 남아 있는 동안 추출이 같은 주제를
+ * 새 행으로 다시 만드는 것을 막는다.
+ */
+function forgetOpenLoop(loopId: number, resolutionNotes: string): boolean {
+  if (!db) return false;
+
+  return runPersistentMutation("Forget open loop", false, database => {
+    database.run(
+      `UPDATE open_loops SET is_closed = 1, closed_at = ?, resolution_notes = ?, is_forgotten = 1
+       WHERE id = ?`,
+      [new Date().toISOString(), resolutionNotes, loopId]
+    );
+    return true;
+  });
+}
+
 // episode_id는 스키마가 INTEGER NOT NULL이라 필수다.
 function insertOpenLoop(loopData: { episode_id: number; topic: string }): true | null {
   if (!db) return null;
+
+  if (findForgottenOpenLoop(loopData.topic)) {
+    // 성공으로 돌려준다 — 호출부에는 실패가 아니고, 만들 것이 없을 뿐이다.
+    return true;
+  }
 
   return runPersistentMutation("Insert open loop", null, database => {
     const now = new Date().toISOString();
@@ -904,12 +1071,17 @@ export {
   getMemoriesByCategory,
   searchMemories,
   deleteMemory,
+  forgetMemory,
+  restoreForgottenMemory,
+  getForgottenMemories,
+  getForgottenMemoryCount,
   setMemoryVerified,
   archiveAllMemories,
   getMemoryCount,
   insertOpenLoop,
   getOpenLoops,
   closeOpenLoop,
+  forgetOpenLoop,
   archiveStaleOpenLoops,
   OPEN_LOOP_ARCHIVE_AGE_DAYS,
   getOpenLoopsCount,

@@ -25,6 +25,9 @@ type StoredMemory = {
 };
 // open_loops.id는 SQLite AUTOINCREMENT라 숫자다.
 type OpenLoop = { id: number; topic: string };
+// 잊기 판정은 행을 지목해야 하므로 id가 필요하다. 추출 프롬프트가 쓰는 StoredMemory에는
+// id가 없다 — 그쪽은 "이미 아는 사실"을 보여주기만 해서 행을 지목할 일이 없다.
+type ForgettableMemory = { id: number; memory_label: string; memory_value: string };
 type RepairEdit = { start: number; end: number; value: string };
 
 function normalizeKey(value: unknown) {
@@ -389,6 +392,134 @@ function detectCompletionSignals(text: unknown) {
   return completionKeywords.some(kw => lowerText.includes(kw));
 }
 
+// 사용자가 "잊어달라"고 했을 가능성을 로컬에서 먼저 걸러낸다. 이 검사가 참일 때만
+// LLM에게 무엇을 잊을지 물으므로, 대화 대부분에서는 추가 호출이 없다
+// (detectCompletionSignals와 같은 구조·같은 이유).
+//
+// 여기서 놓치는 표현은 그 대화에서 안 잊고 지나가는 것뿐이다. 반대로 여기서 과하게
+// 걸리면 LLM 호출만 늘고 잊을 게 없다는 빈 배열이 온다 — 그래서 애매하면 넣는 쪽보다
+// 빼는 쪽으로 둔다. 실제 삭제 여부는 항상 LLM 판단이다.
+const FORGET_KEYWORDS = [
+  "잊어", "잊어줘", "잊자", "기억하지", "기억 하지", "기억에서",
+  "지워줘", "지워 줘", "삭제해", "없던 일로",
+  "forget", "unremember", "delete that", "erase that",
+  "忘れて", "忘れろ", "消して", "削除して"
+];
+
+function detectForgetSignals(text: unknown) {
+  if (!text) return false;
+
+  const lowerText = String(text).toLowerCase();
+  return FORGET_KEYWORDS.some(keyword => lowerText.includes(keyword));
+}
+
+/**
+ * 무엇을 잊을지 LLM에게 묻는 프롬프트. 기억과 미완료 주제를 한 번에 보여주고 `M<번호>`·
+ * `L<번호>` 토큰으로 답하게 한다 — 두 표가 별도라 번호만 받으면 어느 표인지 알 수 없다.
+ *
+ * 사용자 데이터를 지우는 판단이라 **확실한 것만** 고르라고 못 박는다. 놓치면 사용자가 다시
+ * 말하면 되지만, 잘못 지우면 사용자는 기억 관리 탭에서 직접 복원해야 한다.
+ */
+function buildForgetPrompt(
+  conversationHistory: PromptTurn[],
+  memories: ForgettableMemory[],
+  openLoops: OpenLoop[],
+  language = "ko"
+) {
+  const turns = conversationHistory
+    .slice(-5)
+    .map((turn, idx) => `Q${idx + 1}: ${turn.question}\nA${idx + 1}: ${turn.answer}`)
+    .join("\n\n");
+
+  const memoryLines = memories
+    .map((memory, idx) => `M${idx + 1}. ${memory.memory_label}: ${memory.memory_value}`)
+    .join("\n");
+  const loopLines = openLoops
+    .map((loop, idx) => `L${idx + 1}. ${loop.topic}`)
+    .join("\n");
+
+  if (language === "ko") {
+    return {
+      systemPrompt: "당신은 사용자가 잊어달라고 요청한 항목을 찾아내는 AI입니다.",
+      userPrompt: `다음 대화에서 사용자가 잊어달라고(지워달라고) 명시적으로 요청한 항목을 아래 목록에서 고르세요.
+
+대화:
+${turns}
+
+기억 목록:
+${memoryLines || "(없음)"}
+
+미완료 주제 목록:
+${loopLines || "(없음)"}
+
+규칙:
+- 사용자가 분명히 잊어달라고 한 것만 고르세요. 애매하면 고르지 마세요.
+- 사용자가 단순히 화제를 바꾼 것은 잊어달라는 요청이 아닙니다.
+- 해당하는 것이 없으면 빈 배열 []로 답하세요.
+
+응답 형식 (토큰 배열만, 다른 텍스트 없이): ["M2", "L1"]`,
+      maxTokens: 80
+    };
+  }
+
+  return {
+    systemPrompt: "You identify items the user explicitly asked to forget.",
+    userPrompt: `From the lists below, pick the items the user explicitly asked you to forget or delete in this conversation.
+
+Conversation:
+${turns}
+
+Memories:
+${memoryLines || "(none)"}
+
+Open loops:
+${loopLines || "(none)"}
+
+Rules:
+- Pick only what the user clearly asked to forget. If unsure, do not pick it.
+- Merely changing the subject is not a request to forget.
+- Respond with an empty array [] if nothing applies.
+
+Respond format (array of tokens only, no other text): ["M2", "L1"]`,
+    maxTokens: 80
+  };
+}
+
+/**
+ * `M<번호>`·`L<번호>` 토큰을 실제 행 id로 바꾼다. JSON 파싱에 의존하지 않고 토큰을 직접
+ * 훑는다 — 모델이 따옴표나 대괄호를 빼먹어도 지울 대상은 정확히 읽히고, 범위를 벗어난
+ * 번호는 버린다.
+ */
+function parseForgetResponse(
+  responseText: unknown,
+  memories: ForgettableMemory[],
+  openLoops: OpenLoop[]
+): { memoryIds: number[]; loopIds: number[] } {
+  const memoryIds: number[] = [];
+  const loopIds: number[] = [];
+
+  try {
+    const tokens = String(responseText || "").toUpperCase().match(/[ML]\s*\d+/g) || [];
+    for (const token of tokens) {
+      const kind = token[0];
+      const index = Number(token.slice(1).trim());
+      if (!Number.isInteger(index) || index < 1) continue;
+      if (kind === "M" && index <= memories.length) {
+        const id = Number(memories[index - 1].id);
+        if (Number.isInteger(id) && !memoryIds.includes(id)) memoryIds.push(id);
+      }
+      if (kind === "L" && index <= openLoops.length) {
+        const id = Number(openLoops[index - 1].id);
+        if (Number.isInteger(id) && !loopIds.includes(id)) loopIds.push(id);
+      }
+    }
+  } catch (error) {
+    console.error("[MemoryExtraction] Parse forget response failed:", error);
+  }
+
+  return { memoryIds, loopIds };
+}
+
 // 장기 기억과 같은 이유(LLM이 매번 대화 조각만 보고 표현만 다른 주제를 새로
 // 만들어내는 것)로 미완료 주제도 계속 쌓일 수 있어, 이미 열려있는 주제를
 // 보여주고 같은 주제면 새로 만들지 말라고 지시한다.
@@ -561,6 +692,9 @@ export {
   parseExtractionResponse,
   detectOpenLoops,
   detectCompletionSignals,
+  detectForgetSignals,
+  buildForgetPrompt,
+  parseForgetResponse,
   calculateSimilarity,
   detectConflict,
   buildOpenLoopsDetectionPrompt,
@@ -572,4 +706,4 @@ export {
   repairUnquotedStringValues,
   parseJsonArrayLeniently
 };
-export type { PromptTurn, StoredMemory, OpenLoop };
+export type { PromptTurn, StoredMemory, ForgettableMemory, OpenLoop };

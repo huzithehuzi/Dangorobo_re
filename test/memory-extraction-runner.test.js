@@ -5,7 +5,8 @@ const { createMemoryExtractionRunner } = require("../src/main/memory/memory-extr
 const {
   buildExtractionPrompt,
   buildOpenLoopsDetectionPrompt,
-  buildLoopResolutionPrompt
+  buildLoopResolutionPrompt,
+  buildForgetPrompt
 } = require("../src/main/memory/memory-extraction.js");
 
 // 분리 전 main.js가 askGemini에 넘기던 옵션 그대로여야 한다. maxHistoryTurns는
@@ -26,6 +27,7 @@ function expectedAskOptions(maxOutputTokens) {
  * @param {{
  *   askResponses?: Array<string | Error>,
  *   openLoops?: Array<{ id: number, topic: string }>,
+ *   forgettableMemories?: Array<{ id: number, memory_label: string, memory_value: string }>,
  *   episodeId?: number | null
  * }} [options]
  */
@@ -41,6 +43,12 @@ function createFakeDeps(options = {}) {
     getOpenLoops: 0,
     /** @type {unknown[][]} */
     closeOpenLoop: [],
+    /** @type {unknown[][]} */
+    getForgettableMemories: [],
+    /** @type {number[]} */
+    forgetMemory: [],
+    /** @type {unknown[][]} */
+    forgetOpenLoop: [],
     /** @type {unknown[]} */
     insertEpisode: [],
     /** @type {unknown[]} */
@@ -75,6 +83,18 @@ function createFakeDeps(options = {}) {
     },
     insertOpenLoop: (/** @type {unknown} */ loopData) => {
       calls.insertOpenLoop.push(loopData);
+      return true;
+    },
+    getForgettableMemories: (/** @type {number} */ limit) => {
+      calls.getForgettableMemories.push([limit]);
+      return options.forgettableMemories || [];
+    },
+    forgetMemory: (/** @type {number} */ id) => {
+      calls.forgetMemory.push(id);
+      return true;
+    },
+    forgetOpenLoop: (/** @type {number} */ id, /** @type {string} */ note) => {
+      calls.forgetOpenLoop.push([id, note]);
       return true;
     }
   };
@@ -200,4 +220,120 @@ test("빈 대화 이력이면 아무것도 하지 않는다", async () => {
   await createMemoryExtractionRunner(deps)([], "ko");
   assert.equal(calls.ask.length, 0);
   assert.equal(calls.getOpenLoops, 0);
+});
+
+// ── 잊어달라는 요청 (2026-08-21) ──────────────────────────────────────────────────
+//
+// 로컬 키워드 검사를 통과한 대화에서만 LLM에게 무엇을 잊을지 묻는다. 그 배치에서는
+// 다른 추출을 하지 않는다 — 같은 대화에서 기억·주제를 새로 뽑으면 방금 잊은 것이
+// 다른 표현으로 되돌아오는 경로가 생긴다.
+
+const FORGET_HISTORY = [
+  { question: "내 커피 취향은 이제 잊어줘", answer: "알겠어, 지웠어" }
+];
+const FORGET_MEMORIES = [
+  { id: 11, memory_label: "커피 취향", memory_value: "라떼를 좋아함" },
+  { id: 12, memory_label: "아침 운동", memory_value: "매일 달리기" }
+];
+const FORGET_LOOPS = [{ id: 21, topic: "자격증 시험 결과" }];
+
+test("잊어달라고 하면 지목된 기억과 주제만 잊는다", async () => {
+  const { deps, calls } = createFakeDeps({
+    askResponses: ['["M1", "L1"]'],
+    forgettableMemories: FORGET_MEMORIES,
+    openLoops: FORGET_LOOPS
+  });
+  await createMemoryExtractionRunner(deps)(FORGET_HISTORY, "ko");
+
+  const forgetPrompt = buildForgetPrompt(FORGET_HISTORY, FORGET_MEMORIES, FORGET_LOOPS, "ko");
+  assert.equal(calls.ask.length, 1, "잊기 판정 한 번만 부른다");
+  assert.equal(calls.ask[0].userPrompt, forgetPrompt.userPrompt);
+  assert.deepEqual(calls.ask[0].options, expectedAskOptions(forgetPrompt.maxTokens));
+
+  assert.deepEqual(calls.forgetMemory, [11], "M1이 가리키는 행만 잊는다");
+  assert.deepEqual(calls.forgetOpenLoop.map((call) => call[0]), [21]);
+  assert.ok(String(calls.forgetOpenLoop[0][1]).length > 0, "사유를 남긴다");
+});
+
+test("잊기 배치에서는 기억 추출도 주제 추출도 하지 않는다", async () => {
+  const { deps, calls } = createFakeDeps({
+    askResponses: ['["M1"]'],
+    forgettableMemories: FORGET_MEMORIES,
+    openLoops: FORGET_LOOPS
+  });
+  await createMemoryExtractionRunner(deps)(FORGET_HISTORY, "ko");
+
+  assert.deepEqual(calls.insertMemory, []);
+  assert.deepEqual(calls.insertOpenLoop, []);
+  assert.deepEqual(calls.insertEpisode, []);
+  assert.deepEqual(calls.getAllMemories, [], "추출 프롬프트용 목록도 안 읽는다");
+});
+
+test("완료 신호와 잊기 신호가 같이 걸리면 잊기가 이긴다", async () => {
+  // "그거 다 끝났으니 잊어줘"는 주제를 닫으라는 게 아니라 지우라는 요청이다.
+  const history = [
+    { question: "그거 다 끝났으니 이제 잊어줘", answer: "결과가 나왔구나, 지웠어" }
+  ];
+  const { deps, calls } = createFakeDeps({
+    askResponses: ['["L1"]'],
+    forgettableMemories: FORGET_MEMORIES,
+    openLoops: FORGET_LOOPS
+  });
+  await createMemoryExtractionRunner(deps)(history, "ko");
+
+  assert.deepEqual(calls.forgetOpenLoop.map((call) => call[0]), [21]);
+  assert.deepEqual(calls.closeOpenLoop, [], "해결 판정 경로를 타지 않는다");
+});
+
+test("잊을 후보가 없으면 LLM을 부르지 않는다", async () => {
+  const { deps, calls } = createFakeDeps({
+    askResponses: ['["M1"]'],
+    forgettableMemories: [],
+    openLoops: []
+  });
+  await createMemoryExtractionRunner(deps)(FORGET_HISTORY, "ko");
+
+  assert.equal(calls.ask.length, 0);
+  assert.deepEqual(calls.forgetMemory, []);
+});
+
+test("빈 배열이 오면 아무것도 잊지 않는다", async () => {
+  const { deps, calls } = createFakeDeps({
+    askResponses: ["[]"],
+    forgettableMemories: FORGET_MEMORIES,
+    openLoops: FORGET_LOOPS
+  });
+  await createMemoryExtractionRunner(deps)(FORGET_HISTORY, "ko");
+
+  assert.equal(calls.ask.length, 1);
+  assert.deepEqual(calls.forgetMemory, []);
+  assert.deepEqual(calls.forgetOpenLoop, []);
+});
+
+test("잊기 신호가 없는 대화는 기존 경로 그대로다", async () => {
+  const { deps, calls } = createFakeDeps({
+    askResponses: ["[]", "[]"],
+    forgettableMemories: FORGET_MEMORIES
+  });
+  await createMemoryExtractionRunner(deps)(ONGOING_HISTORY, "ko");
+
+  assert.deepEqual(calls.forgetMemory, []);
+  assert.deepEqual(calls.getForgettableMemories, [], "잊기 후보를 읽지도 않는다");
+  assert.equal(calls.ask.length, 2, "추출 + 주제 감지");
+});
+
+test("잊기 신호는 사용자 발화에서만 본다", async () => {
+  // 펫이 "잊어버렸어" 같은 말을 해도 사용자 요청이 아니다. 완료 판정은 답변을 보지만
+  // (기존 동작) 잊기는 요청이라 반대다.
+  const history = [
+    { question: "오늘 뭐 했어?", answer: "미안, 잊어버렸어" }
+  ];
+  const { deps, calls } = createFakeDeps({
+    askResponses: ["[]", "[]"],
+    forgettableMemories: FORGET_MEMORIES
+  });
+  await createMemoryExtractionRunner(deps)(history, "ko");
+
+  assert.deepEqual(calls.forgetMemory, []);
+  assert.equal(calls.ask.length, 2, "일반 추출 경로를 탄다");
 });

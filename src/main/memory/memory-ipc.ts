@@ -23,7 +23,7 @@ type MemoryIpcDependencies = {
   setMemoryVerified: (id: number, verified: boolean) => unknown;
   deleteMemory: (id: number) => unknown;
   closeOpenLoop: (id: number, notes: string) => unknown;
-  insertMemory: (memory: InsertableMemory) => unknown;
+  insertMemory: (memory: InsertableMemory, options?: { allowForgotten?: boolean }) => unknown;
   archiveAllMemories: () => unknown;
   validateExtractedMemory: (candidate: unknown) => MemoryValidation;
 };
@@ -130,7 +130,10 @@ function registerMemoryIpcHandlers(
     try {
       for (const candidate of memories.slice(0, MAX_MEMORY_IMPORT_ITEMS)) {
         const validation = deps.validateExtractedMemory(candidate);
-        if (validation.valid && validation.normalized && deps.insertMemory(validation.normalized)) {
+        // 사용자가 직접 고른 파일을 넣는 동작이라 잊은 기억도 되살린다 — 자동 추출만
+        // is_forgotten에 막힌다.
+        if (validation.valid && validation.normalized
+          && deps.insertMemory(validation.normalized, { allowForgotten: true })) {
           importedCount += 1;
         }
       }

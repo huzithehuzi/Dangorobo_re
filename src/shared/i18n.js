@@ -887,6 +887,11 @@
       en: "Auto-archived after {{days}}+ days without a mention",
       ja: "{{days}}日以上言及がなく自動整理"
     },
+    "memory.forgottenNote": {
+      ko: "사용자가 잊어달라고 요청해 삭제",
+      en: "Removed at the user's request to forget it",
+      ja: "ユーザーが忘れてほしいと頼んだため削除"
+    },
     "memory.episodeBatchSummary": {
       ko: "대화 배치 - {{when}} ({{turns}}턴)",
       en: "Conversation batch - {{when}} ({{turns}} turns)",

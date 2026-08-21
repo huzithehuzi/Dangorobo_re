@@ -99,6 +99,8 @@ import {
   setMemoryVerified,
   archiveAllMemories,
   closeOpenLoop,
+  forgetOpenLoop,
+  forgetMemory,
   insertMemory,
   insertOpenLoop,
   insertEpisode,
@@ -1083,6 +1085,11 @@ const triggerMemoryExtraction = createMemoryExtractionRunner({
   insertMemory,
   getOpenLoops,
   closeOpenLoop,
+  // 잊기 후보는 기억 추출이 보는 목록(EXISTING_MEMORIES_PROMPT_LIMIT)과 별개다 —
+  // 사용자가 지목할 수 있는 범위를 러너가 정한다.
+  getForgettableMemories: (limit) => getAllMemories(limit),
+  forgetMemory,
+  forgetOpenLoop,
   insertEpisode,
   insertOpenLoop
 });
