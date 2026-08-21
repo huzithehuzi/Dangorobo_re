@@ -17,6 +17,7 @@ type MemoryIpcDependencies = {
   getMemoryCount: () => number;
   getOpenLoopsCount: () => number;
   getEpisodesCount: () => number;
+  getForgottenMemoryCount: () => number;
   getMemoriesByCategory: (category: string) => unknown[];
   getAllMemories: () => unknown[];
   getOpenLoops: () => unknown[];
@@ -46,19 +47,22 @@ function registerMemoryIpcHandlers(
   ipcMain: Pick<import("electron").IpcMain, "handle">,
   deps: MemoryIpcDependencies
 ) {
+  /* forgottenCount는 화면 숫자 배지용이 아니다 — 설정창이 "기억 관리" 탭을 보여줄지
+     정하는 데 쓴다. 잊은 기억을 되살릴 곳이 그 탭뿐인데 탭 자체가 기본으로 숨어 있어서,
+     하나라도 잊었으면 토글과 무관하게 탭이 나와야 한다. */
   ipcMain.handle("memory:get-stats", async (event) => {
-    if (!isAllowed(deps, event)) {
-      return { memoryCount: 0, loopsCount: 0, episodesCount: 0 };
-    }
+    const emptyStats = { memoryCount: 0, loopsCount: 0, episodesCount: 0, forgottenCount: 0 };
+    if (!isAllowed(deps, event)) return emptyStats;
     try {
       return {
         memoryCount: deps.getMemoryCount(),
         loopsCount: deps.getOpenLoopsCount(),
-        episodesCount: deps.getEpisodesCount()
+        episodesCount: deps.getEpisodesCount(),
+        forgottenCount: deps.getForgottenMemoryCount()
       };
     } catch (error) {
       console.error("[Memory] Get stats failed:", error);
-      return { memoryCount: 0, loopsCount: 0, episodesCount: 0 };
+      return emptyStats;
     }
   });
 

@@ -250,7 +250,9 @@ interface DesktopPetSettingsApi {
   shortcutRecordingEnd(): void;
   onQueryUnsaved(callback: () => void): void;
   replyUnsavedCheck(isDirty: boolean): void;
-  getMemoryStats(): Promise<{ memoryCount?: number; loopsCount?: number; episodesCount?: number }>;
+  // forgottenCount는 화면 숫자가 아니라 "기억 관리" 탭을 보여줄지 정하는 데 쓴다
+  // (잊은 기억을 되살릴 곳이 그 탭뿐인데 기본으로 숨어 있다).
+  getMemoryStats(): Promise<{ memoryCount?: number; loopsCount?: number; episodesCount?: number; forgottenCount?: number }>;
   getMemories(category: string): Promise<MemoryRow[]>;
   getForgottenMemories(): Promise<MemoryRow[]>;
   restoreForgottenMemory(id: number): Promise<boolean>;

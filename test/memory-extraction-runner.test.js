@@ -337,3 +337,49 @@ test("잊기 신호는 사용자 발화에서만 본다", async () => {
   assert.deepEqual(calls.forgetMemory, []);
   assert.equal(calls.ask.length, 2, "일반 추출 경로를 탄다");
 });
+
+// ── 잊기 요청은 추출 주기를 기다리지 않는다 (2026-08-21) ──────────────────────────
+//
+// 러너는 **마지막 질문**에서만 잊기 신호를 찾는다. main이 3턴 주기에만 러너를 부르면,
+// 주기가 도는 턴에는 마지막 질문이 이미 다른 말이라 신호가 감지되지 않고 요청이 통째로
+// 사라진다(3번 중 2번). 펫 대화 답장은 카운터를 아예 올리지 않아 영영 사라졌다.
+
+test("main은 잊기 신호를 추출 카운터보다 먼저, early return보다 앞에서 본다", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const mainSource = fs
+    .readFileSync(path.join(__dirname, "..", "src", "main.ts"), "utf8")
+    .replace(/\s+/g, " ");
+
+  assert.ok(
+    mainSource.includes("const forgetRequested = detectForgetSignals(turn.question);"),
+    "기록하는 턴에서 바로 판정해야 한다"
+  );
+  assert.ok(
+    mainSource.includes("if (!dueForExtraction && !forgetRequested) return;"),
+    "잊기 요청이면 주기와 무관하게 추출을 당겨 실행해야 한다"
+  );
+  // countTowardExtraction으로 먼저 빠져나가면 펫 대화 답장의 잊기 요청이 사라진다.
+  assert.ok(
+    !mainSource.includes("if (!countTowardExtraction) return;"),
+    "잊기 판정보다 앞선 early return이 남아 있으면 답장 경로의 요청이 버려진다"
+  );
+  assert.ok(
+    mainSource.includes("const dueForExtraction = countTowardExtraction && assistantHistory.countTurnForExtraction();"),
+    "카운터는 원래 조건에서만 올라가야 한다(잊기로 당겨 실행할 때 주기가 밀리지 않게)"
+  );
+});
+
+test("러너는 마지막 질문에서만 잊기 신호를 본다", () => {
+  // main이 즉시 부르는 것과 짝이다. 이 전제가 깨지면(예: 이력 전체를 훑게 바꾸면)
+  // 며칠 전 대화의 "잊어줘"가 매 배치마다 다시 발동한다.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const runnerSource = fs
+    .readFileSync(path.join(__dirname, "..", "src", "main", "memory", "memory-extraction-runner.ts"), "utf8")
+    .replace(/\s+/g, " ");
+  assert.ok(
+    runnerSource.includes("const latestQuestion = conversationHistory[conversationHistory.length - 1]?.question;"),
+    "마지막 질문만 본다"
+  );
+});

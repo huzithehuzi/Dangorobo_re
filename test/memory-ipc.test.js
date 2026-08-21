@@ -29,6 +29,7 @@ function createDependencies(overrides = {}) {
     getMemoryCount: () => 3,
     getOpenLoopsCount: () => 2,
     getEpisodesCount: () => 1,
+    getForgottenMemoryCount: () => 4,
     getMemoriesByCategory: (/** @type {string} */ category) => [{ category }],
     getAllMemories: () => [{ category: "all" }],
     getOpenLoops: () => [{ id: 1, topic: "후속 주제" }],
@@ -107,6 +108,9 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
     getMemoriesByCategory: forbiddenCall,
     getAllMemories: forbiddenCall,
     getOpenLoops: forbiddenCall,
+    getForgottenMemoryCount: forbiddenCall,
+    getForgottenMemories: forbiddenCall,
+    restoreForgottenMemory: forbiddenCall,
     setMemoryVerified: forbiddenCall,
     deleteMemory: forbiddenCall,
     closeOpenLoop: forbiddenCall,
@@ -119,7 +123,8 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-stats"), {
     memoryCount: 0,
     loopsCount: 0,
-    episodesCount: 0
+    episodesCount: 0,
+    forgottenCount: 0
   });
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-all", "fact"), []);
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-open-loops"), []);
@@ -132,12 +137,15 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
   assert.equal(dependencyCalls, 0);
 });
 
-test("통계 조회는 세 값을 함께 반환하고 하나라도 실패하면 전부 0으로 폴백한다", async () => {
+test("통계 조회는 네 값을 함께 반환하고 하나라도 실패하면 전부 0으로 폴백한다", async () => {
+  // forgottenCount는 화면 숫자가 아니라 설정창이 "기억 관리" 탭을 보여줄지 정하는 값이다.
+  // 실패해도 키 자체는 남아야 한다 — UI가 undefined를 "잊은 게 있다"로 오해하지 않게.
   const success = createHarness();
   assert.deepEqual(await success.invoke("memory:get-stats"), {
     memoryCount: 3,
     loopsCount: 2,
-    episodesCount: 1
+    episodesCount: 1,
+    forgottenCount: 4
   });
 
   const failure = createHarness({
@@ -148,7 +156,20 @@ test("통계 조회는 세 값을 함께 반환하고 하나라도 실패하면 
   assert.deepEqual(await failure.invoke("memory:get-stats"), {
     memoryCount: 0,
     loopsCount: 0,
-    episodesCount: 0
+    episodesCount: 0,
+    forgottenCount: 0
+  });
+
+  const forgottenFailure = createHarness({
+    getForgottenMemoryCount: () => {
+      throw new Error("통계 실패");
+    }
+  });
+  assert.deepEqual(await forgottenFailure.invoke("memory:get-stats"), {
+    memoryCount: 0,
+    loopsCount: 0,
+    episodesCount: 0,
+    forgottenCount: 0
   });
 });
 

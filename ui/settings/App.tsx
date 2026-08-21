@@ -102,11 +102,28 @@ export default function App() {
     state.lastClickAt = now;
     if (state.count >= 5) setDevModeUnlocked(true);
   }, [devModeUnlocked]);
-  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이 켜져 있을 때만 목록에 넣고,
+  /* 잊은 기억이 하나라도 있으면 토글과 무관하게 "기억 관리" 탭을 보여준다. 되살릴 수 있는
+     곳이 그 탭뿐인데 탭이 기본으로 숨어 있어서, 펫이 잘못 잊었을 때 일반 사용자에게는
+     복구 경로가 아예 없었다.
+     창을 여는 시점에 한 번만 읽는다 — 잊기는 대화 중에 일어나고 그때 설정창은 보통 닫혀
+     있다. 열어둔 채로 잊었다면 다음에 열 때 탭이 나온다. */
+  const [hasForgottenMemories, setHasForgottenMemories] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void window.desktopPet.getMemoryStats()
+      .then((stats) => {
+        if (!cancelled) setHasForgottenMemories((stats.forgottenCount || 0) > 0);
+      })
+      .catch((error) => console.error("[Settings] Load forgotten memory count failed:", error));
+    return () => { cancelled = true; };
+  }, []);
+
+  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이나 위 조건이 참일 때만 넣고,
   // "개발자" 탭은 위 숨김 제스처로 풀렸을 때만 넣는다.
+  const memoryTabShown = Boolean(d?.memoryTabVisible) || hasForgottenMemories;
   const tabGroups = useMemo(() => {
     let groups = TAB_GROUPS;
-    if (d?.memoryTabVisible) {
+    if (memoryTabShown) {
       groups = groups.map((group) => group.labelKey !== "settings.tabGroup.talk"
         ? group
         : { ...group, tabs: [...group.tabs, { id: "memory", labelKey: "settings.tab.memory" }] });
@@ -117,7 +134,7 @@ export default function App() {
         : { ...group, tabs: [...group.tabs, { id: "dev", labelKey: "settings.tab.dev" }] });
     }
     return groups;
-  }, [d?.memoryTabVisible, devModeUnlocked]);
+  }, [memoryTabShown, devModeUnlocked]);
   // 로드·수정·저장 수명주기는 use-settings-lifecycle.ts가 소유한다(dirty를 셋이 공유한다).
   const {
     loadStatus, saveError, saveSuccess,
@@ -199,9 +216,10 @@ export default function App() {
   }, [loadStatus]);
 
   // 토글을 꺼서 "기억 관리" 탭이 목록에서 사라지면 그 탭에 머물러 있지 않게 대화 탭으로 옮긴다.
+  // 잊은 기억이 있어 탭이 나와 있는 경우에는 토글이 꺼져 있어도 내보내지 않는다.
   useEffect(() => {
-    if (activeTab === "memory" && d && !d.memoryTabVisible) activateTab("conversation");
-  }, [activeTab, d?.memoryTabVisible]);
+    if (activeTab === "memory" && d && !memoryTabShown) activateTab("conversation");
+  }, [activeTab, d, memoryTabShown]);
 
   // 이전 세션에서 개발자 탭에 머물러 있던 채로 창을 다시 열면(sessionStorage에 "dev"가
   // 남아 있음) 아직 잠금을 안 풀었어도 그 탭 내용이 그대로 보이는 걸 막는다.

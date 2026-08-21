@@ -91,3 +91,25 @@ test("잊은 기억 문구는 자동 저장이 막힌다는 점을 세 언어로
     assert.notEqual(t(language, "settings.memory.confirmRestore"), "settings.memory.confirmRestore");
   }
 });
+
+// ── 잊은 기억이 있으면 기억 관리 탭이 나온다 (2026-08-21) ──────────────────────────
+//
+// memoryTabVisible은 기본 false다. 되살리기 UI가 그 탭 안에만 있으므로, 탭이 숨어 있으면
+// 펫이 잘못 잊었을 때 일반 사용자에게는 복구 경로가 아예 없다.
+
+test("설정 UI는 잊은 기억이 있으면 토글과 무관하게 기억 관리 탭을 넣는다", () => {
+  const appSource = fs.readFileSync(path.join(repoRoot, "ui/settings/App.tsx"), "utf8")
+    .replace(/\r\n?/g, "\n");
+  assert.match(
+    appSource,
+    /const memoryTabShown = Boolean\(d\?\.memoryTabVisible\) \|\| hasForgottenMemories;/,
+    "토글 OR 잊은 기억 존재로 판정해야 한다"
+  );
+  assert.match(appSource, /stats\.forgottenCount/, "통계에서 잊은 기억 수를 읽는다");
+  // 탭을 넣는 조건과 "그 탭에서 내보내는" 조건이 갈리면 탭은 보이는데 못 머문다.
+  assert.match(
+    appSource,
+    /if \(activeTab === "memory" && d && !memoryTabShown\) activateTab\("conversation"\);/,
+    "탭 노출 조건과 이탈 조건이 같은 값을 봐야 한다"
+  );
+});

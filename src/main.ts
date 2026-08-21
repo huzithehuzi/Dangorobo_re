@@ -102,6 +102,7 @@ import {
   forgetOpenLoop,
   forgetMemory,
   getForgottenMemories,
+  getForgottenMemoryCount,
   restoreForgottenMemory,
   insertMemory,
   insertOpenLoop,
@@ -118,7 +119,7 @@ import {
   selectFreshOpenLoops,
   selectPromptOpenLoops
 } from "./main/memory/memory-search.js";
-import { validateExtractedMemory } from "./main/memory/memory-extraction.js";
+import { validateExtractedMemory, detectForgetSignals } from "./main/memory/memory-extraction.js";
 import { createMemoryExtractionRunner } from "./main/memory/memory-extraction-runner.js";
 import { createPetChatService } from "./main/assistant/pet-chat-service.js";
 import { createEpisodeSummaryRunner } from "./main/assistant/episode-summary-runner.js";
@@ -631,13 +632,21 @@ function recordAssistantConversationTurn(
   };
   assistantHistory.pushTurn(turn, settings.assistantMemoryTurns);
   appendConversationTurnToHistory(turn.question, turn.answer, MAX_CONVERSATION_HISTORY_TURNS);
-  if (!countTowardExtraction) return;
-  if (assistantHistory.countTurnForExtraction()) {
-    // 추출이 끝난 뒤 정리한다 — 시작할 때만 정리하면 앱을 며칠씩 켜 두는 동안 표가 쌓인다.
-    // 러너는 내부에서 예외를 삼키므로 이 then은 거부되지 않는다.
-    void triggerMemoryExtraction(assistantHistory.getHistory(), settings.language)
-      .then(pruneStaleOpenLoops);
-  }
+
+  /* 잊어달라는 요청은 추출 주기(3턴)를 기다리지 않고 **즉시** 처리한다. 러너는 마지막
+     질문에서만 잊기 신호를 찾으므로, 주기를 기다리면 그 사이 마지막 질문이 다른 말로
+     바뀌어 신호가 감지되지 않고 요청이 통째로 사라진다 — 3번 중 2번이 그랬다. 펫 대화
+     답장은 카운터를 아예 올리지 않아(countTowardExtraction: false) 그쪽 요청은 영영
+     사라졌다. 그래서 이 판정은 카운터보다, 그리고 그 early return보다 앞에 있어야 한다. */
+  const forgetRequested = detectForgetSignals(turn.question);
+  const dueForExtraction = countTowardExtraction && assistantHistory.countTurnForExtraction();
+  if (!dueForExtraction && !forgetRequested) return;
+  /* 잊기로 당겨 실행할 때는 카운터를 건드리지 않는다 — 그 배치는 잊기만 하고 일반 추출을
+     건너뛰므로, 원래 주기의 추출은 예정대로 와야 한다. */
+  // 추출이 끝난 뒤 정리한다 — 시작할 때만 정리하면 앱을 며칠씩 켜 두는 동안 표가 쌓인다.
+  // 러너는 내부에서 예외를 삼키므로 이 then은 거부되지 않는다.
+  void triggerMemoryExtraction(assistantHistory.getHistory(), settings.language)
+    .then(pruneStaleOpenLoops);
 }
 
 function appendPetChatLog(petMessage: string, userReply: string, petReply: string): void {
@@ -1944,6 +1953,7 @@ registerMemoryIpcHandlers(ipcMain, {
   getMemoriesByCategory,
   getAllMemories,
   getOpenLoops,
+  getForgottenMemoryCount,
   getForgottenMemories,
   restoreForgottenMemory,
   setMemoryVerified,
