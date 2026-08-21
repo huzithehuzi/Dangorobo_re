@@ -24,10 +24,10 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 
 ## 현재 상태와 다음 작업
 
-- **1.2.0 릴리스 산출물까지 만들어 둔 상태다**(`release/Dangorobo-1.2.0-Setup.exe`,
-  `-Portable.exe`, `-Source.zip`, `latest.yml`). portable EXE는 임시 프로필로 실제 실행해
-  설정창까지 확인했고, **설치본 설치와 자동 업데이트(낮은 버전 설치 → 새 버전 배포 → 다운로드·
-  재시작)는 아직 확인하지 않았다** — 배포 전 남은 수동 검증이다.
+- **1.3.0을 GitHub 릴리스로 발행했다**(2026-08-21, `v1.3.0` — 설치본·portable EXE·소스 ZIP·
+  `custom_template.zip`·`latest.yml`). portable EXE는 임시 프로필로 실제 실행해 설정창까지
+  확인했고, **설치본에서 자동 업데이트가 잡히는 것까지 실기로 확인했다**(사용자 확인,
+  2026-08-21). 1.2.0까지 "남은 수동 검증"으로 적혀 있던 항목이 이것으로 닫혔다.
 - Windows x64용 Electron 앱이며 현재 버전은 `package.json`을 기준으로 한다. NSIS 설치본과
   portable EXE 두 형태로 배포하고(`package.json`의 `build.win.target`), 설치본만
   `electron-updater`로 자동 업데이트를 확인한다 — portable 실행은 업데이트 채널이 없어
