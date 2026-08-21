@@ -28,9 +28,12 @@ interface PetRectangle {
   height: number;
 }
 
+/** 썸네일 요청의 프리셋에는 그 프리셋 자기 커스텀 얼굴(normal) 이미지가 함께 실린다. */
+type PetThumbnailPreset = PetCustomizationPreset & { customFaceTexture?: string | null };
+
 interface PetPresetThumbnailRequest {
   requestId: number;
-  presets: PetCustomizationPreset[];
+  presets: PetThumbnailPreset[];
 }
 
 interface PetPresetThumbnailResult {

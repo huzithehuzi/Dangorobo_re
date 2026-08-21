@@ -35,8 +35,10 @@ test("검색은 손으로 만든 색인이 아니라 렌더된 패널에서 항�
 
 test("모든 탭 패널에 data-tab-panel이 붙어 있다", () => {
   // 하나라도 빠지면 그 탭의 설정은 검색에서 통째로 사라진다(에러 없이).
-  const panels = [...appSource.matchAll(/<section data-tab-panel="([a-z]+)"/g)].map((m) => m[1]);
-  const activeChecks = [...appSource.matchAll(/activeTab === "([a-z]+)" \? " active" : ""/g)]
+  /* 탭 id는 camelCase도 있다("patchNotes"). `[a-z]+`로 잡으면 그런 탭이 양쪽 집합에서 함께
+     빠져 "일치"로 통과해 버린다 — 검사가 무력해지는 자리라 대문자를 포함해 읽는다. */
+  const panels = [...appSource.matchAll(/<section data-tab-panel="([A-Za-z]+)"/g)].map((m) => m[1]);
+  const activeChecks = [...appSource.matchAll(/activeTab === "([A-Za-z]+)" \? " active" : ""/g)]
     .map((m) => m[1]);
   assert.ok(panels.length > 0, "패널을 찾지 못했다");
   assert.deepEqual(

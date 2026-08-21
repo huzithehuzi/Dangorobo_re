@@ -288,3 +288,25 @@ test("쓰다듬기 잡담은 쓰다듬기 전용 인트로를 쓴다", async () 
   assert.ok(calls.ask[0].prompt.includes(t("ko", "petChat.pettedIntro")));
   assert.equal(service.isSessionActive(), true);
 });
+
+// 펫이 먼저 거는 말에는 "사용자가 방금 쓴 언어"가 없다 — 앱 언어를 프롬프트에 못박지 않으면
+// 모델이 이력이나 다른 블록의 언어를 골라잡아, 영어·일본어 환경에서 한국어로 말한다.
+test("자동 말걸기·부르기·쓰다듬기 오프너는 모두 앱 언어를 프롬프트에 못박는다", async () => {
+  for (const language of ["ko", "en", "ja"]) {
+    const { service, calls } = createHarness({
+      settings: { language },
+      askResponses: ["a", "b", "c"]
+    });
+    await service.callNow();
+    service.endSession();
+    await service.triggerPettingChat();
+    service.endSession();
+    assert.equal(calls.ask.length, 2, `${language}: 오프너를 두 번 보내지 않았다`);
+    for (const call of calls.ask) {
+      assert.ok(
+        call.prompt.includes(t(language, "petChat.answerLanguageDirective")),
+        `${language}: 오프너 프롬프트에 언어 지시가 없다`
+      );
+    }
+  }
+});

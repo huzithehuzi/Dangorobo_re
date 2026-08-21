@@ -1,6 +1,6 @@
 *[한국어](./README.md) · English · [日本語](./README.ja.md)*
 
-# Dangorobo 1.1.0
+# Dangorobo 1.2.0
 
 A retro-flavoured desktop pet that lives in a corner of your screen. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even
@@ -79,7 +79,8 @@ immediately, and closing without saving reverts them.
   cards for each part float next to the pet, connected by a line to the actual part, so you can
   choose while looking at the result.
 - **Presets**: save a combination you like under a name and apply it later in one click. Thumbnail
-  previews are shown, and you can export/import presets as files to move them to another PC.
+  previews are shown. Custom face and body images you imported are stored per preset, and Export
+  writes a single set file (zip) with those images so you can move it to another PC.
   (Cherry, Miro, and Loro presets are built in by default.)
 
 ## Screen effects
@@ -227,6 +228,10 @@ PC.
 Settings, your checklist, and history are stored in the `%APPDATA%\dangorobo` folder, and never
 leave this PC. (If you were already using this app before its name changed, it keeps using the
 older folder, `%APPDATA%\low-poly-desktop-pet`.)
+
+## Patch notes
+
+The **Patch Notes** tab in settings lists what changed in this version.
 
 ## FAQ
 

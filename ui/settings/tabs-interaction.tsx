@@ -1,5 +1,5 @@
 // 알람과 조작 그룹 탭: 알람 / 단축키 / 바로가기 / 플레이어 (2026-08-10, 바닐라 settings.js 포팅).
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSettings } from "./App";
 import { ColorField, ShortcutRecorder } from "./components";
 import { NumberRow, Note, SelectRow, SettingRow, ToggleRow } from "./rows";
@@ -111,192 +111,194 @@ export function AlertsTab() {
 
   return (
     <>
-      <h2>{tt("settings.alerts.heading")}</h2>
-      <ToggleRow checked={d.soundEnabled} onChange={(checked) => set("soundEnabled", checked)} label={tt("settings.alerts.soundToggle")} />
-      <SelectRow
-        label={tt("settings.alerts.soundLabel")}
-        value={d.alarmSound}
-        onChange={(value) => set("alarmSound", value)}
-        options={ALARM_SOUND_OPTIONS.map((n) => ({ value: String(n), label: tt("settings.alerts.soundOption", { n, value: n }) }))}
-      />
-      <div className="favorite-items" aria-live="polite">
-        {s.alarms.length === 0 && <div className="favorite-empty">{tt("settings.alerts.emptyList")}</div>}
-        {s.alarms.map((alarm, index) => {
-          const soundBadge = alarm.soundFile ? ` · ${tt("settings.alerts.customSoundBadge")}` : "";
-          const disabledBadge = alarm.type !== "once" && alarm.enabled === false ? ` · ${tt("settings.alerts.disabledBadge")}` : "";
-          const weatherBadge = alarm.type === "daily" && alarm.weatherBriefingEnabled ? ` · ${tt("settings.alerts.weatherBriefingBadge")}` : "";
-          return (
-            <div key={alarm.id} className="favorite-item">
-              <div className="favorite-item-row alarm-item-row">
-                <span className="alarm-item-title" title={alarm.title || tt("alarm.defaultName")}>
-                  {alarm.title || tt("alarm.defaultName")}
-                </span>
-                <div className="favorite-item-actions">
-                  {alarm.type !== "once" && (
-                    <input
-                      type="checkbox"
-                      className="alarm-item-toggle"
-                      checked={alarm.enabled !== false}
-                      title={tt("settings.alerts.enabledToggleTitle")}
-                      onChange={(event) => {
-                        const next = s.alarms.slice();
-                        next[index] = { ...next[index], enabled: event.target.checked };
-                        s.setAlarms(next);
+      <div className="settings-group">
+        <h2>{tt("settings.alerts.heading")}</h2>
+        <ToggleRow checked={d.soundEnabled} onChange={(checked) => set("soundEnabled", checked)} label={tt("settings.alerts.soundToggle")} />
+        <SelectRow
+          label={tt("settings.alerts.soundLabel")}
+          value={d.alarmSound}
+          onChange={(value) => set("alarmSound", value)}
+          options={ALARM_SOUND_OPTIONS.map((n) => ({ value: String(n), label: tt("settings.alerts.soundOption", { n, value: n }) }))}
+        />
+        <div className="favorite-items" aria-live="polite">
+          {s.alarms.length === 0 && <div className="favorite-empty">{tt("settings.alerts.emptyList")}</div>}
+          {s.alarms.map((alarm, index) => {
+            const soundBadge = alarm.soundFile ? ` · ${tt("settings.alerts.customSoundBadge")}` : "";
+            const disabledBadge = alarm.type !== "once" && alarm.enabled === false ? ` · ${tt("settings.alerts.disabledBadge")}` : "";
+            const weatherBadge = alarm.type === "daily" && alarm.weatherBriefingEnabled ? ` · ${tt("settings.alerts.weatherBriefingBadge")}` : "";
+            return (
+              <div key={alarm.id} className="favorite-item">
+                <div className="favorite-item-row alarm-item-row">
+                  <span className="alarm-item-title" title={alarm.title || tt("alarm.defaultName")}>
+                    {alarm.title || tt("alarm.defaultName")}
+                  </span>
+                  <div className="favorite-item-actions">
+                    {alarm.type !== "once" && (
+                      <input
+                        type="checkbox"
+                        className="alarm-item-toggle"
+                        checked={alarm.enabled !== false}
+                        title={tt("settings.alerts.enabledToggleTitle")}
+                        onChange={(event) => {
+                          const next = s.alarms.slice();
+                          next[index] = { ...next[index], enabled: event.target.checked };
+                          s.setAlarms(next);
+                          s.markDirty();
+                        }}
+                      />
+                    )}
+                    <button className="favorite-edit" type="button" title={tt("settings.alerts.editButtonTitle")} onClick={() => enterEditMode(alarm)}>✎</button>
+                    <button
+                      className="favorite-remove"
+                      type="button"
+                      title={tt("common.delete")}
+                      onClick={() => {
+                        s.setAlarms(s.alarms.filter((_entry, entryIndex) => entryIndex !== index));
+                        if (editingAlarmId === alarm.id) resetForm();
                         s.markDirty();
                       }}
-                    />
-                  )}
-                  <button className="favorite-edit" type="button" title={tt("settings.alerts.editButtonTitle")} onClick={() => enterEditMode(alarm)}>✎</button>
-                  <button
-                    className="favorite-remove"
-                    type="button"
-                    title={tt("common.delete")}
-                    onClick={() => {
-                      s.setAlarms(s.alarms.filter((_entry, entryIndex) => entryIndex !== index));
-                      if (editingAlarmId === alarm.id) resetForm();
-                      s.markDirty();
-                    }}
-                  >
-                    ×
-                  </button>
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div className="favorite-target" title={alarm.message || ""}>
+                  {`${scheduleLabel(alarm)} · ${alarm.message || ""}${soundBadge}${disabledBadge}${weatherBadge}`}
                 </div>
               </div>
-              <div className="favorite-target" title={alarm.message || ""}>
-                {`${scheduleLabel(alarm)} · ${alarm.message || ""}${soundBadge}${disabledBadge}${weatherBadge}`}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="alarm-add-form">
-        <label className="text-field">
-          <span>{tt("settings.alerts.titleLabel")}</span>
-          <input type="text" maxLength={40} placeholder={tt("alarm.defaultTitle")} value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <label className="text-field">
-          <span>{tt("settings.alerts.messageLabel")}</span>
-          <textarea
-            maxLength={80}
-            rows={2}
-            placeholder={tt("alarm.defaultMessage")}
-            value={message}
-            disabled={type === "daily" && weatherBriefingEnabled}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-        </label>
-        <SelectRow
-          label={tt("settings.alerts.repeatLabel")}
-          value={type}
-          onChange={setType}
-          options={[
-            { value: "interval", label: tt("settings.alerts.repeatInterval") },
-            { value: "hourly", label: tt("settings.alerts.repeatHourly") },
-            { value: "daily", label: tt("settings.alerts.repeatDaily") },
-            { value: "once", label: tt("settings.alerts.repeatOnce") }
-          ]}
-        />
-        {type === "interval" && (
-          <label className="setting-row">
-            <span>{tt("settings.alerts.intervalLabel")}</span>
-            <span className="input-wrap">
-              <input type="number" min={1} max={1440} value={intervalValue} onChange={(event) => setIntervalValue(event.target.value)} />
-              <span>{tt("settings.appearance.minutesUnit")}</span>
-            </span>
-          </label>
-        )}
-        {type === "hourly" && (
-          <>
-            <label className="setting-row">
-              <span>{tt("settings.alerts.hourlyLabel")}</span>
-              <span className="input-wrap">
-                <input type="number" min={1} max={12} value={hourlyValue} onChange={(event) => setHourlyValue(event.target.value)} />
-                <span>{tt("settings.alerts.hoursUnit")}</span>
-              </span>
-            </label>
-            <Note>{tt("settings.alerts.hourlyNote")}</Note>
-          </>
-        )}
-        {type === "daily" && (
-          <>
-            <label className="setting-row">
-              <span>{tt("settings.alerts.dailyLabel")}</span>
-              <span className="input-wrap">
-                <input type="time" value={dailyValue} onChange={(event) => setDailyValue(event.target.value)} />
-              </span>
-            </label>
-            <div className="setting-row">
-              <span>{tt("settings.alerts.daysLabel")}</span>
-              <div className="alarm-days-picker">
-                {WEEKDAY_KEYS.map((key, day) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`alarm-day-toggle${selectedDays.has(day) ? " active" : ""}`}
-                    onClick={() => {
-                      const next = new Set(selectedDays);
-                      if (next.has(day)) next.delete(day);
-                      else next.add(day);
-                      setSelectedDays(next);
-                    }}
-                  >
-                    {tt(key)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ToggleRow
-              checked={weatherBriefingEnabled}
-              onChange={setWeatherBriefingEnabled}
-              label={tt("settings.alerts.weatherBriefingToggle")}
-            />
-            <Note>{tt("settings.alerts.weatherBriefingNote")}</Note>
-          </>
-        )}
-        {type === "once" && (
-          <label className="setting-row">
-            <span>{tt("settings.alerts.onceLabel")}</span>
-            <span className="input-wrap">
-              <input type="number" min={1} max={1440} value={onceValue} onChange={(event) => setOnceValue(event.target.value)} />
-              <span>{tt("settings.appearance.minutesUnit")}</span>
-            </span>
-          </label>
-        )}
-        <SettingRow label={tt("settings.alerts.soundFileLabel")}>
-          <button
-            className="secondary-action"
-            type="button"
-            onClick={async () => {
-              const result = await window.desktopPet.pickAlarmSound();
-              if (!result?.ok || !result.filePath) return;
-              setPendingSoundFile(result.filePath);
-            }}
-          >
-            {tt("settings.alerts.soundFilePickButton")}
-          </button>
-          {pendingSoundFile && (
-            <button className="secondary-action" type="button" onClick={() => setPendingSoundFile("")}>
-              {tt("settings.alerts.soundFileClearButton")}
-            </button>
-          )}
-        </SettingRow>
-        <Note>
-          {pendingSoundFile
-            ? tt("settings.alerts.soundFileChosen", { name: fileBaseName(pendingSoundFile) })
-            : tt("settings.alerts.soundFileNone")}
-        </Note>
-        <div className="alarm-form-actions">
-          <button className="secondary-action" type="button" onClick={addOrUpdateAlarm}>
-            {tt(editingAlarmId ? "settings.alerts.updateButton" : "settings.alerts.addButton")}
-          </button>
-          {editingAlarmId && (
-            <button className="secondary-action" type="button" onClick={resetForm}>{tt("common.cancel")}</button>
-          )}
+            );
+          })}
         </div>
+        <div className="alarm-add-form">
+          <label className="text-field">
+            <span>{tt("settings.alerts.titleLabel")}</span>
+            <input type="text" maxLength={40} placeholder={tt("alarm.defaultTitle")} value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="text-field">
+            <span>{tt("settings.alerts.messageLabel")}</span>
+            <textarea
+              maxLength={80}
+              rows={2}
+              placeholder={tt("alarm.defaultMessage")}
+              value={message}
+              disabled={type === "daily" && weatherBriefingEnabled}
+              onChange={(event) => setMessage(event.target.value)}
+            />
+          </label>
+          <SelectRow
+            label={tt("settings.alerts.repeatLabel")}
+            value={type}
+            onChange={setType}
+            options={[
+              { value: "interval", label: tt("settings.alerts.repeatInterval") },
+              { value: "hourly", label: tt("settings.alerts.repeatHourly") },
+              { value: "daily", label: tt("settings.alerts.repeatDaily") },
+              { value: "once", label: tt("settings.alerts.repeatOnce") }
+            ]}
+          />
+          {type === "interval" && (
+            <label className="setting-row">
+              <span>{tt("settings.alerts.intervalLabel")}</span>
+              <span className="input-wrap">
+                <input type="number" min={1} max={1440} value={intervalValue} onChange={(event) => setIntervalValue(event.target.value)} />
+                <span>{tt("settings.appearance.minutesUnit")}</span>
+              </span>
+            </label>
+          )}
+          {type === "hourly" && (
+            <>
+              <label className="setting-row">
+                <span>{tt("settings.alerts.hourlyLabel")}</span>
+                <span className="input-wrap">
+                  <input type="number" min={1} max={12} value={hourlyValue} onChange={(event) => setHourlyValue(event.target.value)} />
+                  <span>{tt("settings.alerts.hoursUnit")}</span>
+                </span>
+              </label>
+              <Note>{tt("settings.alerts.hourlyNote")}</Note>
+            </>
+          )}
+          {type === "daily" && (
+            <>
+              <label className="setting-row">
+                <span>{tt("settings.alerts.dailyLabel")}</span>
+                <span className="input-wrap">
+                  <input type="time" value={dailyValue} onChange={(event) => setDailyValue(event.target.value)} />
+                </span>
+              </label>
+              <div className="setting-row">
+                <span>{tt("settings.alerts.daysLabel")}</span>
+                <div className="alarm-days-picker">
+                  {WEEKDAY_KEYS.map((key, day) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`alarm-day-toggle${selectedDays.has(day) ? " active" : ""}`}
+                      onClick={() => {
+                        const next = new Set(selectedDays);
+                        if (next.has(day)) next.delete(day);
+                        else next.add(day);
+                        setSelectedDays(next);
+                      }}
+                    >
+                      {tt(key)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ToggleRow
+                checked={weatherBriefingEnabled}
+                onChange={setWeatherBriefingEnabled}
+                label={tt("settings.alerts.weatherBriefingToggle")}
+              />
+              <Note>{tt("settings.alerts.weatherBriefingNote")}</Note>
+            </>
+          )}
+          {type === "once" && (
+            <label className="setting-row">
+              <span>{tt("settings.alerts.onceLabel")}</span>
+              <span className="input-wrap">
+                <input type="number" min={1} max={1440} value={onceValue} onChange={(event) => setOnceValue(event.target.value)} />
+                <span>{tt("settings.appearance.minutesUnit")}</span>
+              </span>
+            </label>
+          )}
+          <SettingRow label={tt("settings.alerts.soundFileLabel")}>
+            <button
+              className="secondary-action"
+              type="button"
+              onClick={async () => {
+                const result = await window.desktopPet.pickAlarmSound();
+                if (!result?.ok || !result.filePath) return;
+                setPendingSoundFile(result.filePath);
+              }}
+            >
+              {tt("settings.alerts.soundFilePickButton")}
+            </button>
+            {pendingSoundFile && (
+              <button className="secondary-action" type="button" onClick={() => setPendingSoundFile("")}>
+                {tt("settings.alerts.soundFileClearButton")}
+              </button>
+            )}
+          </SettingRow>
+          <Note>
+            {pendingSoundFile
+              ? tt("settings.alerts.soundFileChosen", { name: fileBaseName(pendingSoundFile) })
+              : tt("settings.alerts.soundFileNone")}
+          </Note>
+          <div className="alarm-form-actions">
+            <button className="secondary-action" type="button" onClick={addOrUpdateAlarm}>
+              {tt(editingAlarmId ? "settings.alerts.updateButton" : "settings.alerts.addButton")}
+            </button>
+            {editingAlarmId && (
+              <button className="secondary-action" type="button" onClick={resetForm}>{tt("common.cancel")}</button>
+            )}
+          </div>
+        </div>
+        <Note>{tt("settings.alerts.note")}</Note>
+        <button className="secondary-action" type="button" onClick={() => window.desktopPet.testAlarm(pendingSoundFile || undefined)}>
+          {tt("settings.alerts.testButton")}
+        </button>
       </div>
-      <Note>{tt("settings.alerts.note")}</Note>
-      <button className="secondary-action" type="button" onClick={() => window.desktopPet.testAlarm(pendingSoundFile || undefined)}>
-        {tt("settings.alerts.testButton")}
-      </button>
     </>
   );
 }
@@ -333,13 +335,15 @@ export function ShortcutsTab() {
   const { d, set, tt } = s;
   return (
     <>
-      <h2>{tt("settings.shortcuts.heading")}</h2>
-      <ShortcutRow def={{ labelKey: "settings.shortcuts.assistantLabel", shortcutKey: "assistantShortcut", enabledKey: "assistantShortcutEnabled" }} />
-      <ShortcutRow def={{ labelKey: "settings.shortcuts.favoritesLabel", shortcutKey: "favoritesShortcut", enabledKey: "favoritesShortcutEnabled" }} />
-      <ShortcutRow def={{ labelKey: "settings.shortcuts.checklistLabel", shortcutKey: "checklistShortcut", enabledKey: "checklistShortcutEnabled" }} />
-      <Note>{tt("settings.shortcuts.note")}</Note>
-      <Note>{tt("settings.shortcuts.recorderNote")}</Note>
-      <Note>{tt("settings.shortcuts.enabledNote")}</Note>
+      <div className="settings-group">
+        <h2>{tt("settings.shortcuts.heading")}</h2>
+        <ShortcutRow def={{ labelKey: "settings.shortcuts.assistantLabel", shortcutKey: "assistantShortcut", enabledKey: "assistantShortcutEnabled" }} />
+        <ShortcutRow def={{ labelKey: "settings.shortcuts.favoritesLabel", shortcutKey: "favoritesShortcut", enabledKey: "favoritesShortcutEnabled" }} />
+        <ShortcutRow def={{ labelKey: "settings.shortcuts.checklistLabel", shortcutKey: "checklistShortcut", enabledKey: "checklistShortcutEnabled" }} />
+        <Note>{tt("settings.shortcuts.note")}</Note>
+        <Note>{tt("settings.shortcuts.recorderNote")}</Note>
+        <Note>{tt("settings.shortcuts.enabledNote")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.shortcuts.imageResizeHeading")}</h2>
         <ShortcutRow def={{ labelKey: "settings.shortcuts.shortcutLabel", shortcutKey: "imageResizeShortcut", enabledKey: "imageResizeShortcutEnabled" }} />
@@ -409,37 +413,11 @@ export function FavoritesTab() {
   const s = useSettings();
   const { d, set, tt } = s;
   const disabled = !d.favoritesEnabled;
+  // 아이콘 선택 팝오버는 네이티브 popover(최상위 레이어)다 — 스크롤 패널·형제 카드에
+  // 잘리지 않고, 바깥 클릭·Esc 닫기와 위/아래 뒤집기도 브라우저가 해 준다(2026-08-20).
+  // 안에 든 색 선택기를 펼치면 높이가 늘어나므로 위치 계산을 직접 하면 그때마다 다시
+  // 재야 한다 — CSS anchor 배치는 높이가 바뀌어도 알아서 따라간다.
   const [openPickerIndex, setOpenPickerIndex] = useState<number | null>(null);
-  const [flipUp, setFlipUp] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
-
-  // 팝오버 바깥 클릭·Esc로 닫기 (바닐라와 동일 — 문서 수준 리스너).
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Element && event.target.closest(".favorite-icon-slot")) return;
-      setOpenPickerIndex(null);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenPickerIndex(null);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
-  // 아래쪽 카드에서 팝오버가 창 밖이나 고정 저장 바 밑으로 들어가면 버튼 위로 뒤집는다.
-  useEffect(() => {
-    if (openPickerIndex === null || !pickerRef.current) return;
-    setFlipUp(false);
-    const picker = pickerRef.current;
-    const footerTop = document.querySelector(".settings-footer")?.getBoundingClientRect().top;
-    const limit = Math.min(window.innerHeight, footerTop || window.innerHeight);
-    if (picker.getBoundingClientRect().bottom > limit) setFlipUp(true);
-    picker.scrollIntoView({ block: "nearest" });
-  }, [openPickerIndex]);
 
   const updateItem = (index: number, patch: Partial<FavoriteEditItem>) => {
     const next = s.favoriteItems.slice();
@@ -461,160 +439,173 @@ export function FavoritesTab() {
 
   return (
     <>
-      <h2>{tt("settings.favorites.heading")}</h2>
-      <ToggleRow checked={d.favoritesEnabled} onChange={(checked) => set("favoritesEnabled", checked)} label={tt("settings.favorites.enableToggle")} />
-      <SelectRow
-        label={tt("settings.favorites.displayModeLabel")}
-        value={d.favoritesDisplayMode}
-        disabled={disabled}
-        onChange={(value) => set("favoritesDisplayMode", value)}
-        options={[
-          { value: "bubble", label: tt("settings.favorites.displayModeBubble") },
-          { value: "window", label: tt("settings.favorites.displayModeWindow") },
-          { value: "dock", label: tt("settings.favorites.displayModeDock") },
-          { value: "cursor", label: tt("settings.favorites.displayModeCursor") }
-        ]}
-      />
-      <Note>{tt("settings.favorites.displayModeNote")}</Note>
-      <ToggleRow checked={d.favoritesLayoutGrid} disabled={disabled} onChange={(checked) => set("favoritesLayoutGrid", checked)} label={tt("settings.favorites.gridToggle")} />
-      <ToggleRow
-        checked={d.favoriteGridLabelsHidden}
-        disabled={disabled || !d.favoritesLayoutGrid}
-        onChange={(checked) => set("favoriteGridLabelsHidden", checked)}
-        label={tt("settings.favorites.hideGridLabelsToggle")}
-      />
-      <div className="favorite-items" aria-live="polite">
-        {s.favoriteItems.length === 0 && <div className="favorite-empty">{tt("settings.favorites.emptyList")}</div>}
-        {s.favoriteItems.map((item, index) => {
-          const pickerOpen = openPickerIndex === index;
-          return (
-            <div key={item.id} className="favorite-item">
-              <div className="favorite-item-row">
-                <div className="favorite-icon-slot">
-                  <button
-                    type="button"
-                    className="favorite-icon-button"
-                    aria-haspopup="true"
-                    aria-expanded={pickerOpen}
-                    disabled={disabled}
-                    title={tt("settings.favorites.iconPickerLabel")}
-                    onClick={() => setOpenPickerIndex(pickerOpen ? null : index)}
-                  >
-                    <FavoriteIconPreview item={item} accentColor={accentColor} />
-                  </button>
-                  {pickerOpen && (
-                    <div ref={pickerRef} className={`favorite-icon-picker open${flipUp ? " flip-up" : ""}`}>
-                      <div className="favorite-icon-picker-head">
-                        <span className="favorite-icon-picker-title">{tt("settings.favorites.iconPickerLabel")}</span>
-                        <span className="favorite-icon-preview-label">
-                          {item.customIcon
-                            ? tt("settings.favorites.iconCustom")
-                            : item.iconTemplate
-                              ? tt(window.FavoriteIcons?.TEMPLATES.find((tpl) => tpl.id === item.iconTemplate)?.labelKey || "")
-                              : tt("settings.favorites.iconAuto")}
-                        </span>
-                      </div>
-                      <div className="favorite-icon-row">
-                        <button
-                          type="button"
-                          className={`favorite-icon-choice favorite-icon-auto${!item.iconTemplate && !item.customIcon ? " active" : ""}`}
-                          title={tt("settings.favorites.iconAutoHint")}
-                          disabled={disabled}
-                          onClick={() => updateItem(index, { iconTemplate: "", customIcon: "", customIconDataUrl: "" })}
-                          dangerouslySetInnerHTML={{ __html: window.FavoriteIcons?.autoIconMarkup() || "" }}
-                        />
-                        <button
-                          type="button"
-                          className="favorite-icon-choice favorite-icon-custom"
-                          title={tt("settings.favorites.iconCustomHint")}
-                          disabled={disabled}
-                          onClick={async () => {
-                            const result = await window.desktopPet.pickFavoriteIcon();
-                            if (!result?.ok || !result.iconPath) return;
-                            updateItem(index, { customIcon: result.iconPath, customIconDataUrl: result.iconDataUrl, iconTemplate: "" });
-                          }}
-                        >
-                          {tt("settings.favorites.iconCustomButton")}
-                        </button>
-                        {(window.FavoriteIcons?.TEMPLATES || []).map((template) => (
+      <div className="settings-group">
+        <h2>{tt("settings.favorites.heading")}</h2>
+        <ToggleRow checked={d.favoritesEnabled} onChange={(checked) => set("favoritesEnabled", checked)} label={tt("settings.favorites.enableToggle")} />
+        <SelectRow
+          label={tt("settings.favorites.displayModeLabel")}
+          value={d.favoritesDisplayMode}
+          disabled={disabled}
+          onChange={(value) => set("favoritesDisplayMode", value)}
+          options={[
+            { value: "bubble", label: tt("settings.favorites.displayModeBubble") },
+            { value: "window", label: tt("settings.favorites.displayModeWindow") },
+            { value: "dock", label: tt("settings.favorites.displayModeDock") },
+            { value: "cursor", label: tt("settings.favorites.displayModeCursor") }
+          ]}
+        />
+        <Note>{tt("settings.favorites.displayModeNote")}</Note>
+        <ToggleRow checked={d.favoritesLayoutGrid} disabled={disabled} onChange={(checked) => set("favoritesLayoutGrid", checked)} label={tt("settings.favorites.gridToggle")} />
+        <ToggleRow
+          checked={d.favoriteGridLabelsHidden}
+          disabled={disabled || !d.favoritesLayoutGrid}
+          onChange={(checked) => set("favoriteGridLabelsHidden", checked)}
+          label={tt("settings.favorites.hideGridLabelsToggle")}
+        />
+        <div className="favorite-items" aria-live="polite">
+          {s.favoriteItems.length === 0 && <div className="favorite-empty">{tt("settings.favorites.emptyList")}</div>}
+          {s.favoriteItems.map((item, index) => {
+            const pickerOpen = openPickerIndex === index;
+            return (
+              <div key={item.id} className="favorite-item">
+                <div className="favorite-item-row">
+                  <div className="favorite-icon-slot">
+                    <button
+                      type="button"
+                      className={`favorite-icon-button${pickerOpen ? " picker-open" : ""}`}
+                      aria-haspopup="true"
+                      aria-expanded={pickerOpen}
+                      disabled={disabled}
+                      title={tt("settings.favorites.iconPickerLabel")}
+                      onClick={() => setOpenPickerIndex(pickerOpen ? null : index)}
+                    >
+                      <FavoriteIconPreview item={item} accentColor={accentColor} />
+                    </button>
+                    {pickerOpen && (
+                      <div
+                        className="favorite-icon-picker open"
+                        popover="auto"
+                        ref={(node) => {
+                          // popover 요소는 showPopover()를 부를 때까지 표시되지 않는다.
+                          if (node && !node.matches(":popover-open")) node.showPopover();
+                        }}
+                        onToggle={(event) => {
+                          // 바깥 클릭·Esc로 브라우저가 닫으면 React 상태도 닫힌 것으로 맞춘다.
+                          if (event.newState === "closed") setOpenPickerIndex(null);
+                        }}
+                      >
+                        <div className="favorite-icon-picker-head">
+                          <span className="favorite-icon-picker-title">{tt("settings.favorites.iconPickerLabel")}</span>
+                          <span className="favorite-icon-preview-label">
+                            {item.customIcon
+                              ? tt("settings.favorites.iconCustom")
+                              : item.iconTemplate
+                                ? tt(window.FavoriteIcons?.TEMPLATES.find((tpl) => tpl.id === item.iconTemplate)?.labelKey || "")
+                                : tt("settings.favorites.iconAuto")}
+                          </span>
+                        </div>
+                        <div className="favorite-icon-row">
                           <button
-                            key={template.id}
                             type="button"
-                            className={`favorite-icon-choice${item.iconTemplate === template.id && !item.customIcon ? " active" : ""}`}
-                            title={tt(template.labelKey)}
+                            className={`favorite-icon-choice favorite-icon-auto${!item.iconTemplate && !item.customIcon ? " active" : ""}`}
+                            title={tt("settings.favorites.iconAutoHint")}
                             disabled={disabled}
-                            onClick={() => updateItem(index, { iconTemplate: template.id, customIcon: "", customIconDataUrl: "" })}
-                            dangerouslySetInnerHTML={{ __html: window.FavoriteIcons?.svgMarkup(template.id, accentColor) || "" }}
+                            onClick={() => updateItem(index, { iconTemplate: "", customIcon: "", customIconDataUrl: "" })}
+                            dangerouslySetInnerHTML={{ __html: window.FavoriteIcons?.autoIconMarkup() || "" }}
                           />
-                        ))}
+                          <button
+                            type="button"
+                            className="favorite-icon-choice favorite-icon-custom"
+                            title={tt("settings.favorites.iconCustomHint")}
+                            disabled={disabled}
+                            onClick={async () => {
+                              const result = await window.desktopPet.pickFavoriteIcon();
+                              if (!result?.ok || !result.iconPath) return;
+                              updateItem(index, { customIcon: result.iconPath, customIconDataUrl: result.iconDataUrl, iconTemplate: "" });
+                            }}
+                          >
+                            {tt("settings.favorites.iconCustomButton")}
+                          </button>
+                          {(window.FavoriteIcons?.TEMPLATES || []).map((template) => (
+                            <button
+                              key={template.id}
+                              type="button"
+                              className={`favorite-icon-choice${item.iconTemplate === template.id && !item.customIcon ? " active" : ""}`}
+                              title={tt(template.labelKey)}
+                              disabled={disabled}
+                              onClick={() => updateItem(index, { iconTemplate: template.id, customIcon: "", customIconDataUrl: "" })}
+                              dangerouslySetInnerHTML={{ __html: window.FavoriteIcons?.svgMarkup(template.id, accentColor) || "" }}
+                            />
+                          ))}
+                        </div>
+                        <div className="favorite-icon-color-group">
+                          <span className="favorite-icon-color-label">{tt("settings.favorites.iconColorLabel")}</span>
+                          <ColorField
+                            className="favorite-icon-color"
+                            value={item.iconColor || accentColor}
+                            placeholder={accentColor}
+                            title={tt("settings.favorites.iconColorLabel")}
+                            ariaLabel={tt("settings.favorites.iconColorLabel")}
+                            disabled={disabled || !item.iconTemplate || Boolean(item.customIcon)}
+                            onPreview={(hex) => updateItem(index, { iconColor: hex })}
+                            onCommit={(hex) => updateItem(index, { iconColor: hex })}
+                          />
+                        </div>
                       </div>
-                      <div className="favorite-icon-color-group">
-                        <span className="favorite-icon-color-label">{tt("settings.favorites.iconColorLabel")}</span>
-                        <ColorField
-                          className="favorite-icon-color"
-                          value={item.iconColor || accentColor}
-                          placeholder={accentColor}
-                          title={tt("settings.favorites.iconColorLabel")}
-                          ariaLabel={tt("settings.favorites.iconColorLabel")}
-                          disabled={disabled || !item.iconTemplate || Boolean(item.customIcon)}
-                          onPreview={(hex) => updateItem(index, { iconColor: hex })}
-                          onCommit={(hex) => updateItem(index, { iconColor: hex })}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="favorite-item-main">
-                  <input
-                    className="favorite-name"
-                    type="text"
-                    maxLength={32}
-                    value={item.name || ""}
-                    disabled={disabled}
-                    aria-label={tt("settings.favorites.nameAriaLabel")}
-                    onChange={(event) => updateItem(index, { name: event.target.value })}
-                  />
-                  <div className="favorite-target" title={item.target}>{item.target}</div>
-                </div>
-                <div className="favorite-item-actions">
-                  <button className="favorite-move" type="button" title={tt("settings.favorites.moveUp")} aria-label={tt("settings.favorites.moveUp")} disabled={disabled || index === 0} onClick={() => moveItem(index, index - 1)}>▲</button>
-                  <button className="favorite-move" type="button" title={tt("settings.favorites.moveDown")} aria-label={tt("settings.favorites.moveDown")} disabled={disabled || index === s.favoriteItems.length - 1} onClick={() => moveItem(index, index + 1)}>▼</button>
-                  <button
-                    className="favorite-remove"
-                    type="button"
-                    title={tt("common.delete")}
-                    disabled={disabled}
-                    onClick={() => {
-                      s.setFavoriteItems(s.favoriteItems.filter((_entry, entryIndex) => entryIndex !== index));
-                      s.markDirty();
-                    }}
-                  >
-                    ×
-                  </button>
+                    )}
+                  </div>
+                  <div className="favorite-item-main">
+                    <input
+                      className="favorite-name"
+                      type="text"
+                      maxLength={32}
+                      value={item.name || ""}
+                      disabled={disabled}
+                      aria-label={tt("settings.favorites.nameAriaLabel")}
+                      onChange={(event) => updateItem(index, { name: event.target.value })}
+                    />
+                    <div className="favorite-target" title={item.target}>{item.target}</div>
+                  </div>
+                  <div className="favorite-item-actions">
+                    <button className="favorite-move" type="button" title={tt("settings.favorites.moveUp")} aria-label={tt("settings.favorites.moveUp")} disabled={disabled || index === 0} onClick={() => moveItem(index, index - 1)}>▲</button>
+                    <button className="favorite-move" type="button" title={tt("settings.favorites.moveDown")} aria-label={tt("settings.favorites.moveDown")} disabled={disabled || index === s.favoriteItems.length - 1} onClick={() => moveItem(index, index + 1)}>▼</button>
+                    <button
+                      className="favorite-remove"
+                      type="button"
+                      title={tt("common.delete")}
+                      disabled={disabled}
+                      onClick={() => {
+                        s.setFavoriteItems(s.favoriteItems.filter((_entry, entryIndex) => entryIndex !== index));
+                        s.markDirty();
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        <button
+          className="secondary-action"
+          type="button"
+          disabled={disabled || s.favoriteItems.length >= FAVORITE_ITEM_LIMIT}
+          onClick={async () => {
+            if (s.favoriteItems.length >= FAVORITE_ITEM_LIMIT) return;
+            const result = await window.desktopPet.pickFavoriteTarget();
+            if (!result?.ok || !result.target) return;
+            s.setFavoriteItems([
+              ...s.favoriteItems,
+              { id: result.id || `favorite-${Date.now()}`, name: result.name || tt("favorites.defaultName"), target: result.target }
+            ]);
+            s.markDirty();
+          }}
+        >
+          {tt("settings.favorites.addButton")}
+        </button>
+        <Note>{tt("settings.favorites.note")}</Note>
       </div>
-      <button
-        className="secondary-action"
-        type="button"
-        disabled={disabled || s.favoriteItems.length >= FAVORITE_ITEM_LIMIT}
-        onClick={async () => {
-          if (s.favoriteItems.length >= FAVORITE_ITEM_LIMIT) return;
-          const result = await window.desktopPet.pickFavoriteTarget();
-          if (!result?.ok || !result.target) return;
-          s.setFavoriteItems([
-            ...s.favoriteItems,
-            { id: result.id || `favorite-${Date.now()}`, name: result.name || tt("favorites.defaultName"), target: result.target }
-          ]);
-          s.markDirty();
-        }}
-      >
-        {tt("settings.favorites.addButton")}
-      </button>
-      <Note>{tt("settings.favorites.note")}</Note>
     </>
   );
 }
@@ -624,13 +615,15 @@ export function PlayerTab() {
   const { d, set, tt } = s;
   return (
     <>
-      <h2>{tt("settings.player.heading")}</h2>
-      <Note>{tt("settings.player.note")}</Note>
-      <ToggleRow checked={d.mediaPlayerEnabled} onChange={(checked) => set("mediaPlayerEnabled", checked)} label={tt("settings.player.enableToggle")} />
-      <NumberRow label={tt("settings.player.scaleLabel")} value={d.mediaPlayerScale} onChange={(value) => set("mediaPlayerScale", value)} min={50} max={150} step={5} unit="%" />
-      <NumberRow label={tt("settings.player.offsetLabel")} value={d.mediaPlayerOffset} onChange={(value) => set("mediaPlayerOffset", value)} min={-20} max={80} step={2} unit="px" />
-      <NumberRow label={tt("settings.player.opacityLabel")} value={d.mediaPlayerOpacity} onChange={(value) => set("mediaPlayerOpacity", value)} min={20} max={100} step={5} unit="%" />
-      <ToggleRow checked={d.mediaPlayerNodEnabled} onChange={(checked) => set("mediaPlayerNodEnabled", checked)} label={tt("settings.player.nodToggle")} />
+      <div className="settings-group">
+        <h2>{tt("settings.player.heading")}</h2>
+        <Note>{tt("settings.player.note")}</Note>
+        <ToggleRow checked={d.mediaPlayerEnabled} onChange={(checked) => set("mediaPlayerEnabled", checked)} label={tt("settings.player.enableToggle")} />
+        <NumberRow label={tt("settings.player.scaleLabel")} value={d.mediaPlayerScale} onChange={(value) => set("mediaPlayerScale", value)} min={50} max={150} step={5} unit="%" />
+        <NumberRow label={tt("settings.player.offsetLabel")} value={d.mediaPlayerOffset} onChange={(value) => set("mediaPlayerOffset", value)} min={-20} max={80} step={2} unit="px" />
+        <NumberRow label={tt("settings.player.opacityLabel")} value={d.mediaPlayerOpacity} onChange={(value) => set("mediaPlayerOpacity", value)} min={20} max={100} step={5} unit="%" />
+        <ToggleRow checked={d.mediaPlayerNodEnabled} onChange={(checked) => set("mediaPlayerNodEnabled", checked)} label={tt("settings.player.nodToggle")} />
+      </div>
     </>
   );
 }

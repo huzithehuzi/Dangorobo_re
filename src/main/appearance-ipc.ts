@@ -13,6 +13,7 @@ import {
   normalizeFacePatternIndex,
   normalizeHexColor,
   normalizeLighting,
+  normalizeOutlineColor,
   normalizePartVariations
 } from "./settings-schema.js";
 import type { Settings } from "./settings-schema.js";
@@ -24,6 +25,8 @@ type DialogFilter = { name: string; extensions: string[] };
 type SaveDialogResult = { canceled: boolean; filePath?: string };
 type OpenDialogResult = { canceled: boolean; filePaths: string[] };
 type CustomFaceImportResult = { ok: boolean; errorCode?: string; keys?: string[] };
+type PresetAssetActivation = { faceKeys: string[]; hasBody: boolean };
+type PresetSetImportResult = { ok: boolean; preset?: unknown; faceKeys?: string[]; hasBody?: boolean };
 
 // 펫 창이 모델 로드 중이거나 응답을 못 하면 영원히 매달리지 않도록 빈 결과로 끝낸다
 // (설정창은 빈 결과를 플레이스홀더로 처리한다).
@@ -49,8 +52,14 @@ type AppearanceIpcDependencies = {
   // 대화상자와 파일 IO는 Electron·디스크 경계라 주입해서 Node 테스트가 가능하게 둔다.
   showSaveDialog: (options: { title: string; defaultPath: string; filters: DialogFilter[] }) => Promise<SaveDialogResult>;
   showOpenDialog: (options: { title: string; properties: string[]; filters: DialogFilter[] }) => Promise<OpenDialogResult>;
-  writeTextFile: (filePath: string, text: string) => void;
-  readTextFile: (filePath: string) => string;
+  /** 프리셋의 커스텀 얼굴·바디 이미지(프리셋마다 별도 파일)와 세트 파일 입출력. */
+  capturePresetAssets: (id: string) => void;
+  deletePresetAssets: (id: string) => void;
+  activatePresetAssets: (id: string) => PresetAssetActivation | null;
+  /** 프리셋 자기 얼굴 이미지(normal)의 data URL — 갤러리 썸네일을 그 프리셋 얼굴로 그린다. */
+  readPresetFaceTexture: (id: string) => string | null;
+  exportPresetSet: (id: string, preset: unknown, targetPath: string) => void;
+  importPresetSet: (filePath: string) => PresetSetImportResult;
   importCustomFaceZip: (filePath: string) => CustomFaceImportResult;
   readCustomFaceTextures: () => unknown;
   importCustomBodyImage: (filePath: string) => { ok: boolean };
@@ -79,6 +88,12 @@ function registerAppearanceIpcHandlers(
 ) {
   const fromSettingsWindow = (event: AppearanceIpcEvent) => deps.isSettingsSender(event.sender);
   const fromPetWindow = (event: AppearanceIpcEvent) => deps.isPetSender(event.sender);
+
+  /** 활성 슬롯의 커스텀 이미지가 바뀌었을 때만 펫 창에 새 텍스처를 보낸다. */
+  const pushCustomTexturesToPet = (activation: PresetAssetActivation) => {
+    if (activation.faceKeys.length) deps.sendToPet("pet:custom-face-textures", deps.readCustomFaceTextures());
+    if (activation.hasBody) deps.sendToPet("pet:custom-body-texture", deps.readCustomBodyTexture());
+  };
 
   ipcMain.on("settings:preview-bubble-theme", (event: AppearanceIpcEvent, payload: unknown) => {
     if (!fromSettingsWindow(event)) return;
@@ -114,6 +129,12 @@ function registerAppearanceIpcHandlers(
   ipcMain.on("settings:preview-part-variations", (event: AppearanceIpcEvent, value: unknown) => {
     if (!fromSettingsWindow(event)) return;
     deps.applyLivePreview({ partVariations: normalizePartVariations(value) });
+  });
+
+  // 외곽선 색은 커스터마이징 탭으로 옮겨졌다(2026-08-20) — 그 탭의 다른 값들처럼 즉시 미리보기한다.
+  ipcMain.on("settings:preview-outline-color", (event: AppearanceIpcEvent, value: unknown) => {
+    if (!fromSettingsWindow(event)) return;
+    deps.applyLivePreview({ outlineColor: normalizeOutlineColor(value) });
   });
 
   ipcMain.on("settings:preview-lighting", (event: AppearanceIpcEvent, value: unknown) => {
@@ -163,10 +184,16 @@ function registerAppearanceIpcHandlers(
     if (!fromSettingsWindow(event)) return {};
     if (!deps.hasPetWindow()) return {};
     const language = deps.getSettings().language;
+    // 커스텀 얼굴은 프리셋마다 다르므로 그 프리셋의 이미지를 함께 보낸다. 썸네일은 머리만,
+    // 표정은 normal 하나라 한 장이면 된다 — 표정 7종을 다 보내면 payload가 수십 MB가 된다.
     const presets = (Array.isArray(payload) ? payload : [])
       .slice(0, PRESET_LIMIT)
       .map((preset) => normalizeCustomizationPreset(preset, language))
-      .filter((preset) => preset.id);
+      .filter((preset) => preset.id)
+      .map((preset) => ({
+        ...preset,
+        customFaceTexture: preset.customFaceEnabled ? deps.readPresetFaceTexture(preset.id) : null
+      }));
     if (!presets.length) return {};
     const requestId = ++requestSeq;
     return new Promise<Record<string, unknown>>((resolve) => {
@@ -201,6 +228,8 @@ function registerAppearanceIpcHandlers(
     }, settings.language);
     deps.setCustomizationPresets([...settings.customizationPresets, preset].slice(-PRESET_LIMIT));
     deps.saveSettings();
+    // 지금 적용된 커스텀 얼굴·바디 이미지를 이 프리셋의 파일로 굳힌다 — 프리셋마다 자기 이미지를 갖는다.
+    deps.capturePresetAssets(preset.id);
     return deps.getSettings().customizationPresets;
   });
 
@@ -209,6 +238,7 @@ function registerAppearanceIpcHandlers(
     if (!fromSettingsWindow(event)) return settings.customizationPresets;
     deps.setCustomizationPresets(settings.customizationPresets.filter((preset) => preset.id !== id));
     deps.saveSettings();
+    deps.deletePresetAssets(String(id ?? ""));
     return deps.getSettings().customizationPresets;
   });
 
@@ -221,12 +251,13 @@ function registerAppearanceIpcHandlers(
     const safeName = (preset.name || "pet-customization").replace(/[\\/:*?"<>|]/g, "_");
     const result = await deps.showSaveDialog({
       title: deps.translate(language, "customization.exportTitle"),
-      defaultPath: `${safeName}.json`,
-      filters: [{ name: "JSON", extensions: ["json"] }]
+      // 세트(zip) 하나로 내보낸다 — 프리셋 값과 그 프리셋의 커스텀 얼굴·바디 이미지가 함께 들어간다.
+      defaultPath: `${safeName}.zip`,
+      filters: [{ name: "ZIP", extensions: ["zip"] }]
     });
     if (result.canceled || !result.filePath) return { ok: false, canceled: true };
     try {
-      deps.writeTextFile(result.filePath, JSON.stringify(preset, null, 2));
+      deps.exportPresetSet(preset.id, preset, result.filePath);
       return { ok: true };
     } catch (error) {
       return { ok: false, error: deps.describeError(error) || deps.translate(language, "customization.saveFailedError") };
@@ -241,15 +272,32 @@ function registerAppearanceIpcHandlers(
     const result = await deps.showOpenDialog({
       title: deps.translate(language, "customization.importTitle"),
       properties: ["openFile"],
-      filters: [{ name: "JSON", extensions: ["json"] }]
+      // 예전 버전이 내보낸 JSON 파일도 계속 읽는다(이미지 없이 값만 들어 있다).
+      filters: [{ name: "ZIP/JSON", extensions: ["zip", "json"] }]
     });
     if (result.canceled || !result.filePaths[0]) return { ok: false, canceled: true };
-    try {
-      const parsed = JSON.parse(deps.readTextFile(result.filePaths[0]));
-      return { ok: true, preset: normalizeCustomizationPreset(parsed, language) };
-    } catch {
+    const imported = deps.importPresetSet(result.filePaths[0]);
+    if (!imported.ok) {
       return { ok: false, error: deps.translate(language, "customization.invalidFileError") };
     }
+    const activation = { faceKeys: imported.faceKeys || [], hasBody: imported.hasBody === true };
+    pushCustomTexturesToPet(activation);
+    return {
+      ok: true,
+      preset: normalizeCustomizationPreset(imported.preset, language),
+      faceKeys: activation.faceKeys,
+      hasBody: activation.hasBody
+    };
+  });
+
+  // 프리셋을 적용할 때 그 프리셋의 커스텀 이미지를 활성 슬롯으로 되돌린다. 이미지를 가진
+  // 프리셋이 아니면 null을 돌려주고 지금 이미지를 건드리지 않는다(이 기능 전에 저장한 프리셋).
+  ipcMain.handle("preset:activate-assets", (event: AppearanceIpcEvent, id: unknown) => {
+    if (!fromSettingsWindow(event)) return null;
+    const activation = deps.activatePresetAssets(String(id ?? ""));
+    if (!activation) return null;
+    pushCustomTexturesToPet(activation);
+    return activation;
   });
 
   // ── 사용자 이미지(얼굴 ZIP / 바디 PNG) ───────────────────────────────────
@@ -312,7 +360,6 @@ function registerAppearanceIpcHandlers(
     ditherPattern: DEFAULT_SETTINGS.ditherPattern,
     ditherAmount: DEFAULT_SETTINGS.ditherAmount,
     outlineEnabled: DEFAULT_SETTINGS.outlineEnabled,
-    outlineColor: DEFAULT_SETTINGS.outlineColor,
     outlineThickness: DEFAULT_SETTINGS.outlineThickness,
     lineWobbleEnabled: DEFAULT_SETTINGS.lineWobbleEnabled,
     lineWobbleFrequency: DEFAULT_SETTINGS.lineWobbleFrequency,

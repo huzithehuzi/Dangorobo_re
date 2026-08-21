@@ -3,6 +3,8 @@ import { useSettings } from "./App";
 import { ColorField } from "./components";
 import { NumberRow, Note, SelectRow, SettingRow, TextField, ToggleRow } from "./rows";
 import { BUBBLE_THEMES, CLICK_SOUND_OPTIONS } from "./store";
+import { PATCH_NOTES } from "./patch-notes";
+import type { PatchNoteLanguage } from "./patch-notes";
 // 입력 범위와 저장 전 미리보기의 클램프는 같아야 한다 — 어긋나면 창은 그 배율로 커지는데
 // 저장은 HTML 검증에 막힌다. 두 값의 원본은 창 공용 외형 모듈이다.
 import {
@@ -34,14 +36,16 @@ export function GeneralTab() {
 
   return (
     <>
-      <h2>{tt("settings.general.languageLabel")}</h2>
-      <SelectRow
-        label={tt("settings.general.languageLabel")}
-        value={d.language}
-        onChange={(value) => set("language", window.PetI18n.normalizeLanguage(value))}
-        options={[{ value: "ko", label: "한국어" }, { value: "en", label: "English" }, { value: "ja", label: "日本語" }]}
-      />
-      <Note>{tt("settings.general.languageNote")}</Note>
+      <div className="settings-group">
+        <h2>{tt("settings.general.languageLabel")}</h2>
+        <SelectRow
+          label={tt("settings.general.languageLabel")}
+          value={d.language}
+          onChange={(value) => set("language", window.PetI18n.normalizeLanguage(value))}
+          options={[{ value: "ko", label: "한국어" }, { value: "en", label: "English" }, { value: "ja", label: "日本語" }]}
+        />
+        <Note>{tt("settings.general.languageNote")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.general.apiKeyHeading")}</h2>
         <label className="text-field">
@@ -206,52 +210,54 @@ export function UiTab() {
 
   return (
     <>
-      <h2>{tt("settings.ui.bubbleHeading")}</h2>
-      <SelectRow
-        label={tt("settings.ui.bubbleThemeLabel")}
-        value={d.bubbleTheme}
-        onChange={(value) => s.previewBubbleThemeNow({ bubbleTheme: value })}
-        options={BUBBLE_THEMES.map((theme) => ({ value: theme.id, label: tt(theme.labelKey) }))}
-      />
-      <Note>{tt("settings.ui.bubbleThemeNote")}</Note>
-      {d.bubbleTheme === "custom" && (
-        <div>
-          <SettingRow asDiv label={tt("settings.ui.customBgLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomBg}
-              placeholder="#20232b"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          <SettingRow asDiv label={tt("settings.ui.customAccentLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomAccent}
-              placeholder="#d75566"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          <SettingRow asDiv label={tt("settings.ui.customTextLabel")}>
-            <ColorField
-              value={d.bubbleThemeCustomText}
-              placeholder="#f7f7f9"
-              onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomText: hex })}
-              onCommit={(hex) => {
-                s.previewBubbleThemeNow({ bubbleThemeCustomText: hex });
-                s.markDirty();
-              }}
-            />
-          </SettingRow>
-          {contrastLow && <Note className="missing">{tt("settings.ui.customContrastWarning")}</Note>}
-        </div>
-      )}
+      <div className="settings-group">
+        <h2>{tt("settings.ui.bubbleHeading")}</h2>
+        <SelectRow
+          label={tt("settings.ui.bubbleThemeLabel")}
+          value={d.bubbleTheme}
+          onChange={(value) => s.previewBubbleThemeNow({ bubbleTheme: value })}
+          options={BUBBLE_THEMES.map((theme) => ({ value: theme.id, label: tt(theme.labelKey) }))}
+        />
+        <Note>{tt("settings.ui.bubbleThemeNote")}</Note>
+        {d.bubbleTheme === "custom" && (
+          <div>
+            <SettingRow asDiv label={tt("settings.ui.customBgLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomBg}
+                placeholder="#20232b"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomBg: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            <SettingRow asDiv label={tt("settings.ui.customAccentLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomAccent}
+                placeholder="#d75566"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomAccent: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            <SettingRow asDiv label={tt("settings.ui.customTextLabel")}>
+              <ColorField
+                value={d.bubbleThemeCustomText}
+                placeholder="#f7f7f9"
+                onPreview={(hex) => s.previewBubbleThemeNow({ bubbleThemeCustomText: hex })}
+                onCommit={(hex) => {
+                  s.previewBubbleThemeNow({ bubbleThemeCustomText: hex });
+                  s.markDirty();
+                }}
+              />
+            </SettingRow>
+            {contrastLow && <Note className="missing">{tt("settings.ui.customContrastWarning")}</Note>}
+          </div>
+        )}
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.ui.fontHeading")}</h2>
         <ToggleRow checked={d.uiFontEnabled} onChange={(checked) => set("uiFontEnabled", checked)} label={tt("settings.ui.fontToggle")} />
@@ -299,8 +305,10 @@ export function TrayTab() {
   const { d, set, tt } = s;
   return (
     <>
-      <h2>{tt("settings.tray.heading")}</h2>
-      <Note>{tt("settings.tray.note")}</Note>
+      <div className="settings-group">
+        <h2>{tt("settings.tray.heading")}</h2>
+        <Note>{tt("settings.tray.note")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.tray.visibleItemsHeading")}</h2>
         {TRAY_ITEMS.map((item) => (
@@ -328,6 +336,29 @@ export function TrayTab() {
         />
         <Note>{tt("settings.favorites.trayItemsNote")}</Note>
       </div>
+    </>
+  );
+}
+
+// 패치 노트 탭(2026-08-20). 버전별 항목은 ui/settings/patch-notes.ts가 원본이고, 언어는
+// 설정창 언어를 따른다 — 설정값을 읽거나 저장하지 않는 읽기 전용 탭이다.
+export function PatchNotesTab() {
+  const { d, tt } = useSettings();
+  const language: PatchNoteLanguage = d.language === "ko" || d.language === "ja" ? d.language : "en";
+  return (
+    <>
+      <div className="settings-group">
+        <h2>{tt("settings.patchNotes.heading")}</h2>
+        <Note>{tt("settings.patchNotes.note")}</Note>
+      </div>
+      {PATCH_NOTES.map((note) => (
+        <div className="settings-group" key={note.version}>
+          <h2>{tt("settings.patchNotes.versionLabel", { version: note.version })}</h2>
+          <ul className="patch-note-list">
+            {note.lines[language].map((line) => <li key={line}>{line}</li>)}
+          </ul>
+        </div>
+      ))}
     </>
   );
 }

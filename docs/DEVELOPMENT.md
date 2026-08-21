@@ -13,6 +13,7 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 | 설정 타입·기본값·정규화 | `src/main/settings-schema.ts` |
 | 커스터마이징·사운드·테마 목록 | `src/shared/*-catalog.*` |
 | 설정 UI 저장 payload | `ui/settings/store.ts` |
+| 설정창 패치 노트 내용 | `ui/settings/patch-notes.ts` |
 | 설정창 외형·커스터마이징 상태 | `ui/settings/use-customization-state.ts` |
 | 설정창 로드·수정·저장 수명주기 | `ui/settings/use-settings-lifecycle.ts` |
 | 창 외형(테마·배율·글자 크기·폰트) 적용과 그 허용 범위 | `ui/lib/appearance.ts` |
@@ -23,6 +24,10 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 
 ## 현재 상태와 다음 작업
 
+- **1.2.0 릴리스 산출물까지 만들어 둔 상태다**(`release/Dangorobo-1.2.0-Setup.exe`,
+  `-Portable.exe`, `-Source.zip`, `latest.yml`). portable EXE는 임시 프로필로 실제 실행해
+  설정창까지 확인했고, **설치본 설치와 자동 업데이트(낮은 버전 설치 → 새 버전 배포 → 다운로드·
+  재시작)는 아직 확인하지 않았다** — 배포 전 남은 수동 검증이다.
 - Windows x64용 Electron 앱이며 현재 버전은 `package.json`을 기준으로 한다. NSIS 설치본과
   portable EXE 두 형태로 배포하고(`package.json`의 `build.win.target`), 설치본만
   `electron-updater`로 자동 업데이트를 확인한다 — portable 실행은 업데이트 채널이 없어
@@ -390,7 +395,19 @@ sender만 호출할 수 있고, 실패하면 암호화 키·설정·전역 단�
 - 위치·창 상태: `pet-position.json`, `checklist.json`, `favorites-panels.json`
 - 대화: `assistant-logs.json`, `assistant-memory.json`, `assistant-episodes.json`,
   `assistant-memory.db`
-- 사용자 에셋·요약: `custom-face/`, `custom-body/`, `summaries/`
+- 사용자 에셋·요약: `custom-face/`, `custom-body/`, `custom-presets/`, `summaries/`
+
+`custom-face/`·`custom-body/`는 **지금 펫에 적용된** 커스텀 이미지고, `custom-presets/<id>.zip`은
+프리셋마다 굳혀 둔 그 프리셋의 이미지다(`custom-preset-assets.ts`). 프리셋을 저장할 때 활성
+이미지를 zip으로 굳히고, 적용할 때 되돌린다 — zip인 것은 내보내는 세트 파일과 같은 형식이라
+`importCustomFaceZip()`의 검증·원자적 교체를 그대로 쓰기 때문이다. 이 기능(2026-08-20) 전에
+저장된 프리셋에는 zip이 없으므로, 시작할 때 `seedLegacyPresetAssets()`가 **커스텀 이미지를 쓰는
+프리셋**에 한해 지금 활성 이미지를 한 번 복사해 준다(이미 파일이 있으면 건드리지 않아 여러 번
+불러도 안전하다). 그마저 없는 프리셋을 적용하면 활성 이미지를 건드리지 않는다.
+**프리셋 갤러리 썸네일은 그 프리셋의 커스텀 얼굴로 그린다** — main이 썸네일 요청에 프리셋별
+`customFaceTexture`(normal 한 장)를 실어 보내고, 펫 창은 **그리기 전에** 텍스처 로드를 await한
+뒤 프리셋마다 `customFaceTextureSet`을 갈아끼운다. 동기 렌더라 로드를 안 기다리면 빈 판이
+찍히고, 표정 7종을 다 보내면 payload가 수십 MB가 된다.
 
 `assistant-keys.json`은 Windows 보안 저장소에 묶이므로 다른 PC에서 재사용하지 않는다.
 
@@ -519,6 +536,11 @@ Gemini의 세 호출 경로는 의도적으로 다르다.
 - 팔레트·디더링·선 떨림·외곽선은 WebGL 후처리다. DOM 말풍선에는 적용되지 않는다.
 - 사용자 지정 팔레트는 밝기 0~1을 정렬된 2~8개 색 정지점 위치에 대응시켜 구간별로 보간한다.
 - 팔레트와 외곽선이 모두 꺼지면 직접 렌더하고, 하나라도 켜지면 render target을 거친다.
+- **외곽선 색은 커스터마이징 프리셋에 저장된다**(2026-08-20). 외곽선 사용 여부·두께는 외형 탭에
+  남아 있고 색만 커스터마이징 탭으로 옮겼다. 프리셋의 `outlineColor`가 빈 문자열이면 "이 프리셋은
+  외곽선 색을 바꾸지 않는다"는 뜻이다 — 이 변경 전에 저장된 프리셋을 적용했을 때 색이 기본값으로
+  튀지 않게 하기 위한 것이라, 기본값으로 채우도록 바꾸면 안 된다. 프리셋 썸네일은 프리셋의
+  외곽선 색으로 그린다(후처리 uniform 하나라 동기 렌더 안에서 바꿔 끼울 수 있다).
 - 머리 장식은 몸을 가릴 수 있지만 머리·귀를 뚫지 않게 Three Layers와 `clearDepth()`를 쓰는
   3패스 렌더링을 한다. 직접·후처리 두 경로가 같은 `renderModelWithHeadgear()` 계약을 지킨다.
 - 커서를 따라보는 좌우 각도는 머리와 몸통이 나눠 맡는다. `animation-loop.ts`가 정한 최종
@@ -699,7 +721,12 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   관찰로 재발 여부를 확인한다. 펫이 가라앉는 것 자체(30초 `moveTop()` 워치독이 되돌린다)는
   별개 문제로 남아 있다.
 - 실제 Gemini 질문·번역·문서 요약과 기억 추출·open loop 판정은 API 키와 네트워크가 필요한
-  수동 검증 영역이다.
+  수동 검증 영역이다. 2026-08-20에 고친 두 가지(모델이 `thinkingConfig`를 모를 때의 호환
+  재시도, 오프너 프롬프트의 언어 고정)도 응답을 흉내 낸 테스트로만 확인했다 — 실제 키로
+  "부르기"를 눌러 영어·일본어 환경에서 첫마디 언어를 한 번 봐 두면 좋다.
+- 프리셋 갤러리 썸네일은 **머리만** 그리므로 프리셋별 커스텀 **바디** 이미지는 썸네일에
+  나타나지 않는다(적용하면 펫에는 반영된다). 표정도 normal 한 장만 보내므로 다른 표정의
+  커스텀 얼굴은 썸네일로 확인할 수 없다.
 - **Open-Meteo의 기상청 모델이 현재 값을 주지 않는다.** 2026-08-21 실측에서 서울·성남·부산
   좌표 모두 `kma_seamless`·`kma_ldps`·`kma_gdps` 48시간 전부 null이었다(모델명 자체는 유효 —
   없는 이름은 HTTP 400). `fetchHourlyForecast()`가 기본 모델로 물러나 사용자에게 보이는

@@ -12,65 +12,67 @@ export function ConversationTab() {
 
   return (
     <>
-      <h2>{tt("settings.conversation.heading")}</h2>
-      <ToggleRow
-        checked={d.assistantEnabled && keyWillExist}
-        disabled={!keyWillExist}
-        onChange={(checked) => set("assistantEnabled", checked)}
-        label={tt("settings.conversation.enableToggle")}
-      />
-      <Note>{tt("settings.conversation.apiKeyNote")}</Note>
-      <SelectRow
-        label={tt("settings.conversation.personalityLabel")}
-        value={d.assistantPersonality}
-        onChange={(value) => set("assistantPersonality", value)}
-        options={["friend", "polite", "concise", "playful", "custom"].map((value) => ({
-          value,
-          label: tt(`assistant.personalityShort.${value}`)
-        }))}
-      />
-      <label className="text-field">
-        <span>{tt("settings.conversation.customPersonalityLabel")}</span>
-        <input
-          type="text"
-          maxLength={300}
-          autoComplete="off"
-          placeholder={tt("settings.conversation.customPersonalityPlaceholder")}
-          value={d.assistantCustomPersonality}
-          disabled={d.assistantPersonality !== "custom"}
-          onChange={(event) => set("assistantCustomPersonality", event.target.value)}
+      <div className="settings-group">
+        <h2>{tt("settings.conversation.heading")}</h2>
+        <ToggleRow
+          checked={d.assistantEnabled && keyWillExist}
+          disabled={!keyWillExist}
+          onChange={(checked) => set("assistantEnabled", checked)}
+          label={tt("settings.conversation.enableToggle")}
         />
-      </label>
-      <Note>{tt("settings.conversation.customPersonalityNote")}</Note>
-      {/* AI 모델 필드는 일반 탭 API 키 그룹에 있다(바닐라의 relocateAssistantModelField와 동일 배치) */}
-      <TextField
-        label={tt("settings.conversation.userNicknameLabel")}
-        value={d.assistantUserNickname}
-        maxLength={40}
-        placeholder={tt("settings.conversation.userNicknamePlaceholder")}
-        onChange={(value) => set("assistantUserNickname", value)}
-      />
-      <TextField
-        label={tt("settings.conversation.petNicknameLabel")}
-        value={d.assistantPetNickname}
-        maxLength={40}
-        placeholder={tt("settings.conversation.petNicknamePlaceholder")}
-        onChange={(value) => set("assistantPetNickname", value)}
-      />
-      <ToggleRow checked={d.assistantMemoryEnabled} onChange={(checked) => set("assistantMemoryEnabled", checked)} label={tt("settings.conversation.memoryToggle")} />
-      <NumberRow
-        label={tt("settings.conversation.memoryTurnsLabel")}
-        value={d.assistantMemoryTurns}
-        onChange={(value) => set("assistantMemoryTurns", value)}
-        min={1}
-        max={20}
-        step={1}
-        unit={tt("settings.conversation.turnsUnit")}
-        disabled={!d.assistantMemoryEnabled}
-      />
-      <Note>{tt("settings.conversation.memoryNote")}</Note>
-      <ToggleRow checked={d.memoryTabVisible} onChange={(checked) => set("memoryTabVisible", checked)} label={tt("settings.conversation.memoryTabToggle")} />
-      <Note>{tt("settings.conversation.memoryTabToggleNote")}</Note>
+        <Note>{tt("settings.conversation.apiKeyNote")}</Note>
+        <SelectRow
+          label={tt("settings.conversation.personalityLabel")}
+          value={d.assistantPersonality}
+          onChange={(value) => set("assistantPersonality", value)}
+          options={["friend", "polite", "concise", "playful", "custom"].map((value) => ({
+            value,
+            label: tt(`assistant.personalityShort.${value}`)
+          }))}
+        />
+        <label className="text-field">
+          <span>{tt("settings.conversation.customPersonalityLabel")}</span>
+          <input
+            type="text"
+            maxLength={300}
+            autoComplete="off"
+            placeholder={tt("settings.conversation.customPersonalityPlaceholder")}
+            value={d.assistantCustomPersonality}
+            disabled={d.assistantPersonality !== "custom"}
+            onChange={(event) => set("assistantCustomPersonality", event.target.value)}
+          />
+        </label>
+        <Note>{tt("settings.conversation.customPersonalityNote")}</Note>
+        {/* AI 모델 필드는 일반 탭 API 키 그룹에 있다(바닐라의 relocateAssistantModelField와 동일 배치) */}
+        <TextField
+          label={tt("settings.conversation.userNicknameLabel")}
+          value={d.assistantUserNickname}
+          maxLength={40}
+          placeholder={tt("settings.conversation.userNicknamePlaceholder")}
+          onChange={(value) => set("assistantUserNickname", value)}
+        />
+        <TextField
+          label={tt("settings.conversation.petNicknameLabel")}
+          value={d.assistantPetNickname}
+          maxLength={40}
+          placeholder={tt("settings.conversation.petNicknamePlaceholder")}
+          onChange={(value) => set("assistantPetNickname", value)}
+        />
+        <ToggleRow checked={d.assistantMemoryEnabled} onChange={(checked) => set("assistantMemoryEnabled", checked)} label={tt("settings.conversation.memoryToggle")} />
+        <NumberRow
+          label={tt("settings.conversation.memoryTurnsLabel")}
+          value={d.assistantMemoryTurns}
+          onChange={(value) => set("assistantMemoryTurns", value)}
+          min={1}
+          max={20}
+          step={1}
+          unit={tt("settings.conversation.turnsUnit")}
+          disabled={!d.assistantMemoryEnabled}
+        />
+        <Note>{tt("settings.conversation.memoryNote")}</Note>
+        <ToggleRow checked={d.memoryTabVisible} onChange={(checked) => set("memoryTabVisible", checked)} label={tt("settings.conversation.memoryTabToggle")} />
+        <Note>{tt("settings.conversation.memoryTabToggleNote")}</Note>
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.conversation.petChatHeading")}</h2>
         <ToggleRow checked={d.petChatEnabled} onChange={(checked) => set("petChatEnabled", checked)} label={tt("settings.conversation.petChatToggle")} />
@@ -174,12 +176,14 @@ export function MemoryTab({ active }: { active: boolean }) {
 
   return (
     <>
-      <h2>{tt("settings.memory.heading")}</h2>
-      <Note>{tt("settings.memory.description")}</Note>
-      <div className="memory-stats">
-        <div className="stat-item"><span className="stat-value">{stats.memoryCount}</span><span className="stat-label">{tt("settings.memory.totalMemories")}</span></div>
-        <div className="stat-item"><span className="stat-value">{stats.loopsCount}</span><span className="stat-label">{tt("settings.memory.openLoops")}</span></div>
-        <div className="stat-item"><span className="stat-value">{stats.episodesCount}</span><span className="stat-label">{tt("settings.memory.episodes")}</span></div>
+      <div className="settings-group">
+        <h2>{tt("settings.memory.heading")}</h2>
+        <Note>{tt("settings.memory.description")}</Note>
+        <div className="memory-stats">
+          <div className="stat-item"><span className="stat-value">{stats.memoryCount}</span><span className="stat-label">{tt("settings.memory.totalMemories")}</span></div>
+          <div className="stat-item"><span className="stat-value">{stats.loopsCount}</span><span className="stat-label">{tt("settings.memory.openLoops")}</span></div>
+          <div className="stat-item"><span className="stat-value">{stats.episodesCount}</span><span className="stat-label">{tt("settings.memory.episodes")}</span></div>
+        </div>
       </div>
       <div className="settings-group">
         <h3>{tt("settings.memory.longTermHeading")}</h3>

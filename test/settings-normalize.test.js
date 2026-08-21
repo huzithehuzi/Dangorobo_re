@@ -271,3 +271,15 @@ test("저장-로드 왕복: 정규화 결과를 다시 정규화해도 같다", 
   const twice = normalizeSettings(JSON.parse(JSON.stringify(once)));
   assert.deepEqual(twice, once);
 });
+
+test("프리셋의 외곽선 색은 정규화되고, 없거나 잘못된 값은 빈 문자열로 남는다", () => {
+  const normalized = /** @type {any[]} */ (normalizeSettings({
+    customizationPresets: [
+      { id: "a", name: "가", outlineColor: "#AABBCC" },
+      { id: "b", name: "나", outlineColor: "빨강" },
+      { id: "c", name: "다" }
+    ]
+  }).customizationPresets);
+  // 빈 문자열은 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이라 기본값(#000000)으로 채우지 않는다.
+  assert.deepEqual(normalized.map((preset) => preset.outlineColor), ["#aabbcc", "", ""]);
+});

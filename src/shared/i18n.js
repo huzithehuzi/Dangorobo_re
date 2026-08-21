@@ -336,7 +336,9 @@
     "settings.customization.presetNamePlaceholder": { ko: "내 프리셋", en: "My preset", ja: "マイプリセット" },
     "settings.customization.presetSaveButton": { ko: "현재 설정 저장", en: "Save Current Settings", ja: "現在の設定を保存" },
     "settings.customization.presetImportButton": { ko: "파일에서 가져오기", en: "Import from File", ja: "ファイルからインポート" },
-    "settings.customization.presetsNote": { ko: "프리셋은 바디 색상·파츠 스타일·얼굴 무늬/장식/눈/입 설정을 저장합니다. 썸네일을 누르면 적용되지만 폼에만 반영되므로, 유지하려면 저장 버튼을 눌러주세요. 저장·삭제·가져오기는 즉시 반영되며 설정 저장 버튼과 무관합니다. 썸네일은 지금 사용 중인 조명·외곽선 설정으로 그려지며, 설정을 저장하거나 이 창을 다시 열면 새로 그려집니다.", en: "Presets store body colors, part styles, and face pattern/cosmetic/eye/mouth settings. Clicking a thumbnail applies it to the form only, so press Save to keep it. Save, delete, and import apply instantly and are independent of the Save button. Thumbnails are rendered with your current lighting and outline settings, and are redrawn when you save or reopen this window.", ja: "プリセットにはボディカラー・パーツスタイル・顔の模様/装飾/目/口の設定が保存されます。サムネイルを押すと適用されますがフォームにのみ反映されるので、維持するには保存ボタンを押してください。保存・削除・インポートは即座に反映され、設定の保存ボタンとは無関係です。サムネイルは現在の照明・輪郭線の設定で描画され、設定を保存するかこのウィンドウを再度開くと再描画されます。" },
+    "settings.customization.presetsNote": { ko: "프리셋은 바디 색상·파츠 스타일·얼굴 무늬/장식/눈/입·외곽선 색상을 저장합니다. 썸네일을 누르면 적용되지만 폼에만 반영되므로, 유지하려면 저장 버튼을 눌러주세요. 저장·삭제·가져오기는 즉시 반영되며 설정 저장 버튼과 무관합니다. 커스텀 얼굴·바디 이미지는 프리셋마다 따로 저장되고, 내보내기는 이미지까지 함께 담은 ZIP 세트 파일로 나갑니다. 썸네일은 지금 사용 중인 조명 설정과 프리셋의 외곽선 색으로 그려지며, 설정을 저장하거나 이 창을 다시 열면 새로 그려집니다.", en: "Presets store body colors, part styles, face pattern/cosmetic/eye/mouth settings, and the outline color. Clicking a thumbnail applies it to the form only, so press Save to keep it. Save, delete, and import apply instantly and are independent of the Save button. Custom face and body images are stored per preset, and Export writes a single ZIP set that includes them. Thumbnails are rendered with your current lighting settings and each preset's outline color, and are redrawn when you save or reopen this window.", ja: "プリセットにはボディカラー・パーツスタイル・顔の模様/装飾/目/口の設定・輪郭線の色が保存されます。サムネイルを押すと適用されますがフォームにのみ反映されるので、維持するには保存ボタンを押してください。保存・削除・インポートは即座に反映され、設定の保存ボタンとは無関係です。カスタム顔・ボディ画像はプリセットごとに保存され、エクスポートは画像まで含むZIPセットファイルとして出力されます。サムネイルは現在の照明設定と各プリセットの輪郭線の色で描画され、設定を保存するかこのウィンドウを再度開くと再描画されます。" },
+    "settings.customization.outlineHeading": { ko: "외곽선 색상", en: "Outline Color", ja: "輪郭線の色" },
+    "settings.customization.outlineNote": { ko: "프리셋에 함께 저장됩니다. 외곽선 사용 여부와 두께는 외형 탭에 있습니다.", en: "Saved with the preset. The outline toggle and thickness are on the Appearance tab.", ja: "プリセットと一緒に保存されます。輪郭線のオン/オフと太さは外観タブにあります。" },
     "settings.customization.faceHeading": { ko: "얼굴 커스터마이징", en: "Face Customization", ja: "顔のカスタマイズ" },
     "settings.customization.bodyHeading": { ko: "몸 커스터마이징", en: "Body Customization", ja: "体のカスタマイズ" },
     "settings.customization.bodyColorHeading": { ko: "바디 색상", en: "Body Colors", ja: "ボディカラー" },
@@ -413,6 +415,14 @@
     "settings.memory.importedAlert": { ko: "기억 {{n}}개를 불러왔습니다.", en: "Imported {{n}} memories.", ja: "記憶を{{n}}件読み込みました。" },
 
     "settings.tab.memory": { ko: "기억 관리", en: "Memory", ja: "メモリー" },
+    "settings.tab.patchNotes": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
+    "settings.patchNotes.heading": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
+    "settings.patchNotes.versionLabel": { ko: "v{{version}}", en: "v{{version}}", ja: "v{{version}}" },
+    "settings.patchNotes.note": {
+      ko: "이 버전에서 달라진 점입니다. 최신 버전이 맨 위에 있습니다.",
+      en: "What changed in this version. The newest version is at the top.",
+      ja: "このバージョンで変わった点です。最新のバージョンが一番上にあります。"
+    },
     "settings.tabGroup.pet": { ko: "펫", en: "Pet", ja: "ペット" },
     "settings.tabGroup.talk": { ko: "대화", en: "Talk", ja: "会話" },
     "settings.tabGroup.interaction": { ko: "알람과 조작", en: "Alarms & Input", ja: "アラームと操作" },
@@ -837,6 +847,26 @@
       ko: "{{personality}}{{nicknameNote}}{{petNicknameNote}} {{commonStyle}} 데스크톱 펫 말풍선에 맞게 핵심부터 답하고, 가능하면 답변은 200자 이하로 작성하세요. 사용자가 자세한 답변을 요구시 더 작성해도 됩니다. 1~2문장 작성 후 줄바꿈을 해주세요.",
       en: "{{personality}}{{nicknameNote}}{{petNicknameNote}} {{commonStyle}} Answer with the key point first, suited to a desktop pet speech bubble, ideally within 200 characters. You may write more if the user explicitly asks for a detailed answer. Add a line break after every 1-2 sentences.",
       ja: "{{personality}}{{nicknameNote}}{{petNicknameNote}} {{commonStyle}} デスクトップペットの吹き出しに合わせて要点から答え、できれば200文字以内にまとめてください。ユーザーが詳しい説明を求めた場合はもっと書いても構いません。1〜2文ごとに改行を入れてください。"
+    },
+    "assistant.dateTimeLocalLine": {
+      ko: "현재 PC 기준 날짜·시각: {{value}}",
+      en: "Current date and time on this PC: {{value}}",
+      ja: "現在のPCの日付・時刻: {{value}}"
+    },
+    "assistant.dateTimeZoneLine": {
+      ko: "현재 PC 시간대: {{zone}} ({{offset}})",
+      en: "Time zone of this PC: {{zone}} ({{offset}})",
+      ja: "このPCのタイムゾーン: {{zone}}({{offset}})"
+    },
+    "assistant.dateTimeUtcLine": {
+      ko: "UTC 기준 시각: {{value}}",
+      en: "Time in UTC: {{value}}",
+      ja: "UTC基準の時刻: {{value}}"
+    },
+    "assistant.dateTimeZoneUnknown": {
+      ko: "시스템 현지 시간대",
+      en: "system local time zone",
+      ja: "システムのローカルタイムゾーン"
     },
     "assistant.dateTimeInstruction": {
       ko: "위 날짜·시각은 프로그램이 이번 질문을 보내는 순간 PC에서 읽은 값입니다. 오늘·내일·어제·현재 시각 같은 표현은 반드시 이 값을 기준으로 해석하세요. 날짜·시각 정보만으로 최신 뉴스·날씨·주가 같은 외부 실시간 정보를 안다고 가정하지 마세요.",

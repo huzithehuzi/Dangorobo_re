@@ -180,6 +180,8 @@ interface CustomizationPreset {
   bodyCostume?: number;
   customFaceEnabled?: boolean;
   customBodyEnabled?: boolean;
+  /** 빈 문자열이면 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이다. */
+  outlineColor?: string;
 }
 
 interface LightingEntry {
@@ -224,6 +226,7 @@ interface DesktopPetSettingsApi {
   previewPartVariations(partVariations: Array<{ id: string; variation: string }>): void;
   previewFaceCustomization(payload: Record<string, unknown>): void;
   previewLighting(lighting: Record<string, LightingEntry>): void;
+  previewOutlineColor(color: string): void;
   openPetCustomize(): void;
   onBodyColorsChanged(callback: (bodyColors: Array<{ id: string; color: string }>) => void): void;
   pickFavoriteTarget(): Promise<(OkResult & { id?: string; name?: string; target?: string }) | undefined>;
@@ -235,7 +238,13 @@ interface DesktopPetSettingsApi {
   saveCustomizationPreset(preset: Record<string, unknown>): Promise<CustomizationPreset[]>;
   deleteCustomizationPreset(id: string): Promise<CustomizationPreset[]>;
   exportCustomizationPreset(preset: CustomizationPreset): Promise<OkResult | undefined>;
-  importCustomizationPreset(): Promise<(OkResult & { preset?: CustomizationPreset }) | undefined>;
+  importCustomizationPreset(): Promise<(OkResult & {
+    preset?: CustomizationPreset;
+    faceKeys?: string[];
+    hasBody?: boolean;
+  }) | undefined>;
+  /** 프리셋의 커스텀 얼굴·바디 이미지를 활성 슬롯으로 되돌린다. 이미지가 없는 프리셋은 null. */
+  activatePresetAssets(id: string): Promise<{ faceKeys: string[]; hasBody: boolean } | null>;
   renderPresetThumbnails(presets: CustomizationPreset[]): Promise<Record<string, string>>;
   exportAllSettings(): Promise<OkResult | undefined>;
   importAllSettings(): Promise<(OkResult & Record<string, unknown>) | undefined>;

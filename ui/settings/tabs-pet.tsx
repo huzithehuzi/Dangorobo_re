@@ -229,7 +229,7 @@ export function AppearanceTab() {
 
   return (
     <>
-      <div className="settings-group no-top-divider">
+      <div className="settings-group">
         <button
           className="secondary-action"
           type="button"
@@ -250,7 +250,6 @@ export function AppearanceTab() {
             set("ditherPattern", String(dd.ditherPattern || "none"));
             set("ditherAmount", String(dd.ditherAmount ?? ""));
             set("outlineEnabled", dd.outlineEnabled === true);
-            set("outlineColor", String(dd.outlineColor || "#000000"));
             set("outlineThickness", String(dd.outlineThickness ?? ""));
             set("lineWobbleEnabled", dd.lineWobbleEnabled === true);
             set("lineWobbleFrequency", String(dd.lineWobbleFrequency ?? ""));
@@ -274,12 +273,13 @@ export function AppearanceTab() {
         </button>
         <Note>{tt("settings.appearance.resetDefaultsNote")}</Note>
       </div>
-      <hr className="settings-divider" />
-      <h2>{tt("settings.appearance.modelHeading")}</h2>
-      <NumberRow label={tt("settings.appearance.scaleLabel")} value={d.petScalePercent} onChange={(value) => set("petScalePercent", value)} min={30} max={130} step={5} unit="%" />
-      <NumberRow label={tt("settings.appearance.tailSpeedLabel")} value={d.tailSpeedPercent} onChange={(value) => set("tailSpeedPercent", value)} min={25} max={350} step={5} unit="%" />
-      <ToggleRow checked={d.shadingEnabled} onChange={(checked) => set("shadingEnabled", checked)} label={tt("settings.appearance.shadingToggle")} />
-      <NumberRow label={tt("settings.appearance.pixelArtLabel")} value={d.pixelArtPercent} onChange={(value) => set("pixelArtPercent", value)} min={0} max={100} step={5} unit="%" />
+      <div className="settings-group">
+        <h2>{tt("settings.appearance.modelHeading")}</h2>
+        <NumberRow label={tt("settings.appearance.scaleLabel")} value={d.petScalePercent} onChange={(value) => set("petScalePercent", value)} min={30} max={130} step={5} unit="%" />
+        <NumberRow label={tt("settings.appearance.tailSpeedLabel")} value={d.tailSpeedPercent} onChange={(value) => set("tailSpeedPercent", value)} min={25} max={350} step={5} unit="%" />
+        <ToggleRow checked={d.shadingEnabled} onChange={(checked) => set("shadingEnabled", checked)} label={tt("settings.appearance.shadingToggle")} />
+        <NumberRow label={tt("settings.appearance.pixelArtLabel")} value={d.pixelArtPercent} onChange={(value) => set("pixelArtPercent", value)} min={0} max={100} step={5} unit="%" />
+      </div>
       <div className="settings-group">
         <h2>{tt("settings.appearance.colorHeading")}</h2>
         <ToggleRow checked={d.paletteEnabled} onChange={(checked) => set("paletteEnabled", checked)} label={tt("settings.appearance.paletteToggle")} />
@@ -328,14 +328,6 @@ export function AppearanceTab() {
         <NumberRow label={tt("settings.appearance.ditherAmountLabel")} value={d.ditherAmount} onChange={(value) => set("ditherAmount", value)} min={0} max={100} step={5} unit="%" disabled={!paletteOn || d.ditherPattern === "none"} />
         <Note>{tt("settings.appearance.ditherNote")}</Note>
         <ToggleRow checked={d.outlineEnabled} onChange={(checked) => set("outlineEnabled", checked)} label={tt("settings.appearance.outlineToggle")} />
-        <SettingRow asDiv label={tt("settings.appearance.outlineColorLabel")}>
-          {/* 외곽선 색은 예전에도 실시간 미리보기가 없었다(저장해야 반영) — 동작 유지 */}
-          <ColorField
-            value={d.outlineColor}
-            disabled={!d.outlineEnabled}
-            onCommit={(hex) => set("outlineColor", hex)}
-          />
-        </SettingRow>
         <NumberRow label={tt("settings.appearance.outlineThicknessLabel")} value={d.outlineThickness} onChange={(value) => set("outlineThickness", value)} min={1} max={8} step={1} unit="px" disabled={!d.outlineEnabled} />
         <ToggleRow checked={d.lineWobbleEnabled} onChange={(checked) => set("lineWobbleEnabled", checked)} label={tt("settings.appearance.lineWobbleToggle")} />
         <NumberRow label={tt("settings.appearance.lineWobbleFrequencyLabel")} value={d.lineWobbleFrequency} onChange={(value) => set("lineWobbleFrequency", value)} min={1} max={30} step={1} disabled={!d.lineWobbleEnabled} />
@@ -357,14 +349,14 @@ export function AppearanceTab() {
         <ToggleRow checked={d.sleepEnabled} onChange={(checked) => set("sleepEnabled", checked)} label={tt("settings.appearance.sleepToggle")} />
         <NumberRow label={tt("settings.appearance.sleepAfterLabel")} value={d.sleepAfterMinutes} onChange={(value) => set("sleepAfterMinutes", value)} min={1} max={120} step={1} unit={tt("settings.appearance.minutesUnit")} disabled={!d.sleepEnabled} />
         <Note>{tt("settings.appearance.sleepNote")}</Note>
-        <hr className="settings-divider" />
+      </div>
+      <div className="settings-group">
         <h2>{tt("settings.appearance.idleRoutineHeading")}</h2>
         <ToggleRow checked={d.idleRoutineEnabled} onChange={(checked) => set("idleRoutineEnabled", checked)} label={tt("settings.appearance.idleRoutineToggle")} />
         <NumberRow label={tt("settings.appearance.idleRoutineMinLabel")} value={d.idleRoutineMinSeconds} onChange={(value) => set("idleRoutineMinSeconds", value)} min={5} max={300} step={1} unit={tt("settings.appearance.secondsUnit")} disabled={!d.idleRoutineEnabled} />
         <NumberRow label={tt("settings.appearance.idleRoutineMaxLabel")} value={d.idleRoutineMaxSeconds} onChange={(value) => set("idleRoutineMaxSeconds", value)} min={5} max={300} step={1} unit={tt("settings.appearance.secondsUnit")} disabled={!d.idleRoutineEnabled} />
         <Note>{tt("settings.appearance.idleRoutineNote")}</Note>
       </div>
-      <hr className="settings-divider" />
       <div className="settings-group">
         <h2>{tt("settings.appearance.lightingHeading")}</h2>
         <Note>{tt("settings.appearance.lightingNote")}</Note>
@@ -408,6 +400,7 @@ export function CustomizationTab() {
   const snapshot = () => ({
     bodyColors: s.bodyColors.map((entry) => ({ ...entry })),
     partVariations: s.partVariations.map((entry) => ({ ...entry })),
+    outlineColor: d.outlineColor,
     ...faceCustomizationPayload(d)
   });
 
@@ -509,12 +502,29 @@ export function CustomizationTab() {
               if (!result.canceled) s.showError(result.error || tt("customization.importFailedError"));
               return;
             }
+            // 세트 파일에 딸려 온 커스텀 이미지는 main이 이미 활성 슬롯에 적용했다.
+            if (result?.faceKeys?.length) s.setCustomFaceKeys(result.faceKeys);
+            if (result?.hasBody) s.setCustomBodyHas(true);
             if (result?.preset) s.applyCustomizationSnapshot(result.preset);
           }}
         >
           {tt("settings.customization.presetImportButton")}
         </button>
         <Note>{tt("settings.customization.presetsNote")}</Note>
+      </div>
+      <div className="settings-group">
+        <h2>{tt("settings.customization.outlineHeading")}</h2>
+        <SettingRow asDiv label={tt("settings.appearance.outlineColorLabel")}>
+          <ColorField
+            value={d.outlineColor}
+            disabled={!d.outlineEnabled}
+            onCommit={(hex) => {
+              set("outlineColor", hex);
+              window.desktopPet.previewOutlineColor(hex);
+            }}
+          />
+        </SettingRow>
+        <Note>{tt("settings.customization.outlineNote")}</Note>
       </div>
       <div className="settings-group">
         <h2>{tt("settings.customization.faceHeading")}</h2>

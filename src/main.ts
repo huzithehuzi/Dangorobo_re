@@ -154,6 +154,15 @@ import { currentDateTimeContext } from "./main/assistant/date-time-context.js";
 import { runQaCaptureHarness } from "./main/qa-capture.js";
 import type { QaCaptureContext } from "./main/qa-capture.js";
 import { registerAppearanceIpcHandlers } from "./main/appearance-ipc.js";
+import {
+  activatePresetAssets,
+  capturePresetAssets,
+  deletePresetAssets,
+  exportPresetSet,
+  importPresetSet,
+  readPresetFaceTextureDataUrl,
+  seedLegacyPresetAssets
+} from "./main/custom-preset-assets.js";
 import { registerFavoritesIpcHandlers } from "./main/windows/favorites-ipc.js";
 import { registerAssistantIpcHandlers } from "./main/assistant/assistant-ipc.js";
 import { registerSettingsIpcHandlers } from "./main/settings-ipc.js";
@@ -1084,7 +1093,7 @@ const favoritesWindows = createFavoritesWindowController({
 
 function assistantInstructions(options: AssistantInstructionOptions = {}): string {
   const includeDateTime = options.includeDateTime !== false;
-  const dateTimeContext = includeDateTime ? currentDateTimeContext() : "";
+  const dateTimeContext = includeDateTime ? currentDateTimeContext(new Date(), settings.language) : "";
   return buildAssistantInstructions(settings, dateTimeContext, options);
 }
 
@@ -1477,6 +1486,12 @@ app.whenReady().then(async () => {
   logWindowOp("app:userData", { path: app.getPath("userData") });
   const assistantKeyRecoverySafe = recoverSettingsPersistenceBeforeLoad();
   loadSettings();
+  // 프리셋마다 커스텀 이미지를 갖는 기능(2026-08-20) 전에 저장된 프리셋에 자기 이미지 파일을
+  // 한 번 채워 준다 — 안 하면 옛 프리셋들만 계속 활성 이미지 한 벌을 공유한다.
+  const seededPresetAssets = seedLegacyPresetAssets(settings.customizationPresets);
+  if (seededPresetAssets > 0) {
+    console.log(`[Customization] 옛 프리셋 ${seededPresetAssets}개에 커스텀 이미지 파일을 채웠다.`);
+  }
   if (assistantKeyRecoverySafe) loadAssistantKey();
   assistantHistory.loadLogs();
   // initializeMemoryDb는 async다. await 없이 if(!...)로 검사하면 Promise가 항상
@@ -1697,8 +1712,12 @@ registerAppearanceIpcHandlers(ipcMain, {
     filters: options.filters,
     properties: options.properties as OpenDialogOptions["properties"]
   }),
-  writeTextFile: (filePath, text) => fs.writeFileSync(filePath, text, "utf8"),
-  readTextFile: (filePath) => fs.readFileSync(filePath, "utf8"),
+  capturePresetAssets,
+  deletePresetAssets,
+  activatePresetAssets,
+  readPresetFaceTexture: readPresetFaceTextureDataUrl,
+  exportPresetSet,
+  importPresetSet,
   importCustomFaceZip,
   readCustomFaceTextures,
   importCustomBodyImage,

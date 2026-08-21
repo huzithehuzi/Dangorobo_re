@@ -1,6 +1,6 @@
 {
   "name": "dangorobo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "commonjs",
   "description": "마우스를 바라보고 휴식을 알려주는 레트로 감성 데스크톱 펫 Dangorobo",

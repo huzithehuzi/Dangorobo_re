@@ -9,7 +9,7 @@ import {
 import { AppearanceTab, CustomizationTab } from "./tabs-pet";
 import { ConversationTab, MemoryTab } from "./tabs-talk";
 import { AlertsTab, ShortcutsTab, FavoritesTab, PlayerTab } from "./tabs-interaction";
-import { GeneralTab, UiTab, TrayTab } from "./tabs-app";
+import { GeneralTab, UiTab, TrayTab, PatchNotesTab } from "./tabs-app";
 import { DevTab } from "./tabs-dev";
 import { useCustomizationState } from "./use-customization-state";
 import { useSettingsLifecycle } from "./use-settings-lifecycle";
@@ -22,7 +22,7 @@ const TAB_GROUPS = [
   { labelKey: "settings.tabGroup.pet", tabs: [{ id: "appearance", labelKey: "settings.tab.appearance" }, { id: "customization", labelKey: "settings.tab.customization" }] },
   { labelKey: "settings.tabGroup.talk", tabs: [{ id: "conversation", labelKey: "settings.tab.conversation" }] },
   { labelKey: "settings.tabGroup.interaction", tabs: [{ id: "alerts", labelKey: "settings.tab.alerts" }, { id: "shortcuts", labelKey: "settings.tab.shortcuts" }, { id: "favorites", labelKey: "settings.tab.favorites" }, { id: "player", labelKey: "settings.tab.player" }] },
-  { labelKey: "settings.tabGroup.app", tabs: [{ id: "general", labelKey: "settings.tab.general" }, { id: "ui", labelKey: "settings.tab.ui" }, { id: "tray", labelKey: "settings.tab.tray" }] }
+  { labelKey: "settings.tabGroup.app", tabs: [{ id: "general", labelKey: "settings.tab.general" }, { id: "ui", labelKey: "settings.tab.ui" }, { id: "tray", labelKey: "settings.tab.tray" }, { id: "patchNotes", labelKey: "settings.tab.patchNotes" }] }
 ];
 
 export interface SettingsStore {
@@ -288,8 +288,12 @@ export default function App() {
     setPartVariations(nextPartVariations);
     setDraft((prev) => {
       if (!prev) return prev;
+      const presetOutlineColor = /^#[0-9a-fA-F]{6}$/.test(String(preset.outlineColor || ""))
+        ? String(preset.outlineColor).toLowerCase()
+        : prev.outlineColor;
       const merged: Draft = {
         ...prev,
+        outlineColor: presetOutlineColor,
         facePattern: String(preset.facePattern ?? 0),
         faceCosmetic: String(preset.faceCosmetic ?? 0),
         faceEyeStyle: String(preset.faceEyeStyle ?? 1),
@@ -299,12 +303,22 @@ export default function App() {
         customBodyEnabled: preset.customBodyEnabled === true
       };
       window.desktopPet.previewFaceCustomization(faceCustomizationPayload(merged));
+      window.desktopPet.previewOutlineColor(presetOutlineColor);
       return merged;
     });
     window.desktopPet.previewBodyColors(nextBodyColors.map((entry) => ({ ...entry })));
     window.desktopPet.previewPartVariations(nextPartVariations.map((entry) => ({ ...entry })));
+    // 프리셋마다 커스텀 얼굴·바디 이미지를 따로 갖는다 — 그 프리셋의 이미지를 활성 슬롯으로
+    // 되돌린다. 이미지를 안 가진 프리셋(이 기능 전에 저장한 것)은 null이 와서 지금 이미지를 둔다.
+    window.desktopPet.activatePresetAssets(String(preset.id || ""))
+      .then((activation) => {
+        if (!activation) return;
+        if (activation.faceKeys.length) setCustomFaceKeys(activation.faceKeys);
+        if (activation.hasBody) setCustomBodyHas(true);
+      })
+      .catch((error) => console.error("[Settings] Activate preset assets failed:", error));
     markDirty();
-  }, [markDirty, setBodyColors, setPartVariations]);
+  }, [markDirty, setBodyColors, setPartVariations, setCustomFaceKeys, setCustomBodyHas]);
 
   const store = useMemo<SettingsStore | null>(() => {
     if (!d) return null;
@@ -412,6 +426,7 @@ export default function App() {
           <section data-tab-panel="shortcuts" className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
           <section data-tab-panel="tray" className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
           <section data-tab-panel="favorites" className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
+          <section data-tab-panel="patchNotes" className={`tab-panel${activeTab === "patchNotes" ? " active" : ""}`} hidden={activeTab !== "patchNotes"}><PatchNotesTab /></section>
           <section data-tab-panel="dev" className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
         </div>
         <footer className="settings-footer">

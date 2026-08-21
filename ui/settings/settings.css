@@ -167,23 +167,22 @@ p { margin: 6px 0 0; color: var(--text-muted); font-size: calc(11px * var(--ui-f
   text-align: left;
   cursor: pointer;
 }
+.settings-tab { transition: color 120ms ease, background 120ms ease, border-color 120ms ease; }
 .settings-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
-.settings-tab.active { color: var(--text); border-color: color-mix(in srgb, var(--settings-accent) 55%, transparent); background: color-mix(in srgb, var(--settings-accent) 25%, transparent); }
-/* 활성 탭 왼쪽 강조 바 — 세로 목록에서 현재 위치를 한눈에 알아보게 한다. */
-.settings-tab.active::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: -6px;
-  width: 3px;
-  height: 16px;
-  border-radius: 2px;
-  background: var(--settings-accent);
-  transform: translateY(-50%);
+/* 활성 탭: 왼쪽 강조선을 pill **안쪽**(box-shadow inset)에 둔다. 예전에는 pill 밖
+   `::before`로 그려서 사이드바의 overflow-x: hidden에 걸려 잘려 보였다(2026-08-20). */
+.settings-tab.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--settings-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--settings-accent) 26%, transparent);
+  box-shadow: inset 3px 0 0 var(--settings-accent);
+  font-weight: 600;
 }
 /* max-width: 창을 아주 넓게 늘렸을 때 setting-row의 라벨과 입력칸이 양 끝으로
    너무 멀어져 짝을 읽기 힘들어지는 걸 막는다(기본 창 너비에서는 영향 없음). */
-.tab-panel { max-width: 740px; padding: 18px; border: 1px solid color-mix(in srgb, var(--settings-border) 75%, transparent); border-radius: 14px; background: var(--settings-panel); }
+/* 패널 자체는 테두리 없는 그릇이고, 실제 시각적 묶음은 아래 .settings-group 카드가 만든다
+   (2026-08-20). 예전에는 패널 한 장 안에 가로줄로만 구분해서 항목이 많은 탭이 벽처럼 보였다. */
+.tab-panel { display: flex; flex-direction: column; gap: 12px; max-width: 740px; }
 
 /* 창이 좁으면(사이드바 168px을 빼면 본문이 눌린다) 원래의 가로 탭 바로 돌아간다.
    .settings-tab-group에 display:contents를 주어 그룹 래퍼를 무시하고
@@ -203,14 +202,35 @@ p { margin: 6px 0 0; color: var(--text-muted); font-size: calc(11px * var(--ui-f
   .settings-tab-group { display: contents; }
   .settings-tab-group-label { display: none; }
   .settings-tab { padding: 7px 11px; text-align: center; }
-  .settings-tab.active::before { display: none; }
+  .settings-tab.active { box-shadow: none; }
 }
-.settings-group { margin-top: 18px; padding-top: 15px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
-/* 탭의 첫 그룹은 위에 이미 .tab-panel 패딩이 있어 이 border-top이 패널 맨 위에 붙은 뜬금없는
-   가로줄로 보인다(외형 탭 "초기화" 버튼, 2026-08-09). 구분선이 필요하면 원하는 위치에
-   <hr class="settings-divider">를 직접 넣을 것 — 이 클래스는 그 기본 줄만 지운다. */
-.settings-group.no-top-divider { margin-top: 0; padding-top: 0; border-top: none; }
-h2 { margin: 0 0 12px; color: var(--text); font-size: calc(13px * var(--ui-font-size-scale)); }
+.settings-group {
+  padding: 15px 16px 16px;
+  border: 1px solid color-mix(in srgb, var(--settings-border) 70%, transparent);
+  border-radius: 13px;
+  background: var(--settings-panel);
+}
+/* 그룹 제목: 왼쪽에 짧은 강조 막대를 붙여 카드의 머리라는 걸 한눈에 보이게 한다. */
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: calc(13px * var(--ui-font-size-scale));
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+h2::before {
+  content: "";
+  flex: none;
+  width: 3px;
+  height: calc(13px * var(--ui-font-size-scale));
+  border-radius: 2px;
+  background: var(--settings-accent);
+}
+/* 그룹 밖에 바로 놓인 안내문(탭 맨 위 설명)은 카드가 아니라 여백만 준다. */
+.tab-panel > .setting-note { margin: 2px 2px 0; }
 label { display: flex; align-items: center; }
 .toggle-row { gap: 9px; margin: 11px 0; font-size: calc(13px * var(--ui-font-size-scale)); }
 .toggle-row input { width: 17px; height: 17px; accent-color: var(--settings-accent); }
@@ -227,7 +247,19 @@ label { display: flex; align-items: center; }
   font: inherit;
   font-size: calc(12px * var(--ui-font-size-scale));
 }
-.input-wrap select { width: 132px; }
+/* 셀렉트는 항목 이름이 길어 132px에서는 자주 잘렸다("베이어 2×2 (거친 격…") — 2026-08-20. */
+.input-wrap select { width: 156px; }
+.input-wrap input:hover:not(:disabled), .input-wrap select:hover:not(:disabled),
+.text-field input:hover:not(:disabled), .text-field textarea:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--settings-accent) 40%, var(--settings-border));
+}
+/* 포커스 표시는 창 전체에 한 규칙으로 준다 — 예전에는 브라우저 기본 파란 테두리가 그대로
+   나와 톤이 어긋났다. */
+:where(input, select, textarea, button, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--settings-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--settings-accent); }
 .input-wrap input[type="time"] { width: 132px; }
 .shortcut-recorder {
   width: 240px;
@@ -308,7 +340,7 @@ label { display: flex; align-items: center; }
   font-size: calc(12px * var(--ui-font-size-scale));
   resize: none;
 }
-.setting-note { margin: 7px 0 0; color: var(--text-dim); font-size: calc(11px * var(--ui-font-size-scale)); line-height: 1.5; }
+.setting-note { margin: 7px 0 0; color: color-mix(in srgb, var(--text-dim) 65%, var(--text)); font-size: calc(11px * var(--ui-font-size-scale)); line-height: 1.6; }
 .setting-note.ready { color: color-mix(in srgb, #2e9e5b 52%, var(--text)); }
 .setting-note.missing { color: color-mix(in srgb, #b3761f 52%, var(--text)); }
 .setting-note a { color: var(--settings-accent, #6ea8fe); }
@@ -329,18 +361,32 @@ label { display: flex; align-items: center; }
   width: 100%;
   padding: 10px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   color: #fff;
   background: var(--settings-accent);
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
+  transition: transform 90ms ease, background 120ms ease, border-color 120ms ease;
 }
+.save-button { max-width: 740px; margin: 0 auto; display: block; box-shadow: 0 6px 18px color-mix(in srgb, var(--settings-accent) 28%, transparent); }
 .save-button:hover, .secondary-action:hover { background: var(--settings-accent-hover); }
-.secondary-action { margin-top: 11px; border: 1px solid var(--settings-border); color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); font-size: 12px; }
-.secondary-action:hover { background: color-mix(in srgb, var(--text) 15%, transparent); }
+.secondary-action { margin-top: 11px; border: 1px solid var(--settings-border); color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); font-size: 12px; font-weight: 500; }
+.secondary-action:hover { border-color: color-mix(in srgb, var(--settings-accent) 45%, var(--settings-border)); background: color-mix(in srgb, var(--text) 15%, transparent); }
+.save-error, .save-success { max-width: 740px; margin-left: auto; margin-right: auto; }
 .save-error { margin-bottom: 8px; padding: 9px 10px; border: 1px solid #9b4b55; border-radius: 8px; color: color-mix(in srgb, #d7566b 42%, var(--text)); background: color-mix(in srgb, #d7566b 20%, var(--settings-panel)); font-size: 12px; }
 .save-success { margin-bottom: 8px; padding: 9px 10px; border: 1px solid #4b9b6a; border-radius: 8px; color: color-mix(in srgb, #2e9e5b 42%, var(--text)); background: color-mix(in srgb, #2e9e5b 20%, var(--settings-panel)); font-size: 12px; text-align: center; }
 input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 스크롤바도 창 톤에 맞춘다(기본 스크롤바가 밝아서 어두운 창에서 먼저 눈에 띈다). */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 20%, transparent);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 32%, transparent); background-clip: content-box; }
 #outline-color { width: 58px; height: 34px; padding: 3px; cursor: pointer; }
 #ui-font-preset { width: 190px; }
 #assistant-personality { width: 154px; }
@@ -392,26 +438,36 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
 .favorite-icon-preview-icon { display: block; width: 100%; height: 100%; }
 .favorite-icon-preview-icon svg { width: 100%; height: 100%; display: block; }
 
-/* 아이콘 선택 팝오버 — 아이콘 버튼 기준으로 아래에, 창 밖으로 나가면 위로 뒤집는다. */
+/* 아이콘·색상 선택 팝오버 — 네이티브 popover라 최상위 레이어에 뜬다(2026-08-20).
+   예전에는 카드 안의 `position: absolute`였는데 스크롤 패널과 형제 카드에 잘려서, 안에 든
+   색 선택기를 펼치면 클릭조차 못 하는 경우가 있었다. 최상위 레이어는 어떤 조상의 overflow·
+   스태킹에도 잘리지 않고, 바깥 클릭·Esc 닫기도 브라우저가 해 준다 — 카드에 z-index를 얹던
+   우회와 JS 뒤집기 계산이 사라졌다.
+   위치는 **누른 아이콘 버튼**에 CSS anchor로 묶는다(가운데 띄우면 어느 항목을 편집하는
+   중인지 알 수 없다). `position-area`가 앵커 기준 영역을 잡고, 아래 공간이 모자라면
+   `position-try-order: most-block-size`가 위/아래 중 더 넓은 쪽을 고른다 — 팝오버 높이는
+   안에서 색 선택기를 펼치면 늘어나므로 고정 계산으로는 못 맞춘다. 그래도 모자라면 팝오버
+   안에서 스크롤해 끝까지 닿게 한다(잘려서 못 고르는 상태 금지). */
+.favorite-icon-button.picker-open { anchor-name: --favorite-icon-anchor; }
 .favorite-icon-picker {
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 0;
-  z-index: 6;
+  position: fixed;
+  position-anchor: --favorite-icon-anchor;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: block-start span-inline-end;
+  position-try-order: most-block-size;
+  margin: 7px 0;
   width: 288px;
+  max-width: calc(100vw - 16px);
+  max-height: none;
+  overflow-y: auto;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--settings-accent) 32%, var(--settings-border));
   border-radius: 11px;
   background: color-mix(in srgb, var(--settings-bg) 90%, black 10%);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: var(--text);
 }
-/* .favorite-items가 display:grid라 각 .favorite-item이 암묵적으로 독립 스태킹 컨텍스트가
-   된다(그리드/플렉스 아이템은 z-index:auto라도 position:relative처럼 취급됨) — 팝오버의
-   z-index:6은 자기 카드 안에서만 유효해서, 카드 밖으로 넘치는 부분(다음 카드와 겹치는
-   영역)이 다음 형제 카드 뒤로 깔려버린다(2026-08-08, "호버하면 아이콘 선택창 순서가
-   이상해짐" 리포트). 팝오버가 열린 카드 자체에 z-index를 줘서 형제 카드보다 위로 올린다. */
-.favorite-item:has(.favorite-icon-picker.open) { z-index: 1; }
-.favorite-icon-picker.flip-up { top: auto; bottom: calc(100% + 7px); }
+.favorite-icon-picker::backdrop { background: rgba(0, 0, 0, 0.35); }
 .favorite-icon-picker-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
 .favorite-icon-picker-title { flex: none; color: var(--text-dim); font-size: 10px; }
 .favorite-icon-preview-label { overflow: hidden; color: var(--text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
@@ -430,10 +486,17 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
 .favorite-icon-choice:hover { border-color: color-mix(in srgb, var(--settings-accent) 55%, var(--settings-border)); }
 .favorite-icon-choice.active { border-color: var(--settings-accent); background: color-mix(in srgb, var(--settings-accent) 22%, transparent); color: var(--settings-accent); }
 .favorite-target { overflow: hidden; padding-left: 2px; color: var(--text-dim); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.favorite-icon-color-group { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 9px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
+.favorite-icon-color-group { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-top: 9px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--settings-border) 60%, transparent); }
 .favorite-icon-color-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-.favorite-icon-color { width: 26px; height: 26px; padding: 0; border: 1px solid var(--settings-border); border-radius: 6px; background: none; flex: none; cursor: pointer; }
-.favorite-icon-color:disabled { opacity: 0.4; cursor: not-allowed; }
+/* 공용 색 선택기(ColorField)의 호스트다. 예전 `<input type="color">` 시절의 26×26 상자
+   크기가 남아 있어서, 펼친 색 패널이 그 작은 상자를 넘쳐 잘려 보였다(2026-08-20).
+   호스트를 레이아웃에서 지워 피커가 제 크기대로 자리를 차지하게 한다. */
+.favorite-icon-color { display: contents; }
+/* 패치 노트 목록(2026-08-20) — 기본 목록 스타일은 여백이 과하고 점이 글자와 붙는다. */
+.patch-note-list { margin: 0; padding-left: 18px; color: var(--text); font-size: calc(12.5px * var(--ui-font-size-scale)); line-height: 1.7; }
+.patch-note-list li { margin: 0 0 6px; padding-left: 2px; }
+.patch-note-list li::marker { color: var(--settings-accent); }
+.patch-note-list li:last-child { margin-bottom: 0; }
 .preset-item-actions { display: flex; gap: 6px; align-items: center; justify-content: center; }
 .preset-item-actions .secondary-action { width: auto; margin-top: 0; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
 
@@ -480,7 +543,9 @@ input:disabled, select:disabled, button:disabled { opacity: 0.5; cursor: not-all
 .preset-thumb:hover .preset-thumb-overlay,
 .preset-thumb:focus-visible .preset-thumb-overlay { opacity: 1; }
 .preset-card-name { overflow: hidden; color: var(--text-muted); font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.settings-divider { margin: 18px 0; border: none; border-top: 2px solid var(--settings-accent); opacity: 0.4; }
+/* 카드 안에서 소절을 나누는 실선(카드 사이 구분은 카드 자체가 한다). 예전엔 2px 강조색
+   이라 카드 디자인에서는 지나치게 튀었다(2026-08-20). */
+.settings-divider { margin: 15px 0; border: none; border-top: 1px solid color-mix(in srgb, var(--settings-border) 70%, transparent); }
 .lighting-group { margin-top: 16px; padding: 12px; border: 1px solid color-mix(in srgb, var(--settings-border) 50%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--settings-field) 50%, transparent); }
 .lighting-group h3 { margin: 0 0 10px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
 .lighting-group .setting-row { margin: 8px 0; }
