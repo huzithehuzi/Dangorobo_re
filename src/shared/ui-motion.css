@@ -188,7 +188,31 @@ textarea:focus-visible,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 40%, transparent);
 }
 
-/* ── 9. 움직임 최소화 설정 존중 ────────────────────────────────────────
+/* ── 9. 누름 젤리 출렁임 ───────────────────────────────────────────────
+   ui-motion.js가 pointerdown에 .ui-jelly를 붙였다가 애니메이션이 끝나면 뗀다.
+
+   ⚠ **`transform`이 아니라 독립 `scale` 속성을 애니메이션한다.** 키프레임의 값은 명시도와
+   무관하게 일반 선언을 이기므로, transform으로 자리를 잡는 버튼(`.fab`·`.gradient-stop`·
+   `.pie-item`의 `translate(-50%, -50%)`)이라면 애니메이션이 도는 460ms 동안 그 translate가
+   통째로 사라져 버튼이 오른쪽 아래로 튄다 — test/active-transform-specificity.test.js가
+   기록한 그 버그와 같은 증상인데, 이쪽은 **명시도를 올려도 막을 수 없다**.
+   `scale`은 별개 속성이라 transform과 곱해져 합성되므로 자리를 건드리지 않는다.
+
+   기존 누름 축소(`button:active { transform: scale(0.94) }`)와도 곱해진다: 누르는 동안
+   납작해지고 손을 떼면 출렁이며 제자리로 돌아오는 순서로 읽힌다. 그래서 진폭을 작게 잡았다 —
+   여기서 더 키우면 두 효과가 겹쳐 출렁임이 아니라 버튼이 튀는 것처럼 보인다.
+   가로·세로를 반대로 움직여(납작 → 홀쭉) 부피가 유지되는 것처럼 보이게 한다. */
+@keyframes ui-jelly-press {
+  0% { scale: 1 1; }
+  24% { scale: 1.05 0.92; }
+  48% { scale: 0.965 1.045; }
+  70% { scale: 1.02 0.985; }
+  86% { scale: 0.995 1.008; }
+  100% { scale: 1 1; }
+}
+.ui-jelly { animation: ui-jelly-press 460ms cubic-bezier(0.22, 0.9, 0.3, 1); }
+
+/* ── 10. 움직임 최소화 설정 존중 ───────────────────────────────────────
    Windows의 "애니메이션 표시" 끄기가 이 미디어 쿼리로 들어온다. 감성적인 효과라도
    멀미·주의력 문제로 끄는 사용자가 있으므로 전부 비활성화한다(포커스 링처럼 움직이지
    않는 것만 남긴다). */
@@ -204,4 +228,5 @@ textarea:focus-visible,
   .ui-stagger-item { animation: none; }
   input[type="checkbox"]:active:not(:disabled),
   input[type="radio"]:active:not(:disabled) { transform: none; }
+  .ui-jelly { animation: none; }
 }

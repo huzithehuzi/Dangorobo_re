@@ -104,6 +104,14 @@ npm run dist
   공용 모션의 레이아웃 속성은 `:where()`로 명시도를 0으로 둔다.
 - transform을 이미 쓰는 버튼에 `button:active` scale을 추가할 때 기존 translate를 보존하고
   공용 선택자보다 높은 명시도로 뒤에 둔다. `prefers-reduced-motion`도 함께 처리한다.
+- **공용 버튼 애니메이션(누름 젤리 등)은 `transform`이 아니라 독립 `scale`/`translate`/`rotate`
+  속성을 움직인다.** 키프레임 값은 명시도와 무관하게 일반 선언을 이기므로, `transform`을
+  애니메이션하면 translate로 자리를 잡은 버튼(`.fab`·`.gradient-stop`·`.pie-item`)이 애니메이션이
+  도는 동안 통째로 튄다 — 위 :active 규칙과 달리 **명시도를 올려도 막을 수 없다**.
+  `test/ui-motion-jelly.test.js`가 막는다.
+- 누름 효과(파문·젤리)는 `pointerdown`에서 돈다. `--capture-settings-click`의 `el.click()`은
+  pointerdown을 만들지 않으므로 그 경로로는 확인할 수 없다 — `--capture-settings-press`를 쓰고,
+  선택자는 `.tab-panel.active ...`로 좁힌다(숨은 탭의 0×0 요소를 잡으면 아무것도 안 보인다).
 - **Tailwind 창에서 `font` 축약(`[font:inherit]`)으로 글자 크기를 덮지 않는다.** preflight가 이미
   `button,input,select,optgroup,textarea`에 걸어 주고(base 레이어라 유틸리티에 항상 진다),
   유틸리티로 쓰면 클래스에 적은 순서와 무관하게 `fs-*`보다 뒤에 정렬돼 크기를 루트 상속값으로

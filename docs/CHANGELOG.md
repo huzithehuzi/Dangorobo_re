@@ -5,6 +5,25 @@ Dangorobo의 주요 마일스톤만 날짜별로 기록한다. 현재 구조·�
 
 ## 2026-08-21
 
+- **UI 버튼을 누르면 젤리처럼 출렁인다**: 기존 누름 반응은 `:active`의 `scale(0.94)` 축소
+  하나뿐이었다. `ui-motion.css`에 가로·세로를 번갈아 반대로 움직이는 키프레임을 넣고
+  (`ui-jelly-press`, 460ms), `ui-motion.js`가 `pointerdown`에 클래스를 붙였다 뗀다. 누르는 동안
+  납작해지고 손을 떼면 출렁이며 돌아오는 순서로 읽힌다. 파문과 같은 대상 판정(`pressTarget()`)을
+  공유한다 — 갈리면 한쪽 효과만 도는 버튼이 생긴다.
+
+  **`transform`이 아니라 독립 `scale` 속성을 애니메이션한다.** 키프레임 값은 명시도와 무관하게
+  일반 선언을 이기므로, transform을 움직이면 translate로 자리를 잡은 버튼
+  (`.fab`·`.gradient-stop`·`.pie-item`)이 460ms 동안 그 translate를 잃고 오른쪽 아래로 튄다 —
+  `test/active-transform-specificity.test.js`가 기록한 그 버그와 같은 증상인데, 이쪽은 명시도를
+  올려도 막을 수 없다. `scale`은 별개 속성이라 transform과 곱해져 합성된다.
+
+- **누름 효과를 실제 창에서 확인할 QA 경로를 만들었다**(`--capture-settings-press=<선택자>`):
+  기존 `--capture-settings-click`은 `el.click()`을 부르는데 그건 `pointerdown`을 만들지 않아
+  파문·젤리가 **아예 돌지 않는다** — 그래서 이 효과들은 여태 캡처로 확인된 적이 없었다.
+  진짜 `PointerEvent`를 보내고, 스크린샷만으로는 "안 돌았다"와 "이미 끝났다"를 구별할 수 없어
+  클래스·파문 개수·요소 크기를 함께 로그로 남긴다. 실제로 이 작업 중 숨은 탭의 0×0 버튼을
+  잡아 "효과가 안 도는 것처럼" 보인 일이 있었다.
+
 - **"잊어줘"를 실제로 처리하게 했다**: 그 경로가 아예 없어서 펫은 알겠다고 대답만 하고 DB는
   그대로였다. 이제 `detectForgetSignals()`가 **사용자 발화**에서 걸릴 때만 무엇을 잊을지 LLM에
   묻고(`buildForgetPrompt()`), 지목된 기억·미완료 주제를 지운다. 완료 판정과 같은 구조라 평소
