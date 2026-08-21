@@ -9,6 +9,7 @@ import {
   recoverInterruptedAtomicWriteSync
 } from "../atomic-file.js";
 const { version: APP_VERSION } = require("../../../package.json") as { version: string };
+const { t } = require("../../shared/i18n.js");
 
 type SqlJsStatic = initSqlJs.SqlJsStatic;
 type Database = initSqlJs.Database;
@@ -741,18 +742,23 @@ function closeOpenLoop(loopId: number, resolutionNotes: string): boolean {
   });
 }
 
-// 아주 오래 언급되지 않은 미완료 주제를 아카이브하는 기준. 프롬프트 노출 상한
-// (`OPEN_LOOP_PROMPT_MAX_AGE_DAYS`, 2주)과는 목적이 다르다 — 그쪽은 "펫이 꺼내지 않게",
-// 이쪽은 "표가 무한정 쌓이지 않게"다. 그래서 훨씬 길게 잡는다. 이사·자격증처럼 느리게
-// 진행되는 일이 여기 걸리면 안 되고, 반년이 지나도록 한 번도 다시 언급되지 않은 주제는
-// 사용자에게도 잊힌 항목으로 본다.
-const OPEN_LOOP_ARCHIVE_AGE_DAYS = 180;
+// 아주 오래 언급되지 않은 미완료 주제를 닫는 기준. 프롬프트 노출 상한
+// (`OPEN_LOOP_PROMPT_MAX_AGE_DAYS`, 3일)과는 목적이 다르다 — 그쪽은 "펫이 스스로 꺼내지
+// 않게", 이쪽은 "표가 무한정 쌓이지 않게"다. 그래서 더 길게 잡는다.
+// 2026-08-21에 반년에서 2주로 줄였다(사용자 피드백: 쓸데없는 주제가 계속 쌓인다).
+// 노출 상한이 3일이므로 그 사이 열린 주제는 어차피 펫이 먼저 꺼내지 않고, 사용자가
+// 다시 언급하면 last_mentioned_at이 갱신돼 기준이 다시 밀린다 — 진행 중인 일은
+// "이야기하는 동안" 살아 있고 잊힌 일만 닫힌다.
+const OPEN_LOOP_ARCHIVE_AGE_DAYS = 14;
 
 /**
  * 기준일보다 오래 언급되지 않은 열린 주제를 닫는다. 이미 닫힌 주제는 건드리지 않으므로
  * 여러 번 불러도 안전하다(시작할 때 한 번 부른다). 닫은 개수를 돌려준다.
  */
-function archiveStaleOpenLoops(maxAgeDays = OPEN_LOOP_ARCHIVE_AGE_DAYS): number {
+function archiveStaleOpenLoops(
+  maxAgeDays = OPEN_LOOP_ARCHIVE_AGE_DAYS,
+  language = "en"
+): number {
   if (!db) return 0;
 
   return runPersistentMutation("Archive stale open loops", 0, database => {
@@ -770,7 +776,11 @@ function archiveStaleOpenLoops(maxAgeDays = OPEN_LOOP_ARCHIVE_AGE_DAYS): number 
     database.run(
       `UPDATE open_loops SET is_closed = 1, closed_at = ?, resolution_notes = ?
        WHERE ${staleCondition}`,
-      [now.toISOString(), `${maxAgeDays}일 이상 언급되지 않아 자동 정리`, cutoff]
+      [
+        now.toISOString(),
+        t(language, "memory.openLoopAutoArchivedNote", { days: maxAgeDays }),
+        cutoff
+      ]
     );
     return archived;
   });

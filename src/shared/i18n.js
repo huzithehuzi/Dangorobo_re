@@ -875,6 +875,24 @@
     "assistant.openLoopsToday": { ko: "오늘", en: "today", ja: "今日" },
     "assistant.openLoopsDaysAgo": { ko: "{{days}}일 전", en: "{{days}} days ago", ja: "{{days}}日前" },
 
+    // 장기 기억 DB에 남기는 사람이 읽는 값들. 화면에 바로 띄우지는 않지만 기억 관리·백업
+    // 파일에서 사용자가 보게 되므로 앱 언어를 따른다(예전에는 한국어로 하드코딩돼 있었다).
+    "memory.openLoopAutoResolvedNote": {
+      ko: "AI가 대화에서 완료 신호를 감지해 자동 종료",
+      en: "Auto-closed: the AI detected a completion signal in the conversation",
+      ja: "AIが会話から完了のサインを検知して自動終了"
+    },
+    "memory.openLoopAutoArchivedNote": {
+      ko: "{{days}}일 이상 언급되지 않아 자동 정리",
+      en: "Auto-archived after {{days}}+ days without a mention",
+      ja: "{{days}}日以上言及がなく自動整理"
+    },
+    "memory.episodeBatchSummary": {
+      ko: "대화 배치 - {{when}} ({{turns}}턴)",
+      en: "Conversation batch - {{when}} ({{turns}} turns)",
+      ja: "会話バッチ - {{when}} ({{turns}}ターン)"
+    },
+
     // ---- 펫이 먼저 말 걸기(petChat) ----
     "petChat.intro": {
       ko: "(지금은 사용자가 질문한 상황이 아니라, 당신이 먼저 사용자에게 말을 거는 상황입니다. 질문에 답하는 것처럼 굴지 말고, 대화를 먼저 여는 자연스러운 말투로 짧게 한마디 건네세요. 지금 몇 시인지, 시간대(아침/밤 등)를 언급하거나 그에 따른 잔소리·조언은 절대 하지 마세요.",

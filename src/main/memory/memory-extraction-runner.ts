@@ -15,6 +15,7 @@ import {
 } from "./memory-extraction.js";
 import type { OpenLoop, StoredMemory } from "./memory-extraction.js";
 import type { ConversationTurn } from "./memory-persistence.js";
+const { t } = require("../../shared/i18n.js");
 
 type ExtractionAskOptions = {
   shortQuestionMode: boolean;
@@ -102,7 +103,7 @@ function createMemoryExtractionRunner(deps: MemoryExtractionRunnerDeps) {
           if (resolutionResponse) {
             const resolvedIds = parseLoopResolutionResponse(resolutionResponse, openLoopsToResolve);
             resolvedIds.forEach((id: number) => {
-              deps.closeOpenLoop(id, "AI가 대화에서 완료 신호를 감지해 자동 종료");
+              deps.closeOpenLoop(id, t(language, "memory.openLoopAutoResolvedNote"));
             });
           }
         }
@@ -125,7 +126,10 @@ function createMemoryExtractionRunner(deps: MemoryExtractionRunnerDeps) {
         if (loopsResponse) {
           const openLoops = parseOpenLoopsResponse(loopsResponse);
           const episodeData = {
-            summary: `대화 배치 - ${new Date().toLocaleString()} (${conversationHistory.length}턴)`,
+            summary: t(language, "memory.episodeBatchSummary", {
+              when: new Date().toLocaleString(),
+              turns: conversationHistory.length
+            }),
             keyTopics: openLoops.map((loop: { topic: string }) => loop.topic)
           };
           const episodeId = deps.insertEpisode(episodeData);

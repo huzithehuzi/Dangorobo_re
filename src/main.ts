@@ -111,6 +111,7 @@ import {
   findRelatedMemories,
   buildMemoryContextBlock,
   buildOpenLoopsContextBlock,
+  selectFreshOpenLoops,
   selectPromptOpenLoops
 } from "./main/memory/memory-search.js";
 import { validateExtractedMemory } from "./main/memory/memory-extraction.js";
@@ -628,7 +629,10 @@ function recordAssistantConversationTurn(
   appendConversationTurnToHistory(turn.question, turn.answer, MAX_CONVERSATION_HISTORY_TURNS);
   if (!countTowardExtraction) return;
   if (assistantHistory.countTurnForExtraction()) {
-    triggerMemoryExtraction(assistantHistory.getHistory(), settings.language);
+    // 추출이 끝난 뒤 정리한다 — 시작할 때만 정리하면 앱을 며칠씩 켜 두는 동안 표가 쌓인다.
+    // 러너는 내부에서 예외를 삼키므로 이 then은 거부되지 않는다.
+    void triggerMemoryExtraction(assistantHistory.getHistory(), settings.language)
+      .then(pruneStaleOpenLoops);
   }
 }
 
@@ -1083,6 +1087,16 @@ const triggerMemoryExtraction = createMemoryExtractionRunner({
   insertOpenLoop
 });
 
+// 오래 언급되지 않은 미완료 주제를 닫는다. 시작할 때와 기억 추출이 돌 때마다 부른다 —
+// 이미 닫힌 주제는 건드리지 않으므로 여러 번 불러도 안전하다. 프롬프트 노출 상한과는
+// 목적이 다르다(그쪽은 "펫이 먼저 꺼내지 않게", 이쪽은 "표가 쌓이지 않게").
+function pruneStaleOpenLoops(): void {
+  const archived = archiveStaleOpenLoops(undefined, settings.language);
+  if (archived > 0) {
+    console.log(`[Memory] 오래된 미완료 주제 ${archived}개를 자동 정리했다.`);
+  }
+}
+
 function assistantHistoryBlock(options: AssistantHistoryOptions = {}): string {
   return buildAssistantHistoryBlock(settings, assistantHistory.getHistory(), options);
 }
@@ -1097,7 +1111,13 @@ function getRecentEpisodeSummaryBlock(options: Record<string, unknown> = {}): st
 // (memory-search.js가 만들어져 있는데 아무도 호출하지 않는 상태였다).
 const RELATED_MEMORY_CANDIDATE_LIMIT = 100; // DB에서 훑어볼 기억 수
 const RELATED_MEMORY_PROMPT_LIMIT = 5; // 그중 실제로 프롬프트에 넣을 수
-function relatedMemoryBlock(question: string): string {
+// 미완료 주제는 나이 상한(3일)을 넘긴 것도 사용자가 그 이야기를 꺼내면 되살아나므로,
+// 상한 안쪽만 필요한 판정(hasOpenLoops)보다 넉넉히 훑는다.
+const RELATED_OPEN_LOOP_CANDIDATE_LIMIT = 50;
+function relatedMemoryBlock(
+  question: string,
+  options: { recallOpenLoops?: boolean } = {}
+): string {
   if (!settings.assistantMemoryEnabled) return "";
   try {
     const related = findRelatedMemories(
@@ -1106,7 +1126,15 @@ function relatedMemoryBlock(question: string): string {
       RELATED_MEMORY_PROMPT_LIMIT
     );
     return buildMemoryContextBlock(related, settings.language) +
-      buildOpenLoopsContextBlock(selectPromptOpenLoops(getOpenLoops()), settings.language);
+      buildOpenLoopsContextBlock(
+        selectPromptOpenLoops(
+          getOpenLoops(RELATED_OPEN_LOOP_CANDIDATE_LIMIT),
+          // 사용자 발화가 아닌 프롬프트(펫이 먼저 말 걸기)에서는 되살리지 않는다 —
+          // 지시문 단어에 옛 주제가 걸리면 3일 상한이 무의미해진다.
+          options.recallOpenLoops === false ? "" : question
+        ),
+        settings.language
+      );
   } catch (error) {
     // 기억을 못 읽는다고 답변 자체가 실패하면 안 된다 — 기억 없이 그냥 답한다.
     console.error("[Memory] 관련 기억 블록을 만들지 못했다:", error);
@@ -1253,11 +1281,12 @@ const petChatService = createPetChatService({
   // 기억이 꺼져 있으면 relatedMemoryBlock이 아무것도 넣지 않으므로, 기억을 소재로 삼는
   // 화제도 후보에서 빠져야 한다 — 재료 없이 지시만 주면 모델이 기억을 지어낸다.
   hasLongTermMemory: () => settings.assistantMemoryEnabled && getMemoryCount() > 0,
-  // 프롬프트에 실제로 올라가는 것과 같은 기준을 써야 한다 — 전체 개수로 재면 오래된
-  // 주제만 남은 상태에서 "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은 비어
-  // 모델이 주제를 지어낸다.
+  // 펫이 먼저 꺼낼 수 있는 주제만 센다 — 전체 개수로 재면 오래된 주제만 남은 상태에서
+  // "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은 비어 모델이 주제를 지어낸다.
+  // selectPromptOpenLoops로 재면 안 된다: 그쪽은 사용자 질문에 걸려 되살아난 옛 주제까지
+  // 세므로, 오프너에는 없는 목록을 두고 지시가 나간다(오프너는 되살리기를 끈다).
   hasOpenLoops: () => settings.assistantMemoryEnabled &&
-    selectPromptOpenLoops(getOpenLoops()).length > 0,
+    selectFreshOpenLoops(getOpenLoops()).length > 0,
   openPanel: (message, expression) => {
     bubblePanels.setAssistantActive(true);
     petWindow?.webContents.send("pet-chat:open", { message, expression });
@@ -1443,12 +1472,7 @@ app.whenReady().then(async () => {
   if (settings.assistantMemoryEnabled) {
     assistantHistory.loadMemory();
   }
-  // 반년 넘게 다시 언급되지 않은 미완료 주제를 닫는다. 프롬프트 노출은 이미 2주로 잘리므로
-  // 이건 표가 무한정 쌓이는 것만 막는 정리다(시작할 때 한 번).
-  const archivedLoops = archiveStaleOpenLoops();
-  if (archivedLoops > 0) {
-    console.log(`[Memory] 오래된 미완료 주제 ${archivedLoops}개를 자동 정리했다.`);
-  }
+  pruneStaleOpenLoops();
   checklistState = loadChecklistFromDisk();
   favoritesPanelsState = loadFavoritesPanelsFromDisk();
   favoritesWindows.primeSyncBaseline();

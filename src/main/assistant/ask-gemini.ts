@@ -30,6 +30,7 @@ type AskGeminiOptions = {
   systemPromptOverride?: string;
   shortQuestionMode?: boolean;
   includeMemory?: boolean;
+  recallOpenLoops?: boolean;
   includeDateTime?: boolean;
   maxHistoryTurns?: number;
   historyCharBudget?: number;
@@ -45,7 +46,7 @@ type AskGeminiDeps = {
   instructionsBlock: (options: { includeDateTime: boolean }) => string;
   historyBlock: (options: { maxTurns?: number; totalBudget?: number }) => string;
   episodeBlock: () => string;
-  memoryBlock: (question: string) => string;
+  memoryBlock: (question: string, options: { recallOpenLoops: boolean }) => string;
   oneOffBlock: (extraTurns: AskGeminiTurn[]) => string;
 };
 
@@ -65,7 +66,12 @@ function createAskGemini(deps: AskGeminiDeps) {
         totalBudget: options.historyCharBudget
       });
     const episodeSummary = options.includeMemory === false ? "" : deps.episodeBlock();
-    const memoryBlock = options.includeMemory === false ? "" : deps.memoryBlock(question);
+    // recallOpenLoops는 question이 실제 사용자 발화일 때만 참이다. 펫이 먼저 말을 거는
+    // 오프너는 question 자리에 지시문이 들어가므로, 그 문장에 옛 미완료 주제가 걸려
+    // 되살아나면 3일 상한을 둔 의미가 없어진다(memory-search.ts 참고).
+    const memoryBlock = options.includeMemory === false
+      ? ""
+      : deps.memoryBlock(question, { recallOpenLoops: options.recallOpenLoops !== false });
     const language = deps.getLanguage();
     const prompt = `${deps.instructionsBlock({ includeDateTime: !shortQuestionMode })}${episodeSummary}${memoryBlock}${history}${deps.oneOffBlock(extraTurns)}\n\n${t(language, "assistant.languageReminder")}\n${t(language, "assistant.questionLabel")}: ${question}`;
     try {

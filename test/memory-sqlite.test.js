@@ -448,7 +448,7 @@ test("저장 실패 시 모든 변경 API가 실패를 반환하고 인메모리
 
 // ── 오래된 미완료 주제 자동 정리 (2026-08-14) ────────────────────────────────────
 //
-// 프롬프트 노출은 memory-search가 2주로 자르고, 이쪽은 표가 무한정 쌓이는 것만 막는다.
+// 프롬프트 노출은 memory-search가 3일로 자르고, 이쪽은 표가 무한정 쌓이는 것만 막는다.
 // 방금 넣은 행의 나이를 뒤로 돌릴 수단이 없으므로 기준일을 0/아주 큰 값으로 줘서
 // 경계 양쪽을 확인한다.
 
@@ -485,8 +485,38 @@ test("자동 정리는 기준보다 오래된 열린 주제만 닫는다", async
 });
 
 test("자동 정리 기준일은 프롬프트 노출 상한보다 훨씬 길다", () => {
-  // 둘은 목적이 다르다. 이 값이 2주 근처로 내려오면 진행 중인 일까지 닫히기 시작한다.
-  assert.equal(OPEN_LOOP_ARCHIVE_AGE_DAYS, 180);
+  // 둘은 목적이 다르다(꺼내지 않게 / 쌓이지 않게). 기준이 노출 상한까지 내려오면
+  // 사용자가 아직 이야기 중인 주제도 표에서 사라진다.
+  assert.equal(OPEN_LOOP_ARCHIVE_AGE_DAYS, 14);
   const { OPEN_LOOP_PROMPT_MAX_AGE_DAYS } = require("../src/main/memory/memory-search.js");
   assert.ok(OPEN_LOOP_ARCHIVE_AGE_DAYS > OPEN_LOOP_PROMPT_MAX_AGE_DAYS * 4);
+});
+
+test("자동 정리 사유는 앱 언어를 따른다", async (t) => {
+  // 예전에는 한국어로 하드코딩돼 영어·일본어 사용자의 기억 DB에도 한국어가 남았다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const episodeId = insertEpisode({
+    session_id: "archive-note-session",
+    date: "2026-08-21",
+    summary: "정리 사유 언어"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "정리 사유를 볼 주제" }), true);
+  assert.equal(archiveStaleOpenLoops(0, "en"), 1);
+
+  const database = getDb();
+  assert.ok(database);
+  const notes = String(
+    database.exec("SELECT resolution_notes FROM open_loops WHERE is_closed = 1")[0]?.values[0][0]
+  );
+  assert.match(notes, /Auto-archived/);
+  assert.ok(!/일 이상/.test(notes), "영어 설정에 한국어가 섞이지 않는다");
 });
