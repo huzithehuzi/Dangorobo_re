@@ -5,7 +5,7 @@
    CSS만으로 안 되는 세 가지만 여기서 한다:
      1. 커서 좌표를 CSS 변수(--ui-glow-x/y)로 넘기기
      2. 누른 자리에서 파문을 그릴 임시 요소 만들기
-     3. 손을 뗀 요소에 젤리 출렁임 클래스를 붙였다 떼기(연타할 때 다시 재생되게)
+     3. 클릭된 요소에 젤리 출렁임 클래스를 붙였다 떼기(연타할 때 다시 재생되게)
      4. 목록이 다시 그려질 때 자식에 스태거 인덱스(--ui-i) 붙이기
    나머지(호버 떠오름·진입 애니메이션·포커스 링)는 전부 CSS 쪽에 있다.
 
@@ -80,16 +80,27 @@
   }
 
   // ── 2. 누름 파문 ───────────────────────────────────────────────────────
-  /* 파문과 젤리가 같은 대상을 봐야 한다 — 하나만 걸리면 한쪽 효과만 도는 버튼이 생긴다. */
+  /* 파문과 젤리가 같은 대상 판정을 써야 한다 — 하나만 걸리면 한쪽 효과만 도는 버튼이 생긴다. */
+  /**
+   * @param {Event} event
+   * @returns {HTMLElement | null}
+   */
+  function motionTarget(event) {
+    if (motionOff()) return null;
+    var origin = /** @type {Element | null} */ (event.target);
+    var target = /** @type {HTMLElement | null} */ (origin && origin.closest ? origin.closest(GLOW_SELECTOR) : null);
+    return !target || isDisabled(target) ? null : target;
+  }
+
+  /* 파문은 누르는 순간에 그리므로 주 버튼만 본다. 클릭 쪽은 버튼 번호를 보지 않는다 —
+     가운데·오른쪽 버튼은 click이 아니라 auxclick으로 가고, 키보드로 누른 click은
+     button이 0이라 그대로 통과해야 한다. */
   /**
    * @param {PointerEvent} event
    * @returns {HTMLElement | null}
    */
   function pressTarget(event) {
-    if (motionOff() || event.button !== 0) return null;
-    var origin = /** @type {Element | null} */ (event.target);
-    var target = /** @type {HTMLElement | null} */ (origin && origin.closest ? origin.closest(GLOW_SELECTOR) : null);
-    return !target || isDisabled(target) ? null : target;
+    return event.button !== 0 ? null : motionTarget(event);
   }
 
   /** @param {PointerEvent} event */
@@ -137,36 +148,25 @@
      써서 버튼의 transform 위치를 건드리지 않는다 — 그쪽 주석 참고). 여기서는 클래스만
      붙였다 뗀다.
 
-     ⚠ **누를 때가 아니라 놓을 때 재생한다.** pointerdown에 걸면 짧게 톡 누른 경우
-     `:active` 축소가 풀리는 움직임과 겹쳐 출렁임이 잘린 것처럼 보인다("꾹 눌러야 다
-     재생된다", 2026-08-21 피드백). 누르는 동안의 반응은 :active 축소와 파문이 맡는다.
+     ⚠ **`click`에서 재생한다.** 앞선 두 시도가 각각 이렇게 실패했다:
+       - `pointerdown`: 짧게 톡 누르면 `:active` 축소가 풀리는 움직임과 겹쳐 출렁임이
+         잘린 것처럼 보였다("꾹 눌러야 다 재생된다").
+       - `pointerup`: 재생 시점이 손을 떼는 시점에 묶여, 누르는 시간이 조금만 흔들려도
+         같은 단발 클릭인데 반응이 늦거나 이르게 느껄졌다("타이밍이 일관성이 없다").
+     `click`은 "이 요소가 실제로 눌렸다"가 확정되는 한 지점이라 매번 같은 자리에서 돈다.
+     누르는 동안의 반응은 `:active` 축소와 파문이 맡는다.
 
-     누른 요소를 기억해 두고 **같은 요소에서 손을 뗐을 때만** 재생한다 — 누른 뒤 버튼
-     밖으로 끌고 나가 떼면 클릭이 취소된 것이므로 출렁여서는 안 된다. */
+     click을 쓰면 덤으로 두 가지가 공짜로 온다: 누른 뒤 버튼 밖으로 끌고 나가 떼면 브라우저가
+     click을 만들지 않으므로 취소된 클릭에 출렁이지 않고(직접 관리했던 부분), 키보드
+     Enter·Space로 누른 경우에도 click이 와서 같은 반응이 난다. */
   var JELLY_CLASS = "ui-jelly";
   var JELLY_ANIMATION = "ui-jelly-wobble";
-  /** @type {HTMLElement | null} */
-  var pressedTarget = null;
 
-  /** @param {PointerEvent} event */
-  function rememberPress(event) {
-    pressedTarget = pressTarget(event);
-  }
-
-  function forgetPress() {
-    pressedTarget = null;
-  }
-
-  /** @param {PointerEvent} event */
-  function jellyRelease(event) {
-    var released = pressedTarget;
-    pressedTarget = null;
-    if (!released || motionOff()) return;
-    var target = released;
-    /* 뗀 자리가 누른 요소 안이어야 한다. pointerup의 target은 버튼 안쪽 자식일 수 있으므로
-       요소 동일성이 아니라 포함 관계로 본다. */
-    var origin = /** @type {Element | null} */ (event.target);
-    if (!origin || !target.contains(origin)) return;
+  /** @param {MouseEvent} event */
+  function jellyClick(event) {
+    var found = motionTarget(event);
+    if (!found) return;
+    var target = found;
 
     /* 연타할 때 다시 재생되려면 클래스를 뗀 뒤 리플로를 강제해야 한다(스태거와 같은 이유). */
     target.classList.remove(JELLY_CLASS);
@@ -258,11 +258,7 @@
   function start() {
     document.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("pointerdown", spawnRipple, { passive: true });
-    document.addEventListener("pointerdown", rememberPress, { passive: true });
-    document.addEventListener("pointerup", jellyRelease, { passive: true });
-    /* 버튼 밖에서 떼거나 시스템이 포인터를 회수하면 누름 기록만 버린다 — 그 경우
-       pointerup이 아예 안 오거나 다른 요소에서 오므로 출렁임도 돌지 않는다. */
-    document.addEventListener("pointercancel", forgetPress, { passive: true });
+    document.addEventListener("click", jellyClick, { passive: true });
     document.addEventListener("pointerleave", clearGlow);
     // 버튼이 사라지거나(목록 재렌더) 창이 포커스를 잃으면 하이라이트가 남지 않게 한다.
     window.addEventListener("blur", clearGlow);

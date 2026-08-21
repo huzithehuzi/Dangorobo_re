@@ -79,49 +79,59 @@ test("움직임 최소화 설정에서 젤리가 꺼진다", () => {
   );
 });
 
-test("드라이버는 파문과 누름 기록에 같은 대상 판정을 쓴다", () => {
+test("드라이버는 파문과 젤리에 같은 대상 판정을 쓴다", () => {
   // 대상 판정이 갈리면 한쪽 효과만 도는 버튼이 생긴다.
-  assert.ok(/function pressTarget\(/.test(motionJs));
-  const rippleUsesShared = /function spawnRipple\([\s\S]{0,200}?pressTarget\(event\)/.test(motionJs);
-  const pressUsesShared = /function rememberPress\([\s\S]{0,200}?pressTarget\(event\)/.test(motionJs);
+  assert.ok(/function motionTarget\(/.test(motionJs));
+  const rippleUsesShared = /function pressTarget\([\s\S]{0,200}?motionTarget\(event\)/.test(motionJs);
+  const jellyUsesShared = /function jellyClick\([\s\S]{0,200}?motionTarget\(event\)/.test(motionJs);
   assert.ok(rippleUsesShared, "파문이 공용 대상 판정을 쓴다");
-  assert.ok(pressUsesShared, "누름 기록이 공용 대상 판정을 쓴다");
+  assert.ok(jellyUsesShared, "젤리가 공용 대상 판정을 쓴다");
 });
 
-// ── 출렁임은 누를 때가 아니라 놓을 때 돈다 (2026-08-21 피드백) ─────────────────────
+// ── 출렁임은 click에서 돈다 (2026-08-21, 세 번째 시도) ────────────────────────────
 //
-// pointerdown에 걸면 짧게 톡 누른 경우 :active 축소가 풀리는 움직임과 겹쳐 애니메이션이
-// 잘린 것처럼 보인다("꾹 눌러야 다 재생된다"). 놓는 순간에 걸면 누른 시간과 무관하게
-// 항상 전체 길이가 재생된다.
+// pointerdown: 짧게 톡 누르면 :active 축소가 풀리는 움직임과 겹쳐 잘린 것처럼 보였다.
+// pointerup: 재생 시점이 손 떼는 시점에 묶여 같은 단발 클릭인데도 반응이 늦거나 이르게
+//   느껄졌다("타이밍이 일관성이 없다").
+// click: "실제로 눌렸다"가 확정되는 한 지점이라 매번 같은 자리에서 돈다.
 
-test("출렁임은 pointerup에 걸리고 pointerdown에는 걸리지 않는다", () => {
+test("출렁임은 click에 걸리고 포인터 이벤트에는 걸리지 않는다", () => {
   assert.ok(
-    /addEventListener\("pointerup", jellyRelease/.test(motionJs),
-    "놓을 때 재생해야 누른 시간과 무관하게 전체가 재생된다"
+    /addEventListener\("click", jellyClick/.test(motionJs),
+    "click이어야 재생 시점이 누르는 시간과 무관해진다"
   );
-  assert.ok(
-    !/addEventListener\("pointerdown", jellyRelease/.test(motionJs),
-    "누를 때 재생하면 짧게 누른 경우 잘린 것처럼 보인다"
-  );
+  for (const wrong of ["pointerdown", "pointerup"]) {
+    assert.ok(
+      !motionJs.includes(`addEventListener("${wrong}", jellyClick`),
+      `${wrong}에 걸면 재생 시점이 누르는 방식에 따라 흔들린다`
+    );
+  }
   // 파문은 반대로 누를 때가 맞다(누른 자리에서 번져 나가는 효과라서).
   assert.ok(/addEventListener\("pointerdown", spawnRipple/.test(motionJs));
 });
 
-test("누른 요소 밖에서 떼면 출렁이지 않는다", () => {
-  // 버튼을 누른 뒤 밖으로 끌고 나가 떼면 클릭이 취소된 것이므로 반응해서는 안 된다.
-  const release = motionJs.slice(motionJs.indexOf("function jellyRelease("));
-  const body = release.slice(0, release.indexOf("\n  }"));
-  assert.ok(/target\.contains\(origin\)/.test(body), "포함 관계로 확인해야 한다");
-  assert.ok(
-    /addEventListener\("pointercancel", forgetPress/.test(motionJs),
-    "포인터가 회수되면 누름 기록을 버려야 다음 클릭에 엉뚱하게 출렁이지 않는다"
-  );
+test("click을 쓰므로 취소된 클릭과 키보드 조작이 저절로 처리된다", () => {
+  // 누른 뒤 밖으로 끌고 나가 떼면 브라우저가 click을 만들지 않고, Enter·Space는 click을 만든다.
+  // 그래서 누름 대상을 따로 기억할 필요가 없다 — 그 상태가 남아 있으면 관리 대상만 늘어난다.
+  assert.ok(!/pressedTarget/.test(motionJs), "누름 기록 상태가 남아 있다");
+  assert.ok(!/pointercancel/.test(motionJs), "click 경로에서는 필요 없다");
+});
+
+test("클릭 경로는 버튼 번호를 보지 않는다", () => {
+  // 가운데·오른쪽 버튼은 click이 아니라 auxclick으로 가고, 키보드로 누른 click은 button이 0이다.
+  // 여기서 button을 검사하면 키보드 조작만 조용히 빠진다.
+  const clickFn = motionJs.slice(motionJs.indexOf("function jellyClick("));
+  const body = clickFn.slice(0, clickFn.indexOf("\n  }"));
+  assert.ok(!/event\.button/.test(body));
+  // 파문 쪽은 반대로 주 버튼만 봐야 한다.
+  const pressFn = motionJs.slice(motionJs.indexOf("function pressTarget("));
+  assert.match(pressFn.slice(0, 200), /event\.button !== 0/);
 });
 
 test("젤리 클래스는 연타에 다시 재생되고 끝나면 떼어진다", () => {
   // 클래스를 뗀 뒤 리플로를 강제하지 않으면 두 번째 누름에서 애니메이션이 재생되지 않는다.
-  const release = motionJs.slice(motionJs.indexOf("function jellyRelease("));
-  const body = release.slice(0, release.indexOf("\n  }"));
+  const clickFn = motionJs.slice(motionJs.indexOf("function jellyClick("));
+  const body = clickFn.slice(0, clickFn.indexOf("\n  }"));
   assert.ok(/classList\.remove\(JELLY_CLASS\)[\s\S]*offsetWidth[\s\S]*classList\.add\(JELLY_CLASS\)/.test(body));
   assert.ok(
     /animationName !== JELLY_ANIMATION/.test(body),
@@ -138,7 +148,7 @@ test("누름 효과를 실제 창에서 확인할 QA 경로가 있다", () => {
     "실제 pointerdown을 만들어야 파문이 돈다"
   );
   assert.ok(
-    /new PointerEvent\("pointerup"/.test(qaCapture),
-    "출렁임은 놓을 때 도므로 pointerup도 보내야 한다"
+    /new MouseEvent\("click"/.test(qaCapture),
+    "출렁임은 click에서 도는데 합성 pointerup은 click을 만들지 않는다"
   );
 });

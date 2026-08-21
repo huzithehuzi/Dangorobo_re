@@ -109,9 +109,12 @@ npm run dist
   애니메이션하면 translate로 자리를 잡은 버튼(`.fab`·`.gradient-stop`·`.pie-item`)이 애니메이션이
   도는 동안 통째로 튄다 — 위 :active 규칙과 달리 **명시도를 올려도 막을 수 없다**.
   `test/ui-motion-jelly.test.js`가 막는다.
-- 누름 효과(파문·젤리)는 `pointerdown`에서 돈다. `--capture-settings-click`의 `el.click()`은
-  pointerdown을 만들지 않으므로 그 경로로는 확인할 수 없다 — `--capture-settings-press`를 쓰고,
-  선택자는 `.tab-panel.active ...`로 좁힌다(숨은 탭의 0×0 요소를 잡으면 아무것도 안 보인다).
+- **파문은 `pointerdown`, 젤리 출렁임은 `click`에서 돈다.** 출렁임을 포인터 이벤트에 걸면
+  재생 시점이 누르는 방식에 따라 흔들린다(pointerdown은 짧게 누를 때 잘려 보이고, pointerup은
+  같은 단발 클릭인데도 타이밍이 일관되지 않다). `click`은 눌림이 확정되는 한 지점이고, 취소된
+  클릭 제외와 키보드 조작이 함께 해결된다.
+- 누름 효과 확인은 `--capture-settings-press`를 쓴다(pointerdown·pointerup·click을 모두 보낸다).
+  선택자는 `.tab-panel.active ...`로 좁힌다 — 숨은 탭의 0×0 요소를 잡으면 아무것도 안 보인다.
 - **Tailwind 창에서 `font` 축약(`[font:inherit]`)으로 글자 크기를 덮지 않는다.** preflight가 이미
   `button,input,select,optgroup,textarea`에 걸어 주고(base 레이어라 유틸리티에 항상 진다),
   유틸리티로 쓰면 클래스에 적은 순서와 무관하게 `fs-*`보다 뒤에 정렬돼 크기를 루트 상속값으로
