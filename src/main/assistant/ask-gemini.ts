@@ -4,7 +4,7 @@
 
 const { t } = require("../../shared/i18n.js");
 import { isShortAssistantQuestion } from "./assistant-core.js";
-import { extractResponseText } from "./gemini-transport.js";
+import { extractFinishReason, extractResponseText } from "./gemini-transport.js";
 
 // 2026-08-14부터 질문·펫대화도 안전 필터를 끈다(그전에는 안 보내서 API 기본 차단 수준이었다).
 // 번역 경로와 같은 4종이지만 **상수를 공유하지 않는다** — 경로마다 정책이 다른 것이 이 코드의
@@ -26,7 +26,7 @@ const ASSISTANT_SHORT_MAX_OUTPUT_TOKENS = 480;
 // 오프너 예산이 320이었다). 예산이 더 작은 경로들(기억 추출 50·150·300)은 답변이 아예 빈
 // 문자열로 와서 조용히 실패한다. 그래서 호출부 예산은 답변용으로만 해석하고, 사고 몫은 여기서
 // 얹는다 — 예산을 경로마다 손으로 키우면 새 호출부가 같은 함정을 다시 밟는다.
-const ASSISTANT_THINKING_HEADROOM_TOKENS = 512;
+const ASSISTANT_THINKING_HEADROOM_TOKENS = 1024;
 const ASSISTANT_PRIMARY_TIMEOUT_MS = 22000;
 const ASSISTANT_RETRY_TIMEOUT_MS = 12000;
 
@@ -81,29 +81,42 @@ function createAskGemini(deps: AskGeminiDeps) {
       : deps.memoryBlock(question, { recallOpenLoops: options.recallOpenLoops !== false });
     const language = deps.getLanguage();
     const prompt = `${deps.instructionsBlock({ includeDateTime: !shortQuestionMode })}${episodeSummary}${memoryBlock}${history}${deps.oneOffBlock(extraTurns)}\n\n${t(language, "assistant.languageReminder")}\n${t(language, "assistant.questionLabel")}: ${question}`;
-    try {
-      const data = await deps.generateContent(
-        {
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            maxOutputTokens: Math.max(
-              128,
-              Number(options.maxOutputTokens) || (
-                shortQuestionMode
-                  ? ASSISTANT_SHORT_MAX_OUTPUT_TOKENS
-                  : ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS
-              )
-            ) + ASSISTANT_THINKING_HEADROOM_TOKENS,
-            // languageDirective가 프롬프트 앞부분에 있는데, minimal 사고 수준에서는 모델이
-            // 그 지시를 놓치고 기본 언어(한국어)로 답하는 사례가 보고됐다 — 다이어그램 생략과
-            // 같은 이유(document-summary.ts 참고)로 여기도 한 단계 올린다.
-            thinkingConfig: { thinkingLevel: "low" }
-          },
-          safetySettings: ASSISTANT_SAFETY_SETTINGS
+    const answerBudget = Math.max(
+      128,
+      Number(options.maxOutputTokens) || (
+        shortQuestionMode
+          ? ASSISTANT_SHORT_MAX_OUTPUT_TOKENS
+          : ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS
+      )
+    );
+    const timeoutMs = Number(options.timeoutMs) || ASSISTANT_PRIMARY_TIMEOUT_MS;
+    /**
+     * thinkingLevel이 low면 사고 몫을 얹어 보낸다. minimal은 사고를 사실상 쓰지 않으므로
+     * 호출부 예산 그대로 보낸다 — 아래 "잘렸으면 다시" 경로가 이 형태를 쓴다.
+     */
+    const send = (thinkingLevel: "low" | "minimal") => deps.generateContent(
+      {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: thinkingLevel === "minimal"
+            ? answerBudget
+            : answerBudget + ASSISTANT_THINKING_HEADROOM_TOKENS,
+          // languageDirective가 프롬프트 앞부분에 있는데, minimal 사고 수준에서는 모델이
+          // 그 지시를 놓치고 기본 언어(한국어)로 답하는 사례가 보고됐다 — 다이어그램 생략과
+          // 같은 이유(document-summary.ts 참고)로 여기도 한 단계 올린다.
+          thinkingConfig: { thinkingLevel }
         },
-        { timeoutMs: Number(options.timeoutMs) || ASSISTANT_PRIMARY_TIMEOUT_MS }
-      );
-      return extractResponseText(data);
+        safetySettings: ASSISTANT_SAFETY_SETTINGS
+      },
+      { timeoutMs }
+    );
+    try {
+      const data = await send("low");
+      // 사고 몫을 얹어도 긴 프롬프트(기억 20턴 등)에서는 사고가 상한을 다 먹어 본문이 문장
+      // 중간에서 끊긴다. 예산 숫자를 더 키워 추측하는 대신 **원인을 없애고** 한 번 더 보낸다 —
+      // 같은 프롬프트, 같은 예산, 사고만 끈 요청이라 남은 상한이 전부 본문에 쓰인다.
+      if (extractFinishReason(data) !== "MAX_TOKENS") return extractResponseText(data);
+      return extractResponseText(await send("minimal"));
     } catch (error) {
       if ((error as { code?: string } | null | undefined)?.code === "REQUEST_TIMEOUT" && options.retryOnTimeout !== false) {
         return askGemini(question, extraTurns, {

@@ -32,6 +32,16 @@ function extractResponseText(data: unknown) {
     .trim();
 }
 
+/**
+ * 첫 후보의 종료 이유. "MAX_TOKENS"면 답변이 상한에 걸려 잘린 것이다 — 사고 토큰도 같은 상한을
+ * 쓰므로, 사고가 예산을 다 먹으면 본문이 짧게 잘리거나 아예 비어서 온다.
+ */
+function extractFinishReason(data: unknown): string {
+  if (!isObjectRecord(data) || !Array.isArray(data.candidates)) return "";
+  const first = data.candidates.find(isObjectRecord);
+  return first && typeof first.finishReason === "string" ? first.finishReason : "";
+}
+
 function extractPromptBlockReason(data: unknown): string {
   if (!isObjectRecord(data) || !isObjectRecord(data.promptFeedback)) return "";
   return typeof data.promptFeedback.blockReason === "string"
@@ -142,5 +152,5 @@ function createGeminiTransport(deps: GeminiTransportDeps) {
   return { fetchJson, generateContent };
 }
 
-export { createGeminiTransport, extractPromptBlockReason, extractResponseText };
+export { createGeminiTransport, extractFinishReason, extractPromptBlockReason, extractResponseText };
 export type { GeminiTransportDeps };

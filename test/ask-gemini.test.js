@@ -4,9 +4,11 @@ const assert = require("node:assert/strict");
 const { createAskGemini } = require("../src/main/assistant/ask-gemini.js");
 const { t } = require("../src/shared/i18n.js");
 
-/** @param {string} text */
-function responseWith(text) {
-  return { candidates: [{ content: { parts: [{ text }] } }] };
+/** @param {string} text @param {string} [finishReason] */
+function responseWith(text, finishReason) {
+  const candidate = { content: { parts: [{ text }] } };
+  if (finishReason) /** @type {any} */ (candidate).finishReason = finishReason;
+  return { candidates: [candidate] };
 }
 
 /**
@@ -57,7 +59,7 @@ function promptOf(request) {
 // 사고 토큰도 maxOutputTokens에서 나가므로, 호출부가 준 "답변 예산" 위에 사고 몫을 얹어
 // 보낸다(ask-gemini.ts의 ASSISTANT_THINKING_HEADROOM_TOKENS). 이 값이 사라지면 예산이 작은
 // 경로에서 답변이 문장 중간에 끊기거나 빈 문자열로 온다.
-const THINKING_HEADROOM = 512;
+const THINKING_HEADROOM = 1024;
 
 test("프롬프트는 지시문·에피소드·기억·이력·원오프·리마인더·질문 순으로 조립한다", async () => {
   const { ask, requests, blockCalls } = createHarness();
@@ -212,4 +214,29 @@ test("호출부 예산은 답변용이고, 사고 몫은 그 위에 얹어 보�
     );
     assert.ok(requests[0].body.generationConfig.thinkingConfig, "사고 설정이 없으면 이 계약도 필요 없다");
   }
+});
+
+// 사고 토큰이 상한을 다 먹어 본문이 잘려 오는 경우(긴 프롬프트에서 실제로 재현됐다).
+// 예산을 더 키워 추측하는 대신 사고를 끄고 같은 예산으로 다시 받는다.
+test("MAX_TOKENS로 잘려 오면 사고를 끄고 같은 예산으로 한 번 더 보낸다", async () => {
+  const { ask, requests } = createHarness({
+    responses: [responseWith("아오, 아까 동물 이야기를 하다 보니까 갑자기 생각", "MAX_TOKENS"), responseWith("끝까지 온 답변")]
+  });
+  const answer = await ask("안녕", [], { maxOutputTokens: 320 });
+
+  assert.equal(answer, "끝까지 온 답변");
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].body.generationConfig.maxOutputTokens, 320 + THINKING_HEADROOM);
+  assert.deepEqual(requests[0].body.generationConfig.thinkingConfig, { thinkingLevel: "low" });
+  // 두 번째는 사고를 끄고, 상한 전부를 본문에 쓰도록 호출부 예산 그대로 보낸다.
+  assert.equal(requests[1].body.generationConfig.maxOutputTokens, 320);
+  assert.deepEqual(requests[1].body.generationConfig.thinkingConfig, { thinkingLevel: "minimal" });
+  // 프롬프트는 그대로다(기억·이력을 빼면 다른 답이 온다).
+  assert.equal(promptOf(requests[0]), promptOf(requests[1]));
+});
+
+test("정상 종료면 한 번만 보낸다", async () => {
+  const { ask, requests } = createHarness({ responses: [responseWith("답변", "STOP")] });
+  assert.equal(await ask("안녕"), "답변");
+  assert.equal(requests.length, 1);
 });

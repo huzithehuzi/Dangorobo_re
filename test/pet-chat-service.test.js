@@ -310,3 +310,41 @@ test("자동 말걸기·부르기·쓰다듬기 오프너는 모두 앱 언어�
     }
   }
 });
+
+// 쓰다듬기는 손을 뗐다 다시 쓰다듬으면 트래커가 다시 발동한다. sessionActive는 답이 온 뒤에야
+// 켜지므로, 응답 대기 중 들어온 두 번째 트리거를 막지 않으면 말풍선이 두 번 열린다.
+test("응답을 기다리는 중에 들어온 트리거는 두 번째 말풍선을 열지 않는다", async () => {
+  /** @type {Array<(value: string) => void>} */
+  const pending = [];
+  const calls = { ask: 0, openPanel: 0 };
+  const service = createPetChatService({
+    ask: () => {
+      calls.ask += 1;
+      return new Promise((resolve) => pending.push(resolve));
+    },
+    getSettings: () => /** @type {any} */ (BASE_SETTINGS),
+    hasApiKey: () => true,
+    isAutoChatBlocked: () => false,
+    hasConversationHistory: () => false,
+    hasLongTermMemory: () => false,
+    hasOpenLoops: () => false,
+    openPanel: () => { calls.openPanel += 1; },
+    logSession: () => {},
+    setTimeoutFn: /** @type {any} */ (() => 0),
+    clearTimeoutFn: /** @type {any} */ (() => {}),
+    random: () => 0
+  });
+
+  const first = service.triggerPettingChat();
+  // 두 번째 트리거는 **기다리지 않는다** — 가드가 없으면 응답 없는 LLM 호출에 매달려
+  // 테스트가 실패하는 대신 영원히 멈춘다(변이 검사 때 실제로 그랬다).
+  const second = service.triggerPettingChat();  // 대기 중 두 번째 쓰다듬기
+  const third = service.callNow();              // 대기 중 "부르기"까지 눌러도
+  await Promise.resolve();
+  assert.equal(calls.ask, 1, "응답 대기 중에 LLM을 또 불렀다");
+
+  pending[0]("반가워");
+  await Promise.all([first, second, third]);
+  assert.equal(calls.openPanel, 1, "말풍선이 두 번 열렸다");
+  assert.equal(service.isSessionActive(), true);
+});

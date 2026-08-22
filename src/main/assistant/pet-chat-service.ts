@@ -90,6 +90,10 @@ function createPetChatService(deps: PetChatServiceDeps) {
   // 다음 주기를 세지 않는다(sessionActive로 그 기간을 표시).
   let timer: ReturnType<typeof setTimeout> | undefined;
   let sessionActive = false;
+  // LLM 응답을 기다리는 동안에도 "말 거는 중"이다. sessionActive는 답이 온 뒤에야 켜지므로,
+  // 이 플래그가 없으면 응답 대기 중에 들어온 두 번째 트리거가 그대로 통과해 말풍선이 두 번
+  // 열린다 — 쓰다듬기가 특히 그렇다(손을 뗐다 다시 쓰다듬으면 트래커가 다시 발동한다).
+  let openerInFlight = false;
   let openingMessage: string | null = null;
   let replyText = "";
   let replyAnswer = "";
@@ -166,12 +170,18 @@ function createPetChatService(deps: PetChatServiceDeps) {
   // 재사용하면서 오프너 문구의 성격만 달리 줄 수 있다.
   async function deliverOpener(buildOpener: () => PetChatOpener = buildOpenerPrompt) {
     const opener = buildOpener();
-    const answer = await deps.ask(opener.prompt, {
-      maxHistoryTurns: PET_CHAT_HISTORY_TURNS,
-      historyCharBudget: PET_CHAT_HISTORY_CHAR_BUDGET,
-      maxOutputTokens: 320,
-      recallOpenLoops: false
-    });
+    openerInFlight = true;
+    let answer: string | null | undefined;
+    try {
+      answer = await deps.ask(opener.prompt, {
+        maxHistoryTurns: PET_CHAT_HISTORY_TURNS,
+        historyCharBudget: PET_CHAT_HISTORY_CHAR_BUDGET,
+        maxOutputTokens: 320,
+        recallOpenLoops: false
+      });
+    } finally {
+      openerInFlight = false;
+    }
     if (!answer) throw new Error(t(deps.getSettings().language, "assistant.emptyAnswerShortError"));
     const { text, expression } = extractAssistantExpression(answer);
     const displayed = text.slice(0, 4000);
@@ -189,7 +199,7 @@ function createPetChatService(deps: PetChatServiceDeps) {
   async function firePetChat() {
     const settings = deps.getSettings();
     if (!settings.petChatEnabled || !settings.assistantEnabled || !deps.hasApiKey()) return;
-    if (sessionActive || deps.isAutoChatBlocked()) {
+    if (sessionActive || openerInFlight || deps.isAutoChatBlocked()) {
       // 다른 패널이 열려있거나 이동 모드면 잠시 후 다시 시도한다(주기 자체를 건너뛰지 않는다).
       timer = setTimeoutFn(firePetChat, 60000);
       return;
@@ -208,7 +218,7 @@ function createPetChatService(deps: PetChatServiceDeps) {
   async function triggerPettingChat() {
     const settings = deps.getSettings();
     if (!settings.pettingChatEnabled || !settings.assistantEnabled || !deps.hasApiKey()) return;
-    if (sessionActive || deps.isAutoChatBlocked()) return;
+    if (sessionActive || openerInFlight || deps.isAutoChatBlocked()) return;
     try {
       await deliverOpener(buildPettingOpenerPrompt);
     } catch {
@@ -219,6 +229,8 @@ function createPetChatService(deps: PetChatServiceDeps) {
   // "부르기" 버튼 경로. 실패하면 예외를 그대로 던지고 타이머는 지운 채로 둔다 —
   // 분리 전 pet-chat:call-now 핸들러와 같은 동작이다(성공했을 때만 다음 주기를 예약).
   async function callNow() {
+    // 이미 부른 응답을 기다리는 중이면 그대로 기다린다(두 번 열리지 않게).
+    if (openerInFlight) return;
     clearTimeoutFn(timer);
     await deliverOpener();
     schedule();
