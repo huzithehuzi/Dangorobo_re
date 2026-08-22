@@ -418,6 +418,16 @@
     "settings.tab.patchNotes": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
     "settings.patchNotes.heading": { ko: "패치 노트", en: "Patch Notes", ja: "パッチノート" },
     "settings.patchNotes.versionLabel": { ko: "v{{version}}", en: "v{{version}}", ja: "v{{version}}" },
+    "settings.patchNotes.updateNotifyToggle": {
+      ko: "업데이트가 있으면 자동으로 알림",
+      en: "Notify me automatically when an update is available",
+      ja: "アップデートがあれば自動で通知"
+    },
+    "settings.patchNotes.updateNotifyNote": {
+      ko: "새 버전을 확인해 내려받은 뒤, 지금 재시작할지 물어봅니다. 설치본에서만 동작하며 무설치(portable) 실행에는 적용되지 않습니다. 끄면 확인 자체를 하지 않습니다.",
+      en: "Checks for a new version, downloads it, then asks whether to restart now. Works only in the installed build — the portable build has no update channel. When off, no check is made at all.",
+      ja: "新しいバージョンを確認してダウンロードし、今すぐ再起動するかを尋ねます。インストール版でのみ動作し、ポータブル版には適用されません。オフにすると確認自体を行いません。"
+    },
     "settings.patchNotes.note": {
       ko: "이 버전에서 달라진 점입니다. 최신 버전이 맨 위에 있습니다.",
       en: "What changed in this version. The newest version is at the top.",

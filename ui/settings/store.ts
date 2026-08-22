@@ -93,6 +93,7 @@ export interface Draft {
   idleRoutineMinSeconds: string;
   idleRoutineMaxSeconds: string;
   fullscreenDndEnabled: boolean;
+  updateNotifyEnabled: boolean;
   petDragMode: string;
   bubbleTheme: string;
   bubbleThemeCustomBg: string;
@@ -272,6 +273,7 @@ export function draftFromSettings(s: AnySettings): Draft {
     idleRoutineMinSeconds: str(s.idleRoutineMinSeconds ?? 18, "18"),
     idleRoutineMaxSeconds: str(s.idleRoutineMaxSeconds ?? 42, "42"),
     fullscreenDndEnabled: s.fullscreenDndEnabled === true,
+    updateNotifyEnabled: s.updateNotifyEnabled !== false,
     petDragMode: s.petDragMode === "toggle" ? "toggle" : "always",
     bubbleTheme: str(s.bubbleTheme, "charcoal") || "charcoal",
     bubbleThemeCustomBg: str(s.bubbleThemeCustomBg, "#20232b") || "#20232b",
@@ -406,6 +408,7 @@ export function buildPayload(d: Draft, c: ComplexState, defaultFavoriteName: str
     idleRoutineMinSeconds: Number(d.idleRoutineMinSeconds),
     idleRoutineMaxSeconds: Number(d.idleRoutineMaxSeconds),
     fullscreenDndEnabled: d.fullscreenDndEnabled,
+    updateNotifyEnabled: d.updateNotifyEnabled,
     petDragMode: d.petDragMode,
     bubbleTheme: d.bubbleTheme,
     bubbleThemeCustomBg: d.bubbleThemeCustomBg,

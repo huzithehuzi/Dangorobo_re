@@ -185,6 +185,9 @@ const DEFAULT_SETTINGS = {
   uiFontPreset: "gulim",
   soundEnabled: true,
   autoStartEnabled: false,
+  // 새 버전 알림(설치본만 동작한다 — portable은 업데이트 채널이 없다). 기존 사용자는 지금까지
+  // 자동으로 알림을 받아 왔으므로 기본값을 켠 상태로 둔다.
+  updateNotifyEnabled: true,
   // 도시 이름 텍스트. Open-Meteo 지오코딩·예보 조회에 쓴다(API 키 불필요). 비어 있으면
   // 날씨 브리핑·트레이 "현재 날씨" 모두 위치 미설정 메시지로 대체된다.
   weatherCity: "",
@@ -1228,6 +1231,7 @@ function normalizeSettings(sourceValue: unknown, options: NormalizeSettingsOptio
     autoStartEnabled: fallback && source.autoStartEnabled === undefined && fallback.autoStartEnabled !== undefined
       ? fallback.autoStartEnabled
       : source.autoStartEnabled === true,
+    updateNotifyEnabled: source.updateNotifyEnabled !== false,
     weatherCity: normalizeOptionalLine(source.weatherCity, 60),
     trayMenuItems: normalizeTrayMenuItems(source.trayMenuItems),
     assistantEnabled: source.assistantEnabled === true && assistantKeyConfigured,

@@ -283,3 +283,12 @@ test("프리셋의 외곽선 색은 정규화되고, 없거나 잘못된 값은 
   // 빈 문자열은 "이 프리셋은 외곽선 색을 바꾸지 않는다"는 뜻이라 기본값(#000000)으로 채우지 않는다.
   assert.deepEqual(normalized.map((preset) => preset.outlineColor), ["#aabbcc", "", ""]);
 });
+
+// 기존 사용자는 지금까지 자동으로 새 버전 알림을 받아 왔다 — 값이 없으면 켠 상태로 읽어야
+// 업데이트 안내가 조용히 끊기지 않는다(끈 사람만 false로 저장된다).
+test("업데이트 알림은 값이 없으면 켜진 것으로 읽고, false만 끈다", () => {
+  assert.equal(normalizeSettings({}).updateNotifyEnabled, true);
+  assert.equal(normalizeSettings({ updateNotifyEnabled: undefined }).updateNotifyEnabled, true);
+  assert.equal(normalizeSettings({ updateNotifyEnabled: "아무값" }).updateNotifyEnabled, true);
+  assert.equal(normalizeSettings({ updateNotifyEnabled: false }).updateNotifyEnabled, false);
+});

@@ -229,9 +229,11 @@ Settings, your checklist, and history are stored in the `%APPDATA%\dangorobo` fo
 leave this PC. (If you were already using this app before its name changed, it keeps using the
 older folder, `%APPDATA%\low-poly-desktop-pet`.)
 
-## Patch notes
+## Patch notes and updates
 
-The **Patch Notes** tab in settings lists what changed in this version.
+The **Patch Notes** tab in settings lists what changed in this version. Turn off "Notify me
+automatically when an update is available" in the same tab to stop checking for new versions
+(update checks only work in the installed build).
 
 ## FAQ
 

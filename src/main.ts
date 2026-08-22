@@ -1538,7 +1538,7 @@ app.whenReady().then(async () => {
   petMenu.createTray();
   // 개발 실행(app.isPackaged === false)에서는 electron-updater가 dev-app-update.yml을
   // 찾다가 실패하며 시끄러운 로그만 남기므로, 패키징된 배포본에서만 확인한다.
-  if (app.isPackaged) autoUpdateService.checkForUpdates();
+  if (app.isPackaged && settings.updateNotifyEnabled) autoUpdateService.checkForUpdates();
   trayCountdownTimer = setInterval(() => {
     rebuildTrayMenu();
     if (petWindow && !petWindow.isDestroyed() && petWindow.isVisible()) {
@@ -1870,6 +1870,11 @@ function applySavedSettings(
   else stopDndMonitor();
   if (mode === "import" || previousSettings.autoStartEnabled !== updatedSettings.autoStartEnabled) {
     applyAutoStart(settings.autoStartEnabled);
+  }
+  // 알림을 방금 켰으면 다음 실행까지 기다리지 않고 지금 한 번 확인한다(끈 경우는 진행 중인
+  // 다운로드를 중단할 방법이 없으므로 그대로 두고, 다음 실행부터 확인을 건너뛴다).
+  if (app.isPackaged && !previousSettings.updateNotifyEnabled && updatedSettings.updateNotifyEnabled) {
+    autoUpdateService.checkForUpdates();
   }
   const alarmsChanged = JSON.stringify(previousSettings.alarms) !== JSON.stringify(updatedSettings.alarms);
   if (mode === "import" || alarmsChanged) scheduleAllAlarms();

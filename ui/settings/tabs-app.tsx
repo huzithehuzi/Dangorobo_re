@@ -343,13 +343,19 @@ export function TrayTab() {
 // 패치 노트 탭(2026-08-20). 버전별 항목은 ui/settings/patch-notes.ts가 원본이고, 언어는
 // 설정창 언어를 따른다 — 설정값을 읽거나 저장하지 않는 읽기 전용 탭이다.
 export function PatchNotesTab() {
-  const { d, tt } = useSettings();
+  const { d, set, tt } = useSettings();
   const language: PatchNoteLanguage = d.language === "ko" || d.language === "ja" ? d.language : "en";
   return (
     <>
       <div className="settings-group">
         <h2>{tt("settings.patchNotes.heading")}</h2>
         <Note>{tt("settings.patchNotes.note")}</Note>
+        <ToggleRow
+          checked={d.updateNotifyEnabled}
+          onChange={(checked) => set("updateNotifyEnabled", checked)}
+          label={tt("settings.patchNotes.updateNotifyToggle")}
+        />
+        <Note>{tt("settings.patchNotes.updateNotifyNote")}</Note>
       </div>
       {PATCH_NOTES.map((note) => (
         <div className="settings-group" key={note.version}>
