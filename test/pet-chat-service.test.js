@@ -113,7 +113,10 @@ test("주기 발동 성공: 고정 옵션으로 LLM을 부르고 말풍선을 �
   assert.deepEqual(calls.ask[0].options, {
     maxHistoryTurns: 6,
     historyCharBudget: 1800,
-    maxOutputTokens: 320
+    maxOutputTokens: 320,
+    // 오프너는 질문 자리에 지시문이 들어간다 — 그 문장에 걸려 오래된 미완료 주제가
+    // 프롬프트로 되살아나면 나이 상한을 둔 의미가 없다(2026-08-21).
+    recallOpenLoops: false
   });
   assert.deepEqual(calls.openPanel, [{ message: "안녕! 오늘 어때?", expression: "normal" }]);
   assert.equal(service.isSessionActive(), true);

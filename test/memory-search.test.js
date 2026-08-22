@@ -13,8 +13,11 @@ const {
   findRelatedMemories,
   buildMemoryContextBlock,
   buildOpenLoopsContextBlock,
+  selectFreshOpenLoops,
   selectPromptOpenLoops,
-  OPEN_LOOP_PROMPT_MAX_AGE_DAYS
+  referencesOpenLoopTopic,
+  OPEN_LOOP_PROMPT_MAX_AGE_DAYS,
+  OPEN_LOOP_RECALL_LIMIT
 } = require("../src/main/memory/memory-search.js");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -220,27 +223,29 @@ test("날짜가 깨져 있어도 블록이 만들어진다", () => {
   assert.ok(!block.includes("NaN"));
 });
 
-// ── 오래된 미완료 주제 걸러내기 (2026-08-14) ─────────────────────────────────────
+// ── 오래된 미완료 주제 걸러내기 (2026-08-14, 2026-08-21 되살리기 추가) ──────────────
 //
-// 오래 언급되지 않은 주제를 계속 프롬프트에 넣으면 펫이 몇 달 전 일을 되묻는다.
+// 오래 언급되지 않은 주제를 계속 프롬프트에 넣으면 펫이 지난달 일을 되묻고, 해결된 줄
+// 모르고 남은 주제까지 쌓인다. selectFreshOpenLoops는 "펫이 스스로 꺼내도 되는 것",
+// selectPromptOpenLoops는 "거기에 사용자가 방금 꺼낸 옛 주제를 더한 것"이다.
 // DB에서 지우지는 않으므로, 여기서 고정하는 것은 "무엇을 프롬프트에 올리는지"뿐이다.
 
-test("상한보다 오래된 주제는 프롬프트에서 빠지고 최근 것만 남는다", () => {
-  const fresh = { topic: "이번 주 발표", last_mentioned_at: daysAgo(2) };
+test("상한보다 오래된 주제는 펫이 먼저 꺼낼 수 없고 최근 것만 남는다", () => {
+  const fresh = { topic: "오늘 발표", last_mentioned_at: daysAgo(0) };
   const edge = { topic: "상한 직전", last_mentioned_at: daysAgo(OPEN_LOOP_PROMPT_MAX_AGE_DAYS - 1) };
   const stale = { topic: "석 달 전 이사", last_mentioned_at: daysAgo(90) };
 
   assert.deepEqual(
-    selectPromptOpenLoops([fresh, edge, stale]).map((loop) => loop.topic),
-    ["이번 주 발표", "상한 직전"]
+    selectFreshOpenLoops([fresh, edge, stale]).map((loop) => loop.topic),
+    ["오늘 발표", "상한 직전"]
   );
 });
 
 test("상한 일수는 기본값으로 쓰이고 호출부가 덮어쓸 수 있다", () => {
-  assert.equal(OPEN_LOOP_PROMPT_MAX_AGE_DAYS, 14);
-  const loops = [{ topic: "열흘 전", last_mentioned_at: daysAgo(10) }];
-  assert.equal(selectPromptOpenLoops(loops).length, 1, "기본 상한 안");
-  assert.equal(selectPromptOpenLoops(loops, 7).length, 0, "상한을 줄이면 빠진다");
+  assert.equal(OPEN_LOOP_PROMPT_MAX_AGE_DAYS, 3);
+  const loops = [{ topic: "이틀 전", last_mentioned_at: daysAgo(2) }];
+  assert.equal(selectFreshOpenLoops(loops).length, 1, "기본 상한 안");
+  assert.equal(selectFreshOpenLoops(loops, 1).length, 0, "상한을 줄이면 빠진다");
 });
 
 test("마지막 언급 시각을 못 읽는 주제는 남긴다", () => {
@@ -249,33 +254,137 @@ test("마지막 언급 시각을 못 읽는 주제는 남긴다", () => {
     { topic: "날짜 없음", last_mentioned_at: null },
     { topic: "깨진 날짜", last_mentioned_at: "언젠가" }
   ];
-  assert.equal(selectPromptOpenLoops(loops).length, 2);
+  assert.equal(selectFreshOpenLoops(loops).length, 2);
+  assert.equal(selectPromptOpenLoops(loops, "아무 말").length, 2);
 });
 
-test("걸러낸 결과를 그대로 블록에 넣으면 오래된 주제가 안 실린다", () => {
+test("사용자 발화가 없으면 오래된 주제는 블록에 안 실린다", () => {
   const loops = [
     { topic: "어제 산 재료", last_mentioned_at: daysAgo(1) },
     { topic: "작년 자격증", last_mentioned_at: daysAgo(300) }
   ];
-  const block = buildOpenLoopsContextBlock(selectPromptOpenLoops(loops), "ko");
+  const block = buildOpenLoopsContextBlock(selectPromptOpenLoops(loops, ""), "ko");
   assert.ok(block.includes("어제 산 재료"));
   assert.ok(!block.includes("작년 자격증"));
 });
 
-test("main은 프롬프트 블록과 펫대화 판정에 같은 필터를 쓴다", () => {
-  // 둘이 갈리면 "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은 비어서,
-  // 모델이 없는 주제를 지어낸다.
+// ── 사용자가 먼저 꺼낸 옛 주제 되살리기 (2026-08-21) ───────────────────────────────
+//
+// 3일 상한만 두면 "펫이 안 꺼낸다"와 "물어봐도 모른다"가 같아진다. 미완료 주제 블록은
+// 장기 기억과 달리 질문과 무관하게 통째로 실리므로, 상한을 넘긴 주제는 사용자가 그
+// 이야기를 직접 꺼냈을 때만 되살린다.
+
+test("사용자가 그 이야기를 꺼내면 상한을 넘긴 주제도 되살아난다", () => {
+  const loops = [
+    { topic: "이번 주 장보기", last_mentioned_at: daysAgo(1) },
+    { topic: "자격증 시험 결과 기다리는 중", last_mentioned_at: daysAgo(40) },
+    { topic: "작년 이사 견적", last_mentioned_at: daysAgo(200) }
+  ];
+
+  const topics = selectPromptOpenLoops(loops, "그 자격증 시험 결과 나왔어?").map((loop) => loop.topic);
+  assert.deepEqual(topics, ["이번 주 장보기", "자격증 시험 결과 기다리는 중"]);
+});
+
+test("되살아난 주제는 최신 주제 뒤에 붙고 개수 상한을 넘지 않는다", () => {
+  const stale = Array.from({ length: 6 }, (_, index) => ({
+    topic: `발표 준비 ${index}`,
+    last_mentioned_at: daysAgo(30 + index)
+  }));
+  const loops = [{ topic: "오늘 산책", last_mentioned_at: daysAgo(0) }, ...stale];
+
+  const selected = selectPromptOpenLoops(loops, "발표 어떻게 됐어?");
+  assert.equal(selected[0].topic, "오늘 산책", "최신 주제가 앞에 온다");
+  assert.equal(selected.length, 1 + OPEN_LOOP_RECALL_LIMIT);
+});
+
+test("되살리기 결과는 항상 최신 목록의 상위집합이다", () => {
+  // 펫대화의 소재 판정(selectFreshOpenLoops)이 참인데 블록이 비면 모델이 주제를 지어낸다.
+  const loops = [
+    { topic: "오늘 병원 예약", last_mentioned_at: daysAgo(0) },
+    { topic: "지난달 노트북 수리", last_mentioned_at: daysAgo(45) }
+  ];
+  const fresh = selectFreshOpenLoops(loops).map((loop) => loop.topic);
+  const prompt = selectPromptOpenLoops(loops, "노트북 수리 다 됐어").map((loop) => loop.topic);
+  assert.ok(fresh.every((topic) => prompt.includes(topic)));
+  assert.ok(prompt.length > fresh.length);
+});
+
+test("되살리기 상한이 0이면 최신 주제만 남는다", () => {
+  const loops = [{ topic: "지난달 이사 견적", last_mentioned_at: daysAgo(45) }];
+  assert.deepEqual(selectPromptOpenLoops(loops, "이사 견적 어떻게 됐어?", { recallLimit: 0 }), []);
+});
+
+test("관계 없는 질문에는 옛 주제가 붙지 않는다", () => {
+  const loops = [{ topic: "자격증 시험 결과", last_mentioned_at: daysAgo(40) }];
+  assert.deepEqual(selectPromptOpenLoops(loops, "오늘 점심 뭐 먹을까?"), []);
+});
+
+// ── 되살리기 판정은 언어별로 갈라 쓰지 않는다 ─────────────────────────────────────
+//
+// 조사 제거 단어 일치만 쓰면 일본어에서 이 경로가 통째로 죽는다 — 형태소 분석기가 없어
+// 문장이 한 토큰이 되고, 키워드 추출의 문자 필터가 가나·한자를 아예 지운다.
+
+test("한국어는 조사가 붙은 표현으로도 주제를 가리킨다", () => {
+  assert.ok(referencesOpenLoopTopic("발표를 언제 한다고 했지", "다음 주 발표 준비"));
+  assert.ok(!referencesOpenLoopTopic("고양이 밥 줬어", "다음 주 발표 준비"));
+});
+
+test("영어도 단어 일치로 주제를 가리킨다", () => {
+  assert.ok(referencesOpenLoopTopic("any news on the presentation?", "waiting for presentation results"));
+  assert.ok(!referencesOpenLoopTopic("what should I eat tonight?", "waiting for presentation results"));
+});
+
+test("일본어는 공백이 없어도 주제를 가리킨다", () => {
+  // 단어 일치만 쓰던 시절에는 이 검사가 통째로 false였다.
+  assert.ok(referencesOpenLoopTopic("資格試験の結果どうなった?", "資格試験の結果待ち"));
+  assert.ok(!referencesOpenLoopTopic("今日は何を食べようかな", "資格試験の結果待ち"));
+});
+
+test("두 글자 한 조각만 겹치면 되살리지 않는다", () => {
+  // 흔한 어미 한 조각으로 옛 주제가 우르르 붙으면 상한을 둔 의미가 없다.
+  assert.ok(!referencesOpenLoopTopic("今日はいい天気", "資格試験の結果待ち"));
+});
+
+test("빈 주제나 빈 질문에는 아무것도 걸리지 않는다", () => {
+  assert.equal(referencesOpenLoopTopic("자격증 시험", ""), false);
+  assert.equal(referencesOpenLoopTopic("", "자격증 시험"), false);
+  assert.equal(referencesOpenLoopTopic(null, "자격증 시험"), false);
+});
+
+test("main은 프롬프트 블록과 펫대화 판정에 서로 다른 목적의 필터를 쓴다", () => {
+  // 판정에 되살리기 필터를 쓰면 사용자 질문에 걸린 옛 주제까지 세어, 오프너에서는 비어
+  // 있는 목록을 두고 "미완료 주제 중 하나를 골라 물어보라"는 지시가 나간다.
   const mainSource = fs
     .readFileSync(path.join(__dirname, "..", "src", "main.ts"), "utf8")
     .replace(/\s+/g, " ");
   assert.ok(
-    mainSource.includes("buildOpenLoopsContextBlock(selectPromptOpenLoops(getOpenLoops())"),
-    "프롬프트 블록이 필터를 거친다"
+    mainSource.includes("buildOpenLoopsContextBlock( selectPromptOpenLoops("),
+    "프롬프트 블록은 되살리기 필터를 거친다"
   );
   assert.ok(
     mainSource.includes(
-      "hasOpenLoops: () => settings.assistantMemoryEnabled && selectPromptOpenLoops(getOpenLoops()).length > 0"
+      "hasOpenLoops: () => settings.assistantMemoryEnabled && selectFreshOpenLoops(getOpenLoops()).length > 0"
     ),
-    "펫대화 판정도 같은 필터를 거친다"
+    "펫대화 판정은 최신 주제만 센다"
+  );
+  assert.ok(
+    !mainSource.includes("hasOpenLoops: () => settings.assistantMemoryEnabled && selectPromptOpenLoops("),
+    "판정이 되살리기 필터로 되돌아가면 안 된다"
+  );
+});
+
+test("펫이 먼저 말 거는 경로는 되살리기를 끈다", () => {
+  // 오프너는 질문 자리에 지시문이 들어간다 — 그 문장에 옛 주제가 걸리면 3일 상한이 무의미해진다.
+  const petChatSource = fs
+    .readFileSync(path.join(__dirname, "..", "src", "main", "assistant", "pet-chat-service.ts"), "utf8")
+    .replace(/\s+/g, " ");
+  assert.ok(petChatSource.includes("recallOpenLoops: false"));
+
+  const mainSource = fs
+    .readFileSync(path.join(__dirname, "..", "src", "main.ts"), "utf8")
+    .replace(/\s+/g, " ");
+  assert.ok(
+    mainSource.includes('options.recallOpenLoops === false ? "" : question'),
+    "main의 블록이 그 옵션을 실제로 읽는다"
   );
 });

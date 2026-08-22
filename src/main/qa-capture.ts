@@ -281,6 +281,50 @@ function captureSettingsWindow(
         await settingsCaptureWindow.webContents.executeJavaScript("window.scrollTo(0, document.body.scrollHeight)");
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
+      /* --capture-settings-press=<CSS 선택자>: 실제 누름 효과(파문·젤리 출렁임)를 찍는다.
+         `--capture-settings-click`의 `el.click()`은 pointerdown을 만들지 않아서 ui-motion.js의
+         누름 효과가 아예 돌지 않는다 — 그래서 그 경로로는 확인할 수 없다(2026-08-21 추가).
+         **pointerdown·pointerup·click을 모두 보낸다** — 파문은 누를 때, 출렁임은 click에서
+         돈다. 합성 pointerup은 click을 만들지 않으므로 따로 보내야 한다.
+         애니메이션 중간(≈120ms)에 찍으려고 클릭 경로보다 짧게 기다린다. */
+      const pressSelector = argValue(argv, "--capture-settings-press=");
+      if (pressSelector !== null) {
+        const pressed = await settingsCaptureWindow.webContents.executeJavaScript(
+          `(() => { const el = document.querySelector(${JSON.stringify(pressSelector)});`
+          + ` if (!el) return { found: false };`
+          + ` el.scrollIntoView({ block: "center" });`
+          + ` const rect = el.getBoundingClientRect();`
+          + ` const options = { bubbles: true, button: 0,`
+          + ` clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };`
+          + ` el.dispatchEvent(new PointerEvent("pointerdown", options));`
+          + ` el.dispatchEvent(new PointerEvent("pointerup", options));`
+          + ` el.dispatchEvent(new MouseEvent("click", options));`
+          + ` return { found: true, size: [Math.round(rect.width), Math.round(rect.height)],`
+          + ` className: el.className, ripples: document.querySelectorAll(".ui-ripple").length }; })()`
+        );
+        /* 스크린샷만으로는 "효과가 안 돌았다"와 "이미 끝났다"를 구별할 수 없어 상태도 남긴다.
+           size가 [0, 0]이면 활성 탭이 아닌 패널의 요소를 잡은 것이다 — 그런 요소에도 클래스는
+           붙지만 화면에는 아무것도 안 보인다. 선택자를 `.tab-panel.active ...`로 좁힐 것. */
+        console.log("[QA] 누름 효과:", JSON.stringify(pressed));
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      /* --capture-settings-type=<선택자>::<문자열>: 입력칸에 값을 넣고 input 이벤트를 보낸다.
+         설정 검색처럼 "입력해야만 나타나는 UI"를 확인하는 용도(2026-08-21 추가). */
+      const typeRequest = argValue(argv, "--capture-settings-type=");
+      if (typeRequest !== null) {
+        const [typeSelector, ...textParts] = typeRequest.split("::");
+        const typedText = textParts.join("::");
+        await settingsCaptureWindow.webContents.executeJavaScript(
+          `(() => { const el = document.querySelector(${JSON.stringify(typeSelector)});`
+          + ` if (!el) return false; el.focus();`
+          /* React 제어 입력은 value를 직접 대입해도 onChange가 돌지 않는다(React가 값을
+             따로 추적한다). 프로토타입의 네이티브 setter로 넣어야 상태가 갱신된다. */
+          + ` const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;`
+          + ` setValue.call(el, ${JSON.stringify(typedText)});`
+          + ` el.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
       // --capture-settings-click=<CSS 선택자>로 찍기 직전에 아무 요소나 한 번 클릭할 수 있다.
       // 팝오버·아코디언처럼 펼쳐야만 보이는 UI를 확인하려고 2026-08-07에 추가.
       // "|"로 여러 선택자를 이으면 순서대로 짧은 간격을 두고 클릭한다(같은 선택자를 여러 번

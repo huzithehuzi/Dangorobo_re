@@ -24,10 +24,10 @@ README 3종, 완료 이력은 [CHANGELOG.md](./CHANGELOG.md), 법적 고지는
 
 ## 현재 상태와 다음 작업
 
-- **1.2.0 릴리스 산출물까지 만들어 둔 상태다**(`release/Dangorobo-1.2.0-Setup.exe`,
-  `-Portable.exe`, `-Source.zip`, `latest.yml`). portable EXE는 임시 프로필로 실제 실행해
-  설정창까지 확인했고, **설치본 설치와 자동 업데이트(낮은 버전 설치 → 새 버전 배포 → 다운로드·
-  재시작)는 아직 확인하지 않았다** — 배포 전 남은 수동 검증이다.
+- **1.3.0을 GitHub 릴리스로 발행했다**(2026-08-21, `v1.3.0` — 설치본·portable EXE·소스 ZIP·
+  `custom_template.zip`·`latest.yml`). portable EXE는 임시 프로필로 실제 실행해 설정창까지
+  확인했고, **설치본에서 자동 업데이트가 잡히는 것까지 실기로 확인했다**(사용자 확인,
+  2026-08-21). 1.2.0까지 "남은 수동 검증"으로 적혀 있던 항목이 이것으로 닫혔다.
 - Windows x64용 Electron 앱이며 현재 버전은 `package.json`을 기준으로 한다. NSIS 설치본과
   portable EXE 두 형태로 배포하고(`package.json`의 `build.win.target`), 설치본만
   `electron-updater`로 자동 업데이트를 확인한다 — portable 실행은 업데이트 채널이 없어
@@ -260,7 +260,12 @@ npm run dist -- --publish always
   Repository access·Contents 권한 화면에서 설정을 다 맞춰도 `403 Resource not accessible by
   personal access token`이 재현성 있게 났다(2026-08-18에 두 번 다른 fine-grained 토큰으로
   확인). 원인을 더 파기보다 classic + `repo` 한 번에 발급하는 쪽이 확실하고 빠르다.
-- **에셋 병렬 업로드 중 같은 태그로 draft 릴리스가 2개 생기는 레이스가 있다.** `electron-builder`가
+- **에셋 병렬 업로드 중 같은 태그로 draft 릴리스가 2개 생기는 레이스가 있다.** 1.3.0에서도
+  그대로 재현됐다(2026-08-21) — 일시적 문제가 아니라 매번 확인해야 하는 단계로 본다.
+  이때 **빠진 파일은 반드시 퍼블리시 실행이 만든 산출물로 올린다**: 퍼블리시가 EXE를 다시
+  빌드하므로 앞서 돌린 `npm run dist`의 blockmap을 올리면 게시된 Setup.exe와 어긋난다
+  (1.3.0에서 119053 → 119100으로 달라졌다). 발행 뒤 `latest.yml`의 크기·SHA512가 실제
+  업로드된 Setup.exe와 같은지 확인한다. `electron-builder`가
   `Setup.exe.blockmap`/`Setup.exe`/`Portable.exe`/`latest.yml`을 동시에 올리면서 "release
   doesn't exist" 판단을 두 번 내려 `v{version}` 태그의 draft를 두 개 만드는 경우가 있었다.
   퍼블리시 뒤에는 항상 `GET /repos/{owner}/{repo}/releases`로 같은 태그가 중복됐는지 확인하고,
@@ -347,12 +352,15 @@ npm run dist -- --publish always
 | 알람 예약·DND 보류 큐 | `alarm-scheduler.ts`, `alarm-queue.ts`, `dnd-monitor.ts` |
 | 자동 업데이트 확인·다운로드·재시작 확인 다이얼로그 | `auto-update-service.ts` |
 | 날씨(Open-Meteo, API 키 불필요) | `weather-service.ts`, `alarm-queue.ts`의 `resolveAlarmForDisplay`, `windows/pet-menu-model.ts`의 `check-weather` 항목 |
+| 한국 지명 보정(광역시 축약형·"시" 붙이기) | `weather-service.ts`의 `METRO_CITY_FORMAL_NAMES`, `citySuffixCandidate()`, `geocodeCity()` |
 | 체크리스트 | `windows/checklist.ts`, `checklist-ipc.ts`, `ui/checklist/` |
 | 즐겨찾기와 아이콘 | `windows/favorites-panels.ts`, `favorites-layout.ts`, `favorite-icon-service.ts`, `favorites-ipc.ts`, `ui/favorites-*/` |
 | 시스템 트레이·펫 우클릭 메뉴 | `windows/pet-menu-controller.ts`, `pet-menu-model.ts`, `ui/pet-context-menu/` |
 | 전역 단축키·Mouse4/5 | `global-shortcut-manager.ts`, `main.ts` |
 | 이미지 리사이즈 | `image-resize.ts` |
+| 설정 검색 | `ui/settings/search.tsx`, `App.tsx`의 `tabLabels`·`data-tab-panel` |
 | 캡처·QA 명령줄 하네스 | `qa-capture.ts`, `main.ts`의 `qaCaptureContext()` |
+| 개발 실행 런처(의존성 자동 설치 판정) | `개발용-실행.bat`, `.dev-deps.hash`(추적 안 함) |
 | 미디어·전체화면·폰트 | `media-monitor.ts`, `dnd-monitor.ts`, `fonts.ts` |
 | 방해 금지 시 창 숨김·복구 | `windows/dnd-visibility.ts` |
 | 펫 창 마우스 통과·포커스 판단 | `windows/pet-interaction-mode.ts` |
@@ -438,15 +446,89 @@ Gemini의 세 호출 경로는 의도적으로 다르다.
 쓴다. 한국어 의미 중복은 문자 겹침만으로 안정적으로 판단할 수 없다.
 
 미완료 주제는 열린 목록을 LLM에 보여 해결된 항목을 닫고, 저장 시 `insertOpenLoop()`가 중복을
-방지한다. 나이 처리는 두 단계이며 목적이 다르다: **프롬프트에는 마지막 언급이
-`OPEN_LOOP_PROMPT_MAX_AGE_DAYS` 안쪽인 주제만 올리고**(`selectPromptOpenLoops()`, DB는 그대로 둔다),
-`OPEN_LOOP_ARCHIVE_AGE_DAYS`를 넘긴 주제는 시작할 때 `archiveStaleOpenLoops()`가 닫아 표가
-무한정 쌓이지 않게 한다. 앞은 "펫이 몇 달 전 일을 되묻지 않게", 뒤는 "표가 커지지 않게"다 —
-뒤 기준을 앞 근처로 내리면 이사·자격증처럼 느리게 진행되는 일까지 닫힌다.
-**펫이 미완료 주제를 소재로 삼을지 판정하는 곳도 프롬프트와 같은 필터를 쓴다** — 갈리면 지시만
-가고 목록은 비어 모델이 주제를 지어낸다. 마지막 언급 시각을 못 읽는 주제는 양쪽 모두 남긴다.
-자동 판정이 놓쳐 열린 채 남은 주제도 앞 필터로 함께 조용해지고, 사용자는 기억 관리 탭에서
-언제든 직접 닫을 수 있다. 이름과 예약 키는 기억에 저장하지 않는다.
+방지한다. 나이 처리는 세 단계이며 목적이 서로 다르다.
+
+| 단계 | 기준 | 하는 일 |
+|---|---|---|
+| 펫이 스스로 꺼내기 | `OPEN_LOOP_PROMPT_MAX_AGE_DAYS` | `selectFreshOpenLoops()`가 이 안쪽 주제만 남긴다 |
+| 사용자가 꺼내면 되살리기 | 위 상한 밖 + 이번 발화가 그 주제를 가리킴 | `selectPromptOpenLoops()`가 뒤에 덧붙인다(`OPEN_LOOP_RECALL_LIMIT`개까지) |
+| 표 정리 | `OPEN_LOOP_ARCHIVE_AGE_DAYS` | `archiveStaleOpenLoops()`가 닫는다(시작 시 + 기억 추출 뒤) |
+
+미완료 주제 블록은 장기 기억과 달리 **질문과 무관하게 통째로 실린다**. 그래서 노출 상한만
+두면 "펫이 안 꺼낸다"와 "물어봐도 모른다"가 같아진다 — 되살리기 단계가 그 차이를 만든다.
+되살릴지는 `referencesOpenLoopTopic()`이 판정하며, 조사 제거 단어 일치와 두 글자 조각 겹침을
+**언어별로 갈라 쓰지 않고 함께** 본다. 단어 일치만 쓰면 공백으로 단어를 끊지 않는 일본어에서
+이 경로가 조용히 아무것도 못 찾는다(키워드 추출의 문자 필터가 가나·한자를 지운다).
+
+**펫이 미완료 주제를 소재로 삼을지 판정하는 곳은 `selectFreshOpenLoops()`를 쓴다.** 되살리기
+필터로 재면 사용자 질문에 걸린 옛 주제까지 세어, 오프너에는 없는 목록을 두고 지시만 나가
+모델이 주제를 지어낸다. 되살리기 결과가 항상 최신 목록의 상위집합인 것도 같은 이유다.
+사용자 발화가 아닌 프롬프트(펫이 먼저 말 걸기)는 `recallOpenLoops: false`로 되살리기를 끈다 —
+오프너 지시문 단어에 옛 주제가 걸리면 상한을 둔 의미가 없어진다.
+
+사용자가 잊어달라고 하면 그 요청은 위 세 단계와 다른 경로다. 로컬 키워드
+(`detectForgetSignals()`)가 **사용자 발화**에서 걸릴 때만 무엇을 잊을지 LLM에 묻고
+(`buildForgetPrompt()`, 기억은 `M<번호>`·미완료 주제는 `L<번호>`로 지목받는다), 그 배치에서는
+다른 추출을 하지 않는다 — 같은 대화에서 기억·주제를 새로 뽑으면 방금 잊은 것이 다른 표현으로
+되돌아온다. 완료 신호보다 먼저 본다: "그거 끝났으니 잊어줘"는 닫기가 아니라 잊기 요청이다.
+
+**이 요청은 3턴 추출 주기를 기다리지 않는다.** 러너는 마지막 질문에서만 신호를 찾으므로
+주기를 기다리면 그 사이 마지막 질문이 다른 말로 바뀌어 요청이 통째로 사라진다. 그래서
+`recordAssistantConversationTurn()`이 턴을 기록하는 자리에서 바로 판정해 추출을 당겨 실행하고,
+그 판정은 `countTowardExtraction` early return보다 **앞**에 있다 — 펫 대화 답장은 카운터를
+올리지 않으므로 뒤에 두면 그쪽 요청이 영영 버려진다. 당겨 실행할 때 카운터는 건드리지 않아
+원래 주기의 일반 추출은 예정대로 온다.
+
+**잊기는 소프트 삭제와 다르다.** `insertMemory()`는 같은 키를 다시 넣으면 아카이브를 풀어
+되살리고, `insertOpenLoop()`는 닫힌 주제를 중복으로 보지 않아 같은 주제를 새 행으로 다시
+만든다. 잊어달라 한 사실은 대화 이력에 한동안 남아 있으므로, 막지 않으면 다음 추출이 조용히
+되돌린다. 그래서 스키마 v4의 `is_forgotten`을 세우는 전용 함수를 쓴다.
+
+| 경로 | 표시 | 되살아나는가 |
+|---|---|---|
+| `deleteMemory()` / 기억 관리 탭 삭제 | `is_archived` | 예 — 같은 사실을 다시 말하면 |
+| `archiveStaleOpenLoops()` / `closeOpenLoop()` | `is_closed` | 예 — 다시 이야기하면 |
+| `forgetMemory()` / `forgetOpenLoop()` | + `is_forgotten` | 아니오 |
+
+자동 추출만 그 표시에 막힌다. 사용자가 직접 하는 가져오기(`memory:import`)는
+`allowForgotten`으로 표시를 지우고 되살리며, 기억 관리 탭의 "잊은 기억" 섹션이
+`memory:get-forgotten`·`memory:restore-forgotten`으로 목록과 복원 버튼을 준다 — 되돌릴 수단이
+없으면 LLM이 잘못 고른 기억을 영구히 잃는다. 그 섹션은 잊은 항목이 있을 때만 나온다.
+
+그 탭 자체가 `memoryTabVisible`(기본 꺼짐)로 숨어 있으므로, **잊은 기억이 하나라도 있으면
+토글과 무관하게 탭을 보여준다** — 안 그러면 일반 사용자에게는 복구 경로가 아예 없다.
+판정은 `memory:get-stats`의 `forgottenCount`로 하고 설정창을 열 때 한 번 읽는다(잊기는 대화
+중에 일어나고 그때 설정창은 보통 닫혀 있다). 탭을 넣는 조건과 그 탭에서 내보내는 조건은
+같은 값을 봐야 한다 — 갈리면 탭은 보이는데 머물 수 없다.
+
+마지막 언급 시각을 못 읽는 주제는 모든 단계에서 남긴다. 자동 판정이 놓쳐 열린 채 남은 주제도
+노출 상한으로 함께 조용해지고, 사용자는 기억 관리 탭에서 언제든 직접 닫을 수 있다.
+기억 DB에 남기는 사람이 읽는 값(종료 사유·에피소드 요약)은 앱 언어로 만든다.
+이름과 예약 키는 기억에 저장하지 않는다.
+
+### 설정 검색
+
+탭이 13개(숨김 2개 포함)까지 늘어나 "기능이 있는데 못 찾는" 상황이 생겨 2026-08-21에 넣었다.
+실제로 "기억 관리 탭 표시" 토글이 그렇게 묻혀 있었다.
+
+**색인을 손으로 관리하지 않고 렌더된 DOM에서 그때그때 만든다.** 탭 패널은 전부 마운트된 상태로
+`hidden`만 토글되므로(`App.tsx`) 숨은 탭의 항목도 그대로 읽힌다. 설정 항목 목록을 검색 코드에
+복사해 두면 탭을 고칠 때마다 같이 고쳐야 하고, 안 고치면 새 설정이 조용히 검색에서 빠진다.
+그래서 각 패널에 `data-tab-panel`을 달고 `rows.tsx`의 세 행 종류(`.setting-row`·`.toggle-row`·
+`.text-field`)를 훑는다. 패널 하나라도 그 속성이 빠지면 그 탭이 통째로 검색에서 사라지므로
+`test/settings-search.test.js`가 목록 일치를 검사한다.
+
+주의할 점 셋:
+
+- **검색창은 저장 버튼이 있는 `<form>` 안에 있다.** Enter를 막지 않으면 검색하려다 설정이
+  저장된다. 결과 항목도 `type="button"`이 없으면 submit이 된다.
+- **결과에 DOM 노드를 담지 않는다.** 탭을 바꾸면 리렌더로 그 노드가 떨어져 스크롤이 안 먹는다.
+  탭 id와 라벨만 담고 이동 뒤 `requestAnimationFrame`에서 라벨로 다시 찾는다.
+- **라벨은 `textContent`가 아니다.** 입력 컨트롤을 떼고 읽는다 — 안 그러면 `<select>` 안의 모든
+  선택지 텍스트가 섞여 결과 줄을 읽을 수 없다.
+
+`tabLabels`는 실제로 보이는 탭 목록(`tabGroups`)에서 파생한다. 잠금 전 개발자 탭처럼 갈 수 없는
+탭이 결과에 나오면 눌러도 이동하지 못한다.
 
 ## 렌더링 계약
 
@@ -552,6 +634,17 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
 커스터마이징, 커스터마이징 팔레트다. 커스터마이징 팔레트 플래그는
 `--capture-customize=<png>`와 함께 사용한다.
 
+**입력해야 나타나는 UI는 `--capture-settings-type=<선택자>::<문자열>`로 확인한다.** 설정 검색의
+결과 목록이 그렇다. React 제어 입력은 `value` 대입만으로는 `onChange`가 돌지 않아 화면에 글자는
+보이면서 결과는 안 뜨므로, 그 플래그가 프로토타입의 네이티브 setter로 넣는다. `--capture-settings-click`과
+함께 주면 입력 → 결과 클릭까지 한 번에 확인된다.
+
+**누름 효과(파문·젤리 출렁임)는 `--capture-settings-press=<선택자>`로만 확인된다.**
+`--capture-settings-click`이 부르는 `el.click()`은 `pointerdown`을 만들지 않아 `ui-motion.js`의
+누름 경로가 아예 돌지 않는다. 선택자는 `.tab-panel.active ...`로 좁힌다 — 숨은 탭 패널의
+요소는 크기가 0×0이라 클래스는 붙지만 화면에는 아무것도 안 보인다. 그 플래그는 클래스·파문
+개수·요소 크기를 로그로 남기므로 "효과가 안 돌았다"와 "이미 끝났다"를 구별할 수 있다.
+
 렌더링 검증은 팔레트·외곽선 ON/OFF 네 조합으로 직접 렌더와 후처리 경로를 모두 확인한다.
 애니메이션 위상, 깜박임, 쓰다듬기 하트 난수 때문에 픽셀 차이 0을 요구하지 말고 창 크기,
 모델 비율·위치, 색·텍스처, 후처리, 오클루전, 말풍선과 라벨의 구조를 비교한다. 커스터마이징
@@ -640,10 +733,24 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
 - 프리셋 갤러리 썸네일은 **머리만** 그리므로 프리셋별 커스텀 **바디** 이미지는 썸네일에
   나타나지 않는다(적용하면 펫에는 반영된다). 표정도 normal 한 장만 보내므로 다른 표정의
   커스텀 얼굴은 썸네일로 확인할 수 없다.
+- **Open-Meteo의 기상청 모델이 현재 값을 주지 않는다.** 2026-08-21 실측에서 서울·성남·부산
+  좌표 모두 `kma_seamless`·`kma_ldps`·`kma_gdps` 48시간 전부 null이었다(모델명 자체는 유효 —
+  없는 이름은 HTTP 400). `fetchHourlyForecast()`가 기본 모델로 물러나 사용자에게 보이는
+  문제는 없지만, "한국은 기상청 우선"은 지금 사실상 쉬는 경로다. 폴백이 발동하면 로그를
+  남기므로 데이터가 돌아왔는지는 로그로 확인한다. 진짜 기상청 데이터가 필요하면 공공데이터
+  포털 단기예보 API를 별도 경로로 붙여야 한다(키 발급·격자 좌표 변환·코드 매핑이 따라온다).
+- Open-Meteo 지오코딩(GeoNames)은 한국 지명 색인이 고르지 않다. 광역시 축약형과 접미사 없는
+  시 이름은 `geocodeCity()`가 보정하지만, 구·군 단위나 색인에 아예 없는 이름("용인")은 여전히
+  못 찾는다. 보정 목록에 없는 지명이 엉뚱한 곳으로 가는지는 실측으로만 알 수 있다.
 - 문서 요약은 모델이 Mermaid를 생략하거나 원시 SVG를 출력할 수 있다.
 - HSV 축별 팔레트 양자화는 특정 경계에서 색 선택이 직관적으로 움직이지 않을 수 있다.
-- [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 알람·클릭 사운드의 정확한 출처 URL과
-  라이선스가 아직 보완되지 않았다. 배포 전 해결해야 할 법적 고지 항목이다.
+- `.dev-deps.hash`는 `개발용-실행.bat`이 `npm ci` 뒤에 남기는 `package-lock.json`의 SHA256이다.
+  런처가 "의존성을 다시 설치할까"를 이 값으로 판단한다. 2026-08-21까지 추적되고 있었는데,
+  그러면 다른 컴퓨터의 값을 받아오는 순간 **바뀐 lock 파일과 해시가 이미 일치해 `npm ci`를
+  건너뛰고** node_modules가 낡은 채로 실행된다. 지금은 `.gitignore`에 있다.
+- 알람·클릭 사운드는 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)에 public domain으로
+  명시돼 있다(파일별 출처 URL은 없다). 2026-08-21 확인 — 그 전까지 여기 "미보완"으로 남아
+  있던 항목이라, 배포 게이트로 다시 올리기 전에 이 문장을 먼저 볼 것.
 
 ## 백로그
 
@@ -654,6 +761,13 @@ macOS `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron`).
   자체는 줄었지만, 남은 차단은 여전히 원인 없는 실패로 보인다.
 - CI: 현재 정적 검사만 실행한다. `npm run dist`, portable EXE·소스 ZIP 구성 검사, 패키징
   artifact 업로드와 Electron QA 캡처·실행 smoke를 자동화할지 결정한다.
+- **앱의 자동 판단을 사용자에게 보여주기**: 2026-08-21에 같은 원인의 버그를 두 건 찾았다 —
+  날씨는 입력한 지명이 **어디로 해석됐는지** 화면에 없어서 "부산"이 경상북도 시골로 가는 걸
+  몇 년간 몰랐고, 기상청 폴백은 조용해서 그 모델을 쓰는지조차 알 수 없었다. 같은 종류가
+  더 있다: 기억 추출이 무엇을 저장했는지, 미완료 주제가 왜 닫혔는지(`resolution_notes`는
+  저장만 되고 화면에 안 나온다), 펫이 왜 그 화제로 말을 걸었는지. 기억 관리 탭에 "최근
+  판단" 같은 자리를 만들어 노출하면 이런 버그가 스스로 드러난다. 새 기능이라기보다 **관측
+  가능성**이고, 지금은 앱이 조용히 판단하고 사용자는 결과만 본다.
 - 문서 요약: 문서 유형별 Mermaid, 정량 차트, 이미지 생성 지원 검토
 - 장기 기억: 임베딩 기반 의미 검색·중복 판정, 다중 사용자 지원
 - TypeScript: 지원되는 parser가 준비되면 TS ESLint AST 규칙 검토

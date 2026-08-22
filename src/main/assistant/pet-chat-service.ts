@@ -58,6 +58,9 @@ type PetChatAskOptions = {
   maxHistoryTurns: number;
   historyCharBudget: number;
   maxOutputTokens: number;
+  // 오프너는 사용자 발화가 아니라 지시문을 질문 자리에 넣는다 — 그 문장에 걸려 오래된
+  // 미완료 주제가 프롬프트로 되살아나지 않게 끈다(memory-search.ts의 나이 상한 참고).
+  recallOpenLoops: boolean;
 };
 
 type PetChatServiceDeps = {
@@ -166,7 +169,8 @@ function createPetChatService(deps: PetChatServiceDeps) {
     const answer = await deps.ask(opener.prompt, {
       maxHistoryTurns: PET_CHAT_HISTORY_TURNS,
       historyCharBudget: PET_CHAT_HISTORY_CHAR_BUDGET,
-      maxOutputTokens: 320
+      maxOutputTokens: 320,
+      recallOpenLoops: false
     });
     if (!answer) throw new Error(t(deps.getSettings().language, "assistant.emptyAnswerShortError"));
     const { text, expression } = extractAssistantExpression(answer);

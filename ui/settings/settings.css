@@ -57,6 +57,91 @@ body { margin: 0; min-width: 400px; background: var(--settings-bg); }
 .settings-header { padding: 18px 16px 14px; }
 h1 { margin: 0; font-size: calc(17px * var(--ui-font-size-scale)); line-height: 1.3; }
 p { margin: 6px 0 0; color: var(--text-muted); font-size: calc(11px * var(--ui-font-size-scale)); line-height: 1.5; }
+/* ── 설정 검색 ────────────────────────────────────────────────────────────
+   탭이 13개까지 늘어나 "기능이 있는데 못 찾는" 상황이 생겨 넣었다(2026-08-21).
+   결과 목록은 사이드바 흐름 안에 그대로 놓는다 — position:absolute로 띄우면 사이드바가
+   overflow-y:auto라 잘리고, 잘리지 않게 하려면 그 스크롤을 포기해야 한다. */
+.settings-search { padding: 0 10px 14px; }
+.settings-search-input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--settings-bg) 60%, black 40%);
+  font: inherit;
+  font-size: calc(12px * var(--ui-font-size-scale));
+}
+.settings-search-input::placeholder { color: var(--text-muted); }
+.settings-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  /* 결과가 12개까지라 사이드바를 밀어내지 않게 자체 스크롤을 준다. */
+  max-height: 46vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.settings-search-empty {
+  margin: 4px 2px;
+  color: var(--text-muted);
+  font-size: calc(11px * var(--ui-font-size-scale));
+}
+.settings-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-search-result:hover,
+.settings-search-result.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--settings-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--settings-accent) 18%, transparent);
+}
+.settings-search-result-label {
+  font-size: calc(12px * var(--ui-font-size-scale));
+  /* 라벨이 길어도 사이드바 너비를 넘기지 않게 한 줄로 자른다. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-search-result-path {
+  color: var(--text-muted);
+  font-size: calc(10.5px * var(--ui-font-size-scale));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 검색으로 이동한 항목을 잠깐 강조한다 — 긴 패널 중간으로 스크롤되면 어디로 왔는지
+   모르기 때문이다. outline을 쓰는 이유는 ui-motion.css의 호버 강조와 같다(레이아웃 불변). */
+@keyframes settings-search-hit {
+  0%, 62% { outline-color: color-mix(in srgb, var(--settings-accent) 85%, transparent); }
+  100% { outline-color: transparent; }
+}
+.settings-search-hit {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  border-radius: 6px;
+  animation: settings-search-hit 1600ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* 강조 자체는 남긴다 — 어디로 왔는지 알려주는 정보라서 끄면 기능이 없어진다.
+     서서히 사라지는 애니메이션만 없애고 같은 시간 뒤에 클래스가 떨어진다. */
+  .settings-search-hit {
+    outline-color: color-mix(in srgb, var(--settings-accent) 85%, transparent);
+    animation: none;
+  }
+}
+
 .settings-tabs { display: flex; flex-direction: column; gap: 17px; padding: 0 10px; }
 .settings-tab-group { display: flex; flex-direction: column; gap: 2px; }
 /* 강조색은 원색(--settings-accent)이 아니라 밝은 쪽(--settings-accent-hover)을 쓴다 —

@@ -13,6 +13,7 @@ import { GeneralTab, UiTab, TrayTab, PatchNotesTab } from "./tabs-app";
 import { DevTab } from "./tabs-dev";
 import { useCustomizationState } from "./use-customization-state";
 import { useSettingsLifecycle } from "./use-settings-lifecycle";
+import { SettingsSearch } from "./search";
 // 창 외형을 <html>에 입히는 법은 창 공용 모듈이 갖는다. 설정창만 폼 값이 바뀔 때마다
 // 낱개로 반영해야 해서 묶음(applyWindowAppearance) 대신 낱개 함수를 쓴다.
 import { applyBubbleTheme, applyUiFont, applyUiFontSize, applyUiScale } from "../lib/appearance";
@@ -102,11 +103,28 @@ export default function App() {
     state.lastClickAt = now;
     if (state.count >= 5) setDevModeUnlocked(true);
   }, [devModeUnlocked]);
-  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이 켜져 있을 때만 목록에 넣고,
+  /* 잊은 기억이 하나라도 있으면 토글과 무관하게 "기억 관리" 탭을 보여준다. 되살릴 수 있는
+     곳이 그 탭뿐인데 탭이 기본으로 숨어 있어서, 펫이 잘못 잊었을 때 일반 사용자에게는
+     복구 경로가 아예 없었다.
+     창을 여는 시점에 한 번만 읽는다 — 잊기는 대화 중에 일어나고 그때 설정창은 보통 닫혀
+     있다. 열어둔 채로 잊었다면 다음에 열 때 탭이 나온다. */
+  const [hasForgottenMemories, setHasForgottenMemories] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void window.desktopPet.getMemoryStats()
+      .then((stats) => {
+        if (!cancelled) setHasForgottenMemories((stats.forgottenCount || 0) > 0);
+      })
+      .catch((error) => console.error("[Settings] Load forgotten memory count failed:", error));
+    return () => { cancelled = true; };
+  }, []);
+
+  // "기억 관리" 탭은 고급 사용자 전용 토글(d.memoryTabVisible)이나 위 조건이 참일 때만 넣고,
   // "개발자" 탭은 위 숨김 제스처로 풀렸을 때만 넣는다.
+  const memoryTabShown = Boolean(d?.memoryTabVisible) || hasForgottenMemories;
   const tabGroups = useMemo(() => {
     let groups = TAB_GROUPS;
-    if (d?.memoryTabVisible) {
+    if (memoryTabShown) {
       groups = groups.map((group) => group.labelKey !== "settings.tabGroup.talk"
         ? group
         : { ...group, tabs: [...group.tabs, { id: "memory", labelKey: "settings.tab.memory" }] });
@@ -117,7 +135,7 @@ export default function App() {
         : { ...group, tabs: [...group.tabs, { id: "dev", labelKey: "settings.tab.dev" }] });
     }
     return groups;
-  }, [d?.memoryTabVisible, devModeUnlocked]);
+  }, [memoryTabShown, devModeUnlocked]);
   // 로드·수정·저장 수명주기는 use-settings-lifecycle.ts가 소유한다(dirty를 셋이 공유한다).
   const {
     loadStatus, saveError, saveSuccess,
@@ -130,6 +148,16 @@ export default function App() {
     (key: string, vars?: Record<string, string | number>) => window.PetI18n.t(language, key, vars),
     [language]
   );
+
+  /* 검색 결과에 보여줄 탭 이름. tabGroups에서 파생하므로 숨겨진 탭(잠금 전 개발자 탭,
+     꺼진 기억 관리 탭)은 자동으로 빠진다 — 목록에 없는 탭이 결과로 나오면 눌러도 못 간다. */
+  const tabLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    for (const group of tabGroups) {
+      for (const tab of group.tabs) labels[tab.id] = tt(tab.labelKey);
+    }
+    return labels;
+  }, [tabGroups, tt]);
 
   const set = useCallback(<K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -199,9 +227,10 @@ export default function App() {
   }, [loadStatus]);
 
   // 토글을 꺼서 "기억 관리" 탭이 목록에서 사라지면 그 탭에 머물러 있지 않게 대화 탭으로 옮긴다.
+  // 잊은 기억이 있어 탭이 나와 있는 경우에는 토글이 꺼져 있어도 내보내지 않는다.
   useEffect(() => {
-    if (activeTab === "memory" && d && !d.memoryTabVisible) activateTab("conversation");
-  }, [activeTab, d?.memoryTabVisible]);
+    if (activeTab === "memory" && d && !memoryTabShown) activateTab("conversation");
+  }, [activeTab, d, memoryTabShown]);
 
   // 이전 세션에서 개발자 탭에 머물러 있던 채로 창을 다시 열면(sessionStorage에 "dev"가
   // 남아 있음) 아직 잠금을 안 풀었어도 그 탭 내용이 그대로 보이는 걸 막는다.
@@ -363,6 +392,7 @@ export default function App() {
             <h1 onClick={handleTitleClick}>{tt("window.settingsTitle")}</h1>
             <p>{tt("settings.subtitle")}</p>
           </header>
+          <SettingsSearch tabLabels={tabLabels} onJump={activateTab} />
           <nav className="settings-tabs" role="tablist" aria-label={tt("settings.tabsAriaLabel")}>
             {tabGroups.map((group) => (
               <div key={group.labelKey} className="settings-tab-group">
@@ -385,19 +415,19 @@ export default function App() {
           </nav>
         </aside>
         <div className="settings-content">
-          <section className={`tab-panel${activeTab === "general" ? " active" : ""}`} hidden={activeTab !== "general"}><GeneralTab /></section>
-          <section className={`tab-panel${activeTab === "appearance" ? " active" : ""}`} hidden={activeTab !== "appearance"}><AppearanceTab /></section>
-          <section className={`tab-panel${activeTab === "player" ? " active" : ""}`} hidden={activeTab !== "player"}><PlayerTab /></section>
-          <section className={`tab-panel${activeTab === "customization" ? " active" : ""}`} hidden={activeTab !== "customization"}><CustomizationTab /></section>
-          <section className={`tab-panel${activeTab === "memory" ? " active" : ""}`} hidden={activeTab !== "memory"}><MemoryTab active={activeTab === "memory"} /></section>
-          <section className={`tab-panel${activeTab === "alerts" ? " active" : ""}`} hidden={activeTab !== "alerts"}><AlertsTab /></section>
-          <section className={`tab-panel${activeTab === "ui" ? " active" : ""}`} hidden={activeTab !== "ui"}><UiTab /></section>
-          <section className={`tab-panel${activeTab === "conversation" ? " active" : ""}`} hidden={activeTab !== "conversation"}><ConversationTab /></section>
-          <section className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
-          <section className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
-          <section className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
-          <section className={`tab-panel${activeTab === "patchNotes" ? " active" : ""}`} hidden={activeTab !== "patchNotes"}><PatchNotesTab /></section>
-          <section className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
+          <section data-tab-panel="general" className={`tab-panel${activeTab === "general" ? " active" : ""}`} hidden={activeTab !== "general"}><GeneralTab /></section>
+          <section data-tab-panel="appearance" className={`tab-panel${activeTab === "appearance" ? " active" : ""}`} hidden={activeTab !== "appearance"}><AppearanceTab /></section>
+          <section data-tab-panel="player" className={`tab-panel${activeTab === "player" ? " active" : ""}`} hidden={activeTab !== "player"}><PlayerTab /></section>
+          <section data-tab-panel="customization" className={`tab-panel${activeTab === "customization" ? " active" : ""}`} hidden={activeTab !== "customization"}><CustomizationTab /></section>
+          <section data-tab-panel="memory" className={`tab-panel${activeTab === "memory" ? " active" : ""}`} hidden={activeTab !== "memory"}><MemoryTab active={activeTab === "memory"} /></section>
+          <section data-tab-panel="alerts" className={`tab-panel${activeTab === "alerts" ? " active" : ""}`} hidden={activeTab !== "alerts"}><AlertsTab /></section>
+          <section data-tab-panel="ui" className={`tab-panel${activeTab === "ui" ? " active" : ""}`} hidden={activeTab !== "ui"}><UiTab /></section>
+          <section data-tab-panel="conversation" className={`tab-panel${activeTab === "conversation" ? " active" : ""}`} hidden={activeTab !== "conversation"}><ConversationTab /></section>
+          <section data-tab-panel="shortcuts" className={`tab-panel${activeTab === "shortcuts" ? " active" : ""}`} hidden={activeTab !== "shortcuts"}><ShortcutsTab /></section>
+          <section data-tab-panel="tray" className={`tab-panel${activeTab === "tray" ? " active" : ""}`} hidden={activeTab !== "tray"}><TrayTab /></section>
+          <section data-tab-panel="favorites" className={`tab-panel${activeTab === "favorites" ? " active" : ""}`} hidden={activeTab !== "favorites"}><FavoritesTab /></section>
+          <section data-tab-panel="patchNotes" className={`tab-panel${activeTab === "patchNotes" ? " active" : ""}`} hidden={activeTab !== "patchNotes"}><PatchNotesTab /></section>
+          <section data-tab-panel="dev" className={`tab-panel${activeTab === "dev" ? " active" : ""}`} hidden={activeTab !== "dev"}><DevTab /></section>
         </div>
         <footer className="settings-footer">
           {saveError && <div className="save-error">{saveError}</div>}

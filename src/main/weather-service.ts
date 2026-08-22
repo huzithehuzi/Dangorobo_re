@@ -19,9 +19,20 @@ type WeatherServiceDeps = {
 type GeocodeResult = { latitude: number; longitude: number; countryCode: string };
 
 // Open-Meteo 지오코딩(GeoNames 기반)은 한국 행정구역 이름 색인이 들쭉날쭉하다(실측, 2026-08).
-// "경기도 성남시"처럼 도+시를 붙이면 통째로 못 찾지만 "성남시"만 넣으면 바로 찾고, 광역시는
-// "서울" 같은 축약형은 없고 "서울특별시" 정식 명칭만 있다. 도 이름 자체는 지역마다 색인
-// 상태가 달라(경기도는 되는데 충청남도는 안 됨) 일반화하지 않는다.
+// "경기도 성남시"처럼 도+시를 붙이면 통째로 못 찾지만 "성남시"만 넣으면 바로 찾는다. 도 이름
+// 자체는 지역마다 색인 상태가 달라(경기도는 되는데 충청남도는 안 됨) 일반화하지 않는다.
+//
+// ⚠ 축약형의 실제 실패 모드는 "못 찾음"이 아니라 **동명의 시골 마을을 성공적으로 찾음**이다
+// (2026-08-21 실측). 그래서 이 치환은 폴백이 아니라 **직접 조회보다 먼저** 와야 한다 —
+// 폴백으로 두면 영영 실행되지 않는다. 그때 사용자가 보던 곳:
+//   부산 → 경상북도 부산(36.38,128.37, 실제 부산에서 150km 내륙)
+//   대구 → 강원도 대구(38.72,127.64) — 국가코드 KP(북한)
+//   전주 → 평안북도(40.45,124.88, KP), 천안 → 강원도(38.50,126.90, KP)
+// "서울"만 우연히 맞았는데, 그건 색인에 "서울"이 아예 없어서 폴백이 돌았기 때문이다.
+//
+// 세종은 반대다 — 축약형 "세종"이 정확하고 "세종특별자치시"는 색인에 없다. 그래서 여기
+// 넣지 않는다(아래 "시" 붙이기 규칙이 세종시를 먼저 시도했다가 없으면 원문으로 돌아간다).
+// 제주는 "제주"·"제주특별자치도" 둘 다 없고 "제주시"만 있어 값이 정식 도명이 아니다.
 const METRO_CITY_FORMAL_NAMES: Record<string, string> = {
   "서울": "서울특별시",
   "부산": "부산광역시",
@@ -29,8 +40,29 @@ const METRO_CITY_FORMAL_NAMES: Record<string, string> = {
   "인천": "인천광역시",
   "광주": "광주광역시",
   "대전": "대전광역시",
-  "울산": "울산광역시"
+  "울산": "울산광역시",
+  "제주": "제주시"
 };
+
+// 행정구역 접미사. 이 중 하나로 끝나는 입력은 이미 정식 형태로 보고 손대지 않는다.
+const KOREAN_PLACE_SUFFIXES = [
+  "특별자치도", "특별자치시", "광역시", "특별시", "시", "군", "구", "도", "읍", "면", "동"
+];
+
+/**
+ * 접미사 없는 순 한글 지명에 "시"를 붙인 후보를 만든다. 광역시가 아닌 큰 도시도 축약형이
+ * 엉뚱한 곳으로 가는 경우가 많고("전주"는 북한, "천안"도 북한, "창원"·"고양"은 다른 도),
+ * "시"를 붙이면 대체로 정확해진다(실측, 2026-08-21). 못 찾으면 호출부가 원문으로 돌아간다.
+ *
+ * 순 한글일 때만 만든다 — 라틴 문자 지명에 "시"를 붙이면 의미 없는 조회가 하나 늘어난다.
+ */
+function citySuffixCandidate(city: string): string | null {
+  if (!/^[가-힣]{2,}$/.test(city)) return null;
+  if (KOREAN_PLACE_SUFFIXES.some((suffix) => city.endsWith(suffix))) return null;
+  return `${city}시`;
+}
+// 위 KOREAN_PLACE_SUFFIXES와 목적이 다르다 — 이쪽은 "OO도 OO시"의 **앞** 토큰이 도·광역시
+// 이름인지만 본다. 시·군·구는 앞 토큰이 될 수 없으므로 일부러 빠져 있다.
 const PROVINCE_PREFIX_SUFFIXES = ["특별자치도", "특별자치시", "광역시", "특별시", "도"];
 
 // "OO도 OO시" 두 토큰 형태만 다룬다 — "서울특별시 강남구"처럼 구 단위까지 오면 손대지 않는다.
@@ -155,18 +187,25 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     const trimmed = city.trim();
     if (!trimmed) return null;
     const primaryLanguage = language === "ko" || language === "ja" ? language : "en";
+
+    /* 한국 지명 보정은 직접 조회보다 **먼저** 온다. 축약형은 못 찾히는 게 아니라 동명의
+       시골 마을에 성공적으로 걸리므로(METRO_CITY_FORMAL_NAMES 주석 참고), 폴백으로 두면
+       영영 실행되지 않는다. 이 후보들은 한국 행정구역 이름 전용이라 항상 language=ko다. */
+    const koreanCandidates = [
+      METRO_CITY_FORMAL_NAMES[trimmed],
+      citySuffixCandidate(trimmed)
+    ].filter((candidate): candidate is string => Boolean(candidate));
+    for (const candidate of koreanCandidates) {
+      const corrected = await geocodeQuery(candidate, "ko");
+      if (corrected) return corrected;
+    }
+
     const direct = await geocodeQuery(trimmed, primaryLanguage);
     if (direct) return direct;
     for (const fallbackLanguage of ["en", "ko"]) {
       if (fallbackLanguage === primaryLanguage) continue;
       const viaFallback = await geocodeQuery(trimmed, fallbackLanguage);
       if (viaFallback) return viaFallback;
-    }
-    // 아래 두 폴백은 한국 행정구역 이름 전용이라 항상 language=ko로 시도한다.
-    const metroFormalName = METRO_CITY_FORMAL_NAMES[trimmed];
-    if (metroFormalName) {
-      const metro = await geocodeQuery(metroFormalName, "ko");
-      if (metro) return metro;
     }
     const strippedCity = stripLeadingProvince(trimmed);
     if (strippedCity) return geocodeQuery(strippedCity, "ko");
@@ -188,6 +227,11 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
   // kma_seamless는 이따금 이 지역·시각에 대해 모든 필드를 null로 돌려준다(실측, 2026-08).
   // 그럴 때 "?"로만 채워진 문장을 보여주느니 기본 모델(best_match)로 조용히 물러난다 —
   // 대한민국 우선은 "쓸 수 있으면" 정도의 개선이지 강한 보장이 아니다.
+  //
+  // 2026-08-21 재측정: 서울·성남·부산 좌표에서 kma_seamless·kma_ldps·kma_gdps 모두 48시간
+  // 전부 null이었다(모델명은 유효 — 없는 이름은 HTTP 400이 온다). 즉 지금은 **항상** 이
+  // 폴백을 타고, 기상청 우선 경로는 사실상 쉬고 있다. 업스트림 데이터 문제라 앱에서 고칠
+  // 것은 없지만, 조용히 물러나기만 하면 데이터가 돌아왔는지도 알 수 없어 한 줄 남긴다.
   async function fetchHourlyForecast(geo: GeocodeResult): Promise<HourlyForecast | null> {
     const baseUrl = `${FORECAST_URL}?latitude=${geo.latitude}&longitude=${geo.longitude}` +
       `&hourly=temperature_2m,weathercode,precipitation_probability` +
@@ -195,6 +239,7 @@ function createWeatherService(deps: WeatherServiceDeps = {}) {
     if (geo.countryCode === "KR") {
       const kmaForecast = await fetchHourlyForecastFromUrl(`${baseUrl}&models=kma_seamless`);
       if (kmaForecast && kmaForecast.temperature.some((value) => typeof value === "number")) return kmaForecast;
+      console.log("[Weather] 기상청(kma_seamless) 값이 비어 기본 모델로 물러났다.");
     }
     return fetchHourlyForecastFromUrl(baseUrl);
   }

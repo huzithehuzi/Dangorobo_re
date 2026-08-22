@@ -25,6 +25,11 @@ const {
   getMemoriesByCategory,
   searchMemories,
   deleteMemory,
+  forgetMemory,
+  forgetOpenLoop,
+  restoreForgottenMemory,
+  getForgottenMemories,
+  getForgottenMemoryCount,
   setMemoryVerified,
   archiveAllMemories,
   getMemoryCount,
@@ -170,6 +175,16 @@ test("v2 데이터베이스를 v3으로 올리면서 데이터와 원본 백업�
       "SELECT memory_key, memory_value, is_verified, is_archived FROM long_term_memory"
     )[0]?.values,
     [["favorite_drink", "라떼", 0, 0]]
+  );
+  // v4에서 붙는 열은 기존 행에 0으로 들어와야 한다 — 1이면 기존 사용자의 기억이 전부
+  // "잊은 것"이 되어 화면에서 사라지고 다시 배울 수도 없다.
+  assert.deepEqual(
+    migrated.exec("SELECT is_forgotten FROM long_term_memory")[0]?.values,
+    [[0]]
+  );
+  assert.deepEqual(
+    migrated.exec("SELECT is_forgotten FROM open_loops")[0]?.values,
+    [[0]]
   );
   const expectedMemory = {
     id: 1,
@@ -448,7 +463,7 @@ test("저장 실패 시 모든 변경 API가 실패를 반환하고 인메모리
 
 // ── 오래된 미완료 주제 자동 정리 (2026-08-14) ────────────────────────────────────
 //
-// 프롬프트 노출은 memory-search가 2주로 자르고, 이쪽은 표가 무한정 쌓이는 것만 막는다.
+// 프롬프트 노출은 memory-search가 3일로 자르고, 이쪽은 표가 무한정 쌓이는 것만 막는다.
 // 방금 넣은 행의 나이를 뒤로 돌릴 수단이 없으므로 기준일을 0/아주 큰 값으로 줘서
 // 경계 양쪽을 확인한다.
 
@@ -485,8 +500,258 @@ test("자동 정리는 기준보다 오래된 열린 주제만 닫는다", async
 });
 
 test("자동 정리 기준일은 프롬프트 노출 상한보다 훨씬 길다", () => {
-  // 둘은 목적이 다르다. 이 값이 2주 근처로 내려오면 진행 중인 일까지 닫히기 시작한다.
-  assert.equal(OPEN_LOOP_ARCHIVE_AGE_DAYS, 180);
+  // 둘은 목적이 다르다(꺼내지 않게 / 쌓이지 않게). 기준이 노출 상한까지 내려오면
+  // 사용자가 아직 이야기 중인 주제도 표에서 사라진다.
+  assert.equal(OPEN_LOOP_ARCHIVE_AGE_DAYS, 14);
   const { OPEN_LOOP_PROMPT_MAX_AGE_DAYS } = require("../src/main/memory/memory-search.js");
   assert.ok(OPEN_LOOP_ARCHIVE_AGE_DAYS > OPEN_LOOP_PROMPT_MAX_AGE_DAYS * 4);
+});
+
+test("닫을 주제가 없으면 DB를 다시 쓰지 않는다", async (t) => {
+  // 정리는 대화 몇 턴마다 돈다. runPersistentMutation은 롤백 스냅샷을 위해 DB 전체를
+  // export하고 성공하면 파일을 통째로 다시 쓰므로, 헛돌 때까지 그 비용을 치르면 안 된다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  let writes = 0;
+  /**
+   * @param {string} filePath
+   * @param {string | Buffer} data
+   * @param {{ backup?: boolean }} [options]
+   */
+  function countingWriter(filePath, data, options) {
+    writes += 1;
+    writeFileAtomicSync(filePath, data, options);
+  }
+  const initializeOptions = /** @type {InitializeDatabaseOptions} */ ({
+    writeDatabaseFile: countingWriter
+  });
+  assert.equal(await initializeDatabase(initializeOptions), true);
+  const episodeId = insertEpisode({
+    session_id: "no-op-archive-session",
+    date: "2026-08-21",
+    summary: "헛도는 정리"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "아직 최근인 주제" }), true);
+
+  const writesBefore = writes;
+  // 기준이 아주 길면 닫을 게 없다 — 읽기만 하고 끝나야 한다.
+  assert.equal(archiveStaleOpenLoops(3650), 0);
+  assert.equal(writes, writesBefore, "닫을 게 없으면 파일을 쓰지 않는다");
+
+  // 닫을 게 있으면 그때만 쓴다.
+  assert.equal(archiveStaleOpenLoops(0), 1);
+  assert.ok(writes > writesBefore, "닫을 게 있으면 저장한다");
+});
+
+test("자동 정리 사유는 앱 언어를 따른다", async (t) => {
+  // 예전에는 한국어로 하드코딩돼 영어·일본어 사용자의 기억 DB에도 한국어가 남았다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const episodeId = insertEpisode({
+    session_id: "archive-note-session",
+    date: "2026-08-21",
+    summary: "정리 사유 언어"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "정리 사유를 볼 주제" }), true);
+  assert.equal(archiveStaleOpenLoops(0, "en"), 1);
+
+  const database = getDb();
+  assert.ok(database);
+  const notes = String(
+    database.exec("SELECT resolution_notes FROM open_loops WHERE is_closed = 1")[0]?.values[0][0]
+  );
+  assert.match(notes, /Auto-archived/);
+  assert.ok(!/일 이상/.test(notes), "영어 설정에 한국어가 섞이지 않는다");
+});
+
+// ── 잊어달라고 한 것은 되살아나지 않는다 (2026-08-21) ──────────────────────────────
+//
+// 소프트 삭제만으로는 부족하다. insertMemory()는 같은 키를 다시 넣으면 아카이브를 풀어
+// 되살리고, insertOpenLoop()는 닫힌 주제를 중복으로 보지 않아 같은 주제를 새 행으로
+// 다시 만든다. 잊어달라 한 사실은 잊은 뒤에도 대화 이력에 남아 있으므로, 막지 않으면
+// 다음 추출이 돌 때 조용히 돌아온다 — 사용자에게는 "안 잊는다"로 보인다.
+
+test("잊은 기억은 같은 사실을 다시 추출해도 되살아나지 않는다", async (t) => {
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const memory = {
+    category: "preference",
+    memory_key: "coffee_taste",
+    memory_label: "커피 취향",
+    memory_value: "라떼를 좋아함"
+  };
+  assert.equal(insertMemory(memory), true);
+  const stored = getAllMemories()[0];
+  assert.ok(stored);
+
+  assert.equal(forgetMemory(stored.id), true);
+  assert.equal(getMemoryCount(), 0, "활성 목록에서 빠진다");
+  assert.equal(getForgottenMemoryCount(), 1);
+
+  // 다음 추출이 같은 사실을 다시 넣는 상황. 실패가 아니라 "저장할 것이 없음"이다.
+  assert.equal(insertMemory(memory), true);
+  assert.equal(getMemoryCount(), 0, "되살아나지 않는다");
+  assert.deepEqual(getAllMemories(), []);
+
+  // 표현만 다른 같은 뜻도 같은 키로 막힌다.
+  assert.equal(insertMemory({ ...memory, memory_value: "라떼를 좋아함!" }), true);
+  assert.equal(getMemoryCount(), 0);
+});
+
+test("소프트 삭제만 된 기억은 예전처럼 되살아난다", async (t) => {
+  // 잊기와 일반 삭제를 갈라 둔 것이 이 차이다 — 기억 관리 탭의 삭제는 되살아나도 된다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const memory = {
+    category: "habit",
+    memory_key: "morning_run",
+    memory_label: "아침 운동",
+    memory_value: "매일 아침 달리기를 함"
+  };
+  assert.equal(insertMemory(memory), true);
+  const stored = getAllMemories()[0];
+  assert.equal(deleteMemory(stored.id), true);
+  assert.equal(getMemoryCount(), 0);
+
+  assert.equal(insertMemory(memory), true);
+  assert.equal(getMemoryCount(), 1, "잊은 것이 아니라 지운 것이라 되살아난다");
+  assert.equal(getForgottenMemoryCount(), 0);
+});
+
+test("잊은 기억은 목록으로 보고 되살릴 수 있다", async (t) => {
+  // 되돌릴 수단이 없으면 잘못 잊은 사실을 영구히 다시 배우지 못한다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  assert.equal(insertMemory({
+    category: "preference",
+    memory_key: "coffee_taste",
+    memory_label: "커피 취향",
+    memory_value: "라떼를 좋아함"
+  }), true);
+  const stored = getAllMemories()[0];
+  assert.equal(forgetMemory(stored.id), true);
+
+  const forgotten = getForgottenMemories();
+  assert.equal(forgotten.length, 1);
+  assert.equal(forgotten[0].memory_label, "커피 취향");
+
+  assert.equal(restoreForgottenMemory(forgotten[0].id), true);
+  assert.equal(getMemoryCount(), 1, "활성 목록으로 돌아온다");
+  assert.equal(getForgottenMemoryCount(), 0);
+  assert.deepEqual(getForgottenMemories(), []);
+});
+
+test("사용자가 직접 가져오면 잊은 기억도 되살린다", async (t) => {
+  // memory:import는 사용자의 명시적 동작이다 — 자동 추출과 달리 표시를 지우고 되살린다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const memory = {
+    category: "preference",
+    memory_key: "coffee_taste",
+    memory_label: "커피 취향",
+    memory_value: "라떼를 좋아함"
+  };
+  assert.equal(insertMemory(memory), true);
+  assert.equal(forgetMemory(getAllMemories()[0].id), true);
+  assert.equal(getMemoryCount(), 0);
+
+  assert.equal(insertMemory(memory, { allowForgotten: true }), true);
+  assert.equal(getMemoryCount(), 1);
+  assert.equal(getForgottenMemoryCount(), 0);
+});
+
+test("잊은 미완료 주제는 같은 주제로 다시 만들어지지 않는다", async (t) => {
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const episodeId = insertEpisode({
+    session_id: "forget-loop-session",
+    date: "2026-08-21",
+    summary: "잊은 주제"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "자격증 시험 결과" }), true);
+  const loop = getOpenLoops()[0];
+  assert.ok(loop);
+
+  assert.equal(forgetOpenLoop(loop.id, "사용자 요청"), true);
+  assert.equal(getOpenLoopsCount(), 0);
+
+  // 닫힌 주제는 findDuplicateOpenLoop이 보지 않으므로, 표시가 없으면 새 행이 생긴다.
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "자격증 시험 결과" }), true);
+  assert.equal(getOpenLoopsCount(), 0, "새 행으로 되돌아오지 않는다");
+});
+
+test("자동 정리로 닫힌 주제는 다시 이야기하면 살아난다", async (t) => {
+  // 잊기와 자동 정리를 갈라 둔 것이 이 차이다 — 잊힌 게 아니라 조용해진 것이다.
+  closeDatabase();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
+  fs.mkdirSync(userDataDir, { recursive: true });
+  t.after(() => {
+    closeDatabase();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  assert.equal(await initializeDatabase(), true);
+  const episodeId = insertEpisode({
+    session_id: "archived-loop-session",
+    date: "2026-08-21",
+    summary: "정리된 주제"
+  });
+  assert.ok(episodeId !== null);
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "이사 견적" }), true);
+  assert.equal(archiveStaleOpenLoops(0), 1);
+  assert.equal(getOpenLoopsCount(), 0);
+
+  assert.equal(insertOpenLoop({ episode_id: episodeId, topic: "이사 견적" }), true);
+  assert.equal(getOpenLoopsCount(), 1, "정리된 주제는 다시 꺼내면 살아난다");
 });

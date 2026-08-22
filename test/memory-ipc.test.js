@@ -9,6 +9,8 @@ const MEMORY_CHANNELS = [
   "memory:get-stats",
   "memory:get-all",
   "memory:get-open-loops",
+  "memory:get-forgotten",
+  "memory:restore-forgotten",
   "memory:verify",
   "memory:unverify",
   "memory:delete",
@@ -27,9 +29,12 @@ function createDependencies(overrides = {}) {
     getMemoryCount: () => 3,
     getOpenLoopsCount: () => 2,
     getEpisodesCount: () => 1,
+    getForgottenMemoryCount: () => 4,
     getMemoriesByCategory: (/** @type {string} */ category) => [{ category }],
     getAllMemories: () => [{ category: "all" }],
     getOpenLoops: () => [{ id: 1, topic: "후속 주제" }],
+    getForgottenMemories: () => [{ id: 9, memory_label: "잊은 것" }],
+    restoreForgottenMemory: () => true,
     setMemoryVerified: () => true,
     deleteMemory: () => true,
     closeOpenLoop: () => true,
@@ -103,6 +108,9 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
     getMemoriesByCategory: forbiddenCall,
     getAllMemories: forbiddenCall,
     getOpenLoops: forbiddenCall,
+    getForgottenMemoryCount: forbiddenCall,
+    getForgottenMemories: forbiddenCall,
+    restoreForgottenMemory: forbiddenCall,
     setMemoryVerified: forbiddenCall,
     deleteMemory: forbiddenCall,
     closeOpenLoop: forbiddenCall,
@@ -115,7 +123,8 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-stats"), {
     memoryCount: 0,
     loopsCount: 0,
-    episodesCount: 0
+    episodesCount: 0,
+    forgottenCount: 0
   });
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-all", "fact"), []);
   assert.deepEqual(await harness.invokeFrom(forbiddenSender, "memory:get-open-loops"), []);
@@ -128,12 +137,15 @@ test("설정창이 아닌 sender는 9개 채널 모두 거부하고 저장소에
   assert.equal(dependencyCalls, 0);
 });
 
-test("통계 조회는 세 값을 함께 반환하고 하나라도 실패하면 전부 0으로 폴백한다", async () => {
+test("통계 조회는 네 값을 함께 반환하고 하나라도 실패하면 전부 0으로 폴백한다", async () => {
+  // forgottenCount는 화면 숫자가 아니라 설정창이 "기억 관리" 탭을 보여줄지 정하는 값이다.
+  // 실패해도 키 자체는 남아야 한다 — UI가 undefined를 "잊은 게 있다"로 오해하지 않게.
   const success = createHarness();
   assert.deepEqual(await success.invoke("memory:get-stats"), {
     memoryCount: 3,
     loopsCount: 2,
-    episodesCount: 1
+    episodesCount: 1,
+    forgottenCount: 4
   });
 
   const failure = createHarness({
@@ -144,7 +156,20 @@ test("통계 조회는 세 값을 함께 반환하고 하나라도 실패하면 
   assert.deepEqual(await failure.invoke("memory:get-stats"), {
     memoryCount: 0,
     loopsCount: 0,
-    episodesCount: 0
+    episodesCount: 0,
+    forgottenCount: 0
+  });
+
+  const forgottenFailure = createHarness({
+    getForgottenMemoryCount: () => {
+      throw new Error("통계 실패");
+    }
+  });
+  assert.deepEqual(await forgottenFailure.invoke("memory:get-stats"), {
+    memoryCount: 0,
+    loopsCount: 0,
+    episodesCount: 0,
+    forgottenCount: 0
   });
 });
 
@@ -395,4 +420,55 @@ test("저장소 검증 변경과 전체 보관은 기존 성공 의미와 대상
   assert.equal(memoryStore.getEpisodesCount(), 1);
   assert.deepEqual(database.exec("SELECT is_archived FROM long_term_memory")[0]?.values, [[1]]);
   assert.deepEqual(database.exec("SELECT is_closed FROM open_loops")[0]?.values, [[0]]);
+});
+
+// ── 잊은 기억 조회·되살리기 (2026-08-21) ──────────────────────────────────────────
+
+test("잊은 기억 목록을 돌려준다", async () => {
+  const harness = createHarness();
+  assert.deepEqual(
+    await harness.invoke("memory:get-forgotten"),
+    [{ id: 9, memory_label: "잊은 것" }]
+  );
+});
+
+test("잊은 기억 되살리기는 양의 정수 id만 받는다", async () => {
+  /** @type {number[]} */
+  const restored = [];
+  const harness = createHarness({
+    restoreForgottenMemory: (/** @type {number} */ id) => {
+      restored.push(id);
+      return true;
+    }
+  });
+
+  assert.equal(await harness.invoke("memory:restore-forgotten", 4), true);
+  assert.equal(await harness.invoke("memory:restore-forgotten", 0), false);
+  assert.equal(await harness.invoke("memory:restore-forgotten", -1), false);
+  assert.equal(await harness.invoke("memory:restore-forgotten", "4"), false);
+  assert.equal(await harness.invoke("memory:restore-forgotten", 1.5), false);
+  assert.deepEqual(restored, [4], "검증을 통과한 호출만 내려간다");
+});
+
+test("잊은 기억 채널도 설정창이 아닌 sender를 막는다", async () => {
+  const harness = createHarness({ isAllowedSender: () => false });
+  assert.deepEqual(await harness.invoke("memory:get-forgotten"), []);
+  assert.equal(await harness.invoke("memory:restore-forgotten", 4), false);
+});
+
+test("가져오기는 잊은 기억도 되살리도록 요청한다", async () => {
+  // 자동 추출만 is_forgotten에 막힌다 — 사용자가 직접 고른 파일은 되살려야 한다.
+  /** @type {unknown[]} */
+  const insertOptions = [];
+  const harness = createHarness({
+    insertMemory: (/** @type {unknown} */ _memory, /** @type {unknown} */ options) => {
+      insertOptions.push(options);
+      return true;
+    }
+  });
+  const imported = await harness.invoke("memory:import", [
+    { valid: true, normalized: { category: "fact", memory_key: "k", memory_label: "l", memory_value: "v" } }
+  ]);
+  assert.equal(imported, 1);
+  assert.deepEqual(insertOptions, [{ allowForgotten: true }]);
 });

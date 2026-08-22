@@ -349,6 +349,17 @@
     "settings.memory.description": { ko: "펫이 기억한 장기 기억과 미완료 주제를 관리합니다.", en: "Manage the pet's long-term memories and unresolved topics.", ja: "ペットの長期記憶と未解決のトピックを管理します。" },
     "settings.memory.statsHeading": { ko: "통계", en: "Statistics", ja: "統計" },
     "settings.memory.totalMemories": { ko: "장기 기억", en: "Long-term memories", ja: "長期記憶" },
+    "settings.search.placeholder": { ko: "설정 검색", en: "Search settings", ja: "設定を検索" },
+    "settings.search.ariaLabel": {
+      ko: "설정 항목 검색",
+      en: "Search settings",
+      ja: "設定項目を検索"
+    },
+    "settings.search.noResults": {
+      ko: "일치하는 설정이 없습니다",
+      en: "No matching settings",
+      ja: "一致する設定がありません"
+    },
     "settings.memory.openLoops": { ko: "미완료 주제", en: "Open loops", ja: "未解決のトピック" },
     "settings.memory.episodes": { ko: "대화 기록", en: "Conversation sessions", ja: "会話記録" },
     "settings.memory.longTermHeading": { ko: "장기 기억", en: "Long-term Memory", ja: "長期記憶" },
@@ -357,6 +368,22 @@
     "settings.memory.exportButton": { ko: "내보내기 (JSON)", en: "Export (JSON)", ja: "エクスポート (JSON)" },
     "settings.memory.importButton": { ko: "불러오기 (JSON)", en: "Import (JSON)", ja: "読み込み (JSON)" },
     "settings.memory.clearButton": { ko: "장기 기억 모두 삭제", en: "Delete All Long-term Memories", ja: "長期記憶をすべて削除" },
+    "settings.memory.forgottenHeading": {
+      ko: "잊은 기억",
+      en: "Forgotten memories",
+      ja: "忘れた記憶"
+    },
+    "settings.memory.forgottenNote": {
+      ko: "잊어달라고 요청한 기억입니다. 되살리기 전까지는 대화에 쓰이지 않고, 같은 사실을 다시 말해도 자동으로 저장되지 않습니다.",
+      en: "Memories you asked to forget. They are not used in conversation, and saying the same thing again will not save them automatically until you restore them.",
+      ja: "忘れてほしいと頼んだ記憶です。復元するまでは会話に使われず、同じことをもう一度話しても自動保存されません。"
+    },
+    "settings.memory.restoreButton": { ko: "되살리기", en: "Restore", ja: "復元" },
+    "settings.memory.confirmRestore": {
+      ko: "이 기억을 되살릴까요? 다시 대화에 쓰이고, 앞으로 자동 저장도 다시 됩니다.",
+      en: "Restore this memory? It will be used in conversation again and can be saved automatically from now on.",
+      ja: "この記憶を復元しますか? 再び会話に使われ、今後は自動保存もされます。"
+    },
     "settings.memory.openLoopsHeading": { ko: "미완료 주제", en: "Open Loops", ja: "未解決のトピック" },
     "settings.memory.noOpenLoops": { ko: "미완료 주제가 없습니다.", en: "No open loops.", ja: "未解決のトピックはありません。" },
     "settings.memory.note": { ko: "기억은 자동으로 저장되며, 앱을 다시 시작해도 유지됩니다. 장기 기억은 확인 후 검증 표시를 할 수 있습니다.", en: "Memories are saved automatically and persist after app restart. You can verify long-term memories after review.", ja: "メモリーは自動的に保存され、アプリを再起動しても保持されます。長期記憶はレビュー後に検証できます。" },
@@ -904,6 +931,29 @@
     },
     "assistant.openLoopsToday": { ko: "오늘", en: "today", ja: "今日" },
     "assistant.openLoopsDaysAgo": { ko: "{{days}}일 전", en: "{{days}} days ago", ja: "{{days}}日前" },
+
+    // 장기 기억 DB에 남기는 사람이 읽는 값들. 화면에 바로 띄우지는 않지만 기억 관리·백업
+    // 파일에서 사용자가 보게 되므로 앱 언어를 따른다(예전에는 한국어로 하드코딩돼 있었다).
+    "memory.openLoopAutoResolvedNote": {
+      ko: "AI가 대화에서 완료 신호를 감지해 자동 종료",
+      en: "Auto-closed: the AI detected a completion signal in the conversation",
+      ja: "AIが会話から完了のサインを検知して自動終了"
+    },
+    "memory.openLoopAutoArchivedNote": {
+      ko: "{{days}}일 이상 언급되지 않아 자동 정리",
+      en: "Auto-archived after {{days}}+ days without a mention",
+      ja: "{{days}}日以上言及がなく自動整理"
+    },
+    "memory.forgottenNote": {
+      ko: "사용자가 잊어달라고 요청해 삭제",
+      en: "Removed at the user's request to forget it",
+      ja: "ユーザーが忘れてほしいと頼んだため削除"
+    },
+    "memory.episodeBatchSummary": {
+      ko: "대화 배치 - {{when}} ({{turns}}턴)",
+      en: "Conversation batch - {{when}} ({{turns}} turns)",
+      ja: "会話バッチ - {{when}} ({{turns}}ターン)"
+    },
 
     // ---- 펫이 먼저 말 걸기(petChat) ----
     "petChat.intro": {

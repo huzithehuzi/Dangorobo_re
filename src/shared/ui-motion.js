@@ -5,7 +5,8 @@
    CSS만으로 안 되는 세 가지만 여기서 한다:
      1. 커서 좌표를 CSS 변수(--ui-glow-x/y)로 넘기기
      2. 누른 자리에서 파문을 그릴 임시 요소 만들기
-     3. 목록이 다시 그려질 때 자식에 스태거 인덱스(--ui-i) 붙이기
+     3. 클릭된 요소에 젤리 출렁임 클래스를 붙였다 떼기(연타할 때 다시 재생되게)
+     4. 목록이 다시 그려질 때 자식에 스태거 인덱스(--ui-i) 붙이기
    나머지(호버 떠오름·진입 애니메이션·포커스 링)는 전부 CSS 쪽에 있다.
 
    설계 원칙: **기존 요소의 스타일을 건드리지 않는다.** 파문은 버튼 안이 아니라 body 아래
@@ -79,12 +80,33 @@
   }
 
   // ── 2. 누름 파문 ───────────────────────────────────────────────────────
-  /** @param {PointerEvent} event */
-  function spawnRipple(event) {
-    if (motionOff() || event.button !== 0) return;
+  /* 파문과 젤리가 같은 대상 판정을 써야 한다 — 하나만 걸리면 한쪽 효과만 도는 버튼이 생긴다. */
+  /**
+   * @param {Event} event
+   * @returns {HTMLElement | null}
+   */
+  function motionTarget(event) {
+    if (motionOff()) return null;
     var origin = /** @type {Element | null} */ (event.target);
     var target = /** @type {HTMLElement | null} */ (origin && origin.closest ? origin.closest(GLOW_SELECTOR) : null);
-    if (!target || isDisabled(target)) return;
+    return !target || isDisabled(target) ? null : target;
+  }
+
+  /* 파문은 누르는 순간에 그리므로 주 버튼만 본다. 클릭 쪽은 버튼 번호를 보지 않는다 —
+     가운데·오른쪽 버튼은 click이 아니라 auxclick으로 가고, 키보드로 누른 click은
+     button이 0이라 그대로 통과해야 한다. */
+  /**
+   * @param {PointerEvent} event
+   * @returns {HTMLElement | null}
+   */
+  function pressTarget(event) {
+    return event.button !== 0 ? null : motionTarget(event);
+  }
+
+  /** @param {PointerEvent} event */
+  function spawnRipple(event) {
+    var target = pressTarget(event);
+    if (!target) return;
     var rect = target.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
 
@@ -121,7 +143,50 @@
     window.setTimeout(done, 900);
   }
 
-  // ── 3. 목록 스태거 ─────────────────────────────────────────────────────
+  // ── 3. 젤리 출렁임 ─────────────────────────────────────────────────────
+  /* 실제 출렁임은 ui-motion.css의 @keyframes ui-jelly-wobble이 그린다(독립 `scale` 속성을
+     써서 버튼의 transform 위치를 건드리지 않는다 — 그쪽 주석 참고). 여기서는 클래스만
+     붙였다 뗀다.
+
+     ⚠ **`click`에서 재생한다.** 앞선 두 시도가 각각 이렇게 실패했다:
+       - `pointerdown`: 짧게 톡 누르면 `:active` 축소가 풀리는 움직임과 겹쳐 출렁임이
+         잘린 것처럼 보였다("꾹 눌러야 다 재생된다").
+       - `pointerup`: 재생 시점이 손을 떼는 시점에 묶여, 누르는 시간이 조금만 흔들려도
+         같은 단발 클릭인데 반응이 늦거나 이르게 느껄졌다("타이밍이 일관성이 없다").
+     `click`은 "이 요소가 실제로 눌렸다"가 확정되는 한 지점이라 매번 같은 자리에서 돈다.
+     누르는 동안의 반응은 `:active` 축소와 파문이 맡는다.
+
+     click을 쓰면 덤으로 두 가지가 공짜로 온다: 누른 뒤 버튼 밖으로 끌고 나가 떼면 브라우저가
+     click을 만들지 않으므로 취소된 클릭에 출렁이지 않고(직접 관리했던 부분), 키보드
+     Enter·Space로 누른 경우에도 click이 와서 같은 반응이 난다. */
+  var JELLY_CLASS = "ui-jelly";
+  var JELLY_ANIMATION = "ui-jelly-wobble";
+
+  /** @param {MouseEvent} event */
+  function jellyClick(event) {
+    var found = motionTarget(event);
+    if (!found) return;
+    var target = found;
+
+    /* 연타할 때 다시 재생되려면 클래스를 뗀 뒤 리플로를 강제해야 한다(스태거와 같은 이유). */
+    target.classList.remove(JELLY_CLASS);
+    void target.offsetWidth;
+    target.classList.add(JELLY_CLASS);
+
+    /** @param {AnimationEvent} [animationEvent] */
+    var done = function (animationEvent) {
+      /* 버튼 안쪽 요소의 애니메이션이 올려보낸 animationend에 반응하면 출렁임이 중간에
+         끊긴다. 이름으로 우리 것만 받는다. */
+      if (animationEvent && animationEvent.animationName !== JELLY_ANIMATION) return;
+      target.removeEventListener("animationend", /** @type {EventListener} */ (done));
+      target.classList.remove(JELLY_CLASS);
+    };
+    target.addEventListener("animationend", /** @type {EventListener} */ (done));
+    // animationend가 안 오는 경우(창이 숨겨져 애니메이션이 안 도는 등)를 대비한 안전망.
+    window.setTimeout(function () { done(); }, 1200);
+  }
+
+  // ── 4. 목록 스태거 ─────────────────────────────────────────────────────
   /* 목록이 통째로 다시 그려질 때만 걸고 싶다(항목 하나 추가/삭제에 전체가 다시 튀면
      산만하다). 그래서 "한 번에 2개 이상 추가된 경우"에만 인덱스를 붙인다. */
   /** @param {Element} container */
@@ -193,6 +258,7 @@
   function start() {
     document.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("pointerdown", spawnRipple, { passive: true });
+    document.addEventListener("click", jellyClick, { passive: true });
     document.addEventListener("pointerleave", clearGlow);
     // 버튼이 사라지거나(목록 재렌더) 창이 포커스를 잃으면 하이라이트가 남지 않게 한다.
     window.addEventListener("blur", clearGlow);

@@ -1,6 +1,6 @@
 *[한국어](./README.md) · English · [日本語](./README.ja.md)*
 
-# Dangorobo 1.2.0
+# Dangorobo 1.3.0
 
 A retro-flavoured desktop pet that lives in a corner of your screen. It watches your cursor, wags its tail as
 you type, gets happy when you pet it, and reminds you to take breaks at set times. You can even
@@ -36,6 +36,10 @@ runs as a single executable with no installation needed.
 
 Korean, English, and Japanese are supported, and the language is picked automatically to match
 your Windows language on first launch.
+
+Type into the **search box** at the top of the settings sidebar to find a setting by name. The
+results show which tab it lives in; clicking one jumps to that tab and briefly highlights the
+row (useful when there are more tabs than you want to browse).
 
 If you installed via the setup file (`Dangorobo-Setup.exe`), the app checks for new versions,
 downloads them automatically, and asks whether to restart and install. The portable build

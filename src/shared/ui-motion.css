@@ -188,7 +188,44 @@ textarea:focus-visible,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--bubble-button, #d75566)) 40%, transparent);
 }
 
-/* ── 9. 움직임 최소화 설정 존중 ────────────────────────────────────────
+/* ── 9. 누름 젤리 출렁임 ───────────────────────────────────────────────
+   ui-motion.js가 **클릭이 확정될 때(click)** .ui-jelly를 붙였다가 애니메이션이 끝나면 뗀다.
+
+   ⚠ pointerdown도 pointerup도 아니다(2026-08-21에 그 순서로 두 번 고쳤다).
+   pointerdown에 걸면 짧게 톡 누른 경우 출렁임이 도는 도중에 `:active`의 scale(0.94)가
+   풀리면서(90ms transition) 두 움직임이 겹쳐 잘린 것처럼 보인다. pointerup으로 옮기면
+   그건 사라지지만 재생 시점이 손 떼는 시점에 묶여, 같은 단발 클릭인데도 누르는 시간이
+   흔들리는 만큼 반응이 늦거나 이르게 느껄진다. `click`은 "실제로 눌렸다"가 확정되는 한
+   지점이라 매번 같은 자리에서 돈다. 누르는 동안의 반응은 `:active` 축소와 파문이 맡는다.
+
+   ⚠ **`transform`이 아니라 독립 `scale` 속성을 애니메이션한다.** 키프레임의 값은 명시도와
+   무관하게 일반 선언을 이기므로, transform으로 자리를 잡는 버튼(`.fab`·`.gradient-stop`·
+   `.pie-item`의 `translate(-50%, -50%)`)이라면 애니메이션이 도는 460ms 동안 그 translate가
+   통째로 사라져 버튼이 오른쪽 아래로 튄다 — test/active-transform-specificity.test.js가
+   기록한 그 버그와 같은 증상인데, 이쪽은 **명시도를 올려도 막을 수 없다**.
+   `scale`은 별개 속성이라 transform과 곱해져 합성되므로 자리를 건드리지 않는다.
+
+   기존 누름 축소(`button:active { transform: scale(0.94) }`)와도 곱해진다: 누르는 동안
+   납작해지고 손을 떼면 출렁이며 제자리로 돌아오는 순서로 읽힌다.
+   가로·세로를 반대로 움직여(납작 → 홀쭉) 부피가 유지되는 것처럼 보이게 한다.
+
+   진폭 조정 이력:
+     ±5%/460ms  → "느낌 좋은데 조금만 더 출렁여도 좋겠다"(2026-08-21 피드백)
+     ±8%/520ms  ← 지금. 진폭과 함께 지속 시간도 늘렸다 — 진폭만 키우면 같은 시간에 더 많이
+                  움직여서 출렁임이 아니라 딸깍거리는 느낌이 된다.
+   더 키우려면 :active 축소(0.94)와 곱해지는 것을 기억할 것. 가로로 8% 늘어난 상태에서
+   0.94가 곱해지면 실제로는 1.08 × 0.94 ≈ 1.02배다. 여기서 더 가면 옆 버튼과 겹쳐 보인다. */
+@keyframes ui-jelly-wobble {
+  0% { scale: 1 1; }
+  24% { scale: 1.08 0.89; }
+  48% { scale: 0.95 1.065; }
+  70% { scale: 1.03 0.977; }
+  86% { scale: 0.99 1.013; }
+  100% { scale: 1 1; }
+}
+.ui-jelly { animation: ui-jelly-wobble 520ms cubic-bezier(0.22, 0.9, 0.3, 1); }
+
+/* ── 10. 움직임 최소화 설정 존중 ───────────────────────────────────────
    Windows의 "애니메이션 표시" 끄기가 이 미디어 쿼리로 들어온다. 감성적인 효과라도
    멀미·주의력 문제로 끄는 사용자가 있으므로 전부 비활성화한다(포커스 링처럼 움직이지
    않는 것만 남긴다). */
@@ -204,4 +241,5 @@ textarea:focus-visible,
   .ui-stagger-item { animation: none; }
   input[type="checkbox"]:active:not(:disabled),
   input[type="radio"]:active:not(:disabled) { transform: none; }
+  .ui-jelly { animation: none; }
 }

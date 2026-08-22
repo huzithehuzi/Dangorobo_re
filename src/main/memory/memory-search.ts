@@ -170,22 +170,83 @@ function buildMemoryContextBlock(relatedMemories: MemoryRecord[], language = "ko
   return `\n\n${t(language, "assistant.relatedMemoryHeader")}\n${lines.join("\n")}\n`;
 }
 
-// 프롬프트에 올릴 미완료 주제의 나이 상한(마지막 언급 이후 경과 일수). 오래 언급되지 않은
-// 주제를 계속 보여주면 펫이 몇 달 전 일을 "그거 어떻게 됐어?"로 되묻는다 — 사람이 물어도
-// 자연스럽지 않은 상한이라 3주 아래로 뒀다(2026-08-14 사용자 피드백).
-// 해결됐는데 자동 판정이 놓쳐 열린 채로 남은 주제도 이 필터로 함께 조용해진다.
-// DB에서 지우거나 닫지는 않는다 — 사용자는 설정창 기억 관리 탭에서 그대로 보고 직접 닫는다.
-const OPEN_LOOP_PROMPT_MAX_AGE_DAYS = 14;
+// 펫이 **스스로 꺼내도 되는** 미완료 주제의 나이 상한(마지막 언급 이후 경과 일수).
+// 오래 언급되지 않은 주제를 계속 보여주면 펫이 지난달 일을 "그거 어떻게 됐어?"로 되묻고,
+// 해결됐는데 자동 판정이 놓친 주제까지 섞여 쓸데없이 쌓인다(2026-08-14에 2주로 뒀다가
+// 2026-08-21 사용자 피드백으로 3일). 상한을 넘긴 주제도 영구히 사라지지는 않는다 —
+// 사용자가 그 이야기를 먼저 꺼내면 `selectPromptOpenLoops()`가 다시 올린다.
+// DB에서 지우거나 닫지는 않는다 — 표 정리는 `archiveStaleOpenLoops()`가 따로 판단하고,
+// 사용자는 설정창 기억 관리 탭에서 그대로 보고 직접 닫는다.
+const OPEN_LOOP_PROMPT_MAX_AGE_DAYS = 3;
+
+// 사용자가 먼저 꺼내서 되살아나는 오래된 주제의 개수 상한. 질문 한 마디에 옛 주제가
+// 우르르 붙으면 위 상한을 둔 의미가 없어진다.
+const OPEN_LOOP_RECALL_LIMIT = 3;
+
+// 오래된 주제를 되살릴지 판정할 때 훑어볼 사용자 문장 길이 상한. 문서를 그대로 붙여넣은
+// 질문에서 두 글자 조각을 전부 뽑으면 무엇에든 걸린다.
+const OPEN_LOOP_RECALL_SCAN_CHARS = 300;
+
+// 두 글자 조각이 몇 개 겹쳐야 "그 이야기를 꺼냈다"로 볼지. 한 조각만으로는 흔한 어미에도 걸린다.
+const OPEN_LOOP_RECALL_MIN_GRAMS = 2;
+
+// 공백으로 단어를 끊지 않는 문자(한글·가나·한자). 일본어는 형태소 분석기가 없으면 문장
+// 전체가 한 토큰이 되고 `extractKeywordCandidates()`의 문자 필터에서 아예 지워지므로,
+// 단어 일치만 쓰면 되살리기 경로가 일본어에서 조용히 아무것도 못 찾는다.
+// 가나(3040~30FF)·CJK 확장A(3400~4DBF)·CJK 통합한자(4E00~9FFF)·호환한자(F900~FAFF)·한글 음절.
+const NO_WORD_BOUNDARY_CHAR = /[぀-ヿ㐀-䶿一-鿿豈-﫿가-힣]/;
+
+/** 공백으로 끊을 수 없는 문자만 이어진 두 글자 조각을 모은다. */
+function extractNoBoundaryBigrams(text: unknown): Set<string> {
+  const grams = new Set<string>();
+  if (!text || typeof text !== "string") return grams;
+
+  const scanned = text.slice(0, OPEN_LOOP_RECALL_SCAN_CHARS).toLowerCase();
+  for (let index = 0; index + 1 < scanned.length; index += 1) {
+    const first = scanned[index];
+    const second = scanned[index + 1];
+    if (NO_WORD_BOUNDARY_CHAR.test(first) && NO_WORD_BOUNDARY_CHAR.test(second)) {
+      grams.add(first + second);
+    }
+  }
+  return grams;
+}
 
 /**
- * 프롬프트에 올릴 미완료 주제만 고른다. 마지막 언급 시각을 못 읽으면 남긴다 —
+ * 사용자 문장이 그 주제를 직접 가리키는지 본다. 조사 제거 단어 일치(한국어·영어)와
+ * 두 글자 조각 겹침(일본어·한자)을 함께 쓴다 — 언어별로 갈라 쓰지 않고 둘 다 보므로
+ * 어느 언어에서도 이 경로가 통째로 죽지 않는다.
+ */
+function referencesOpenLoopTopic(question: unknown, topic: unknown): boolean {
+  const topicText = String(topic ?? "").toLowerCase();
+  if (!topicText) return false;
+
+  for (const candidate of extractKeywordCandidates(question)) {
+    if (topicText.includes(candidate.raw)) return true;
+    if (candidate.normalized !== candidate.raw && topicText.includes(candidate.normalized)) return true;
+  }
+
+  const topicGrams = extractNoBoundaryBigrams(topicText);
+  if (topicGrams.size === 0) return false;
+
+  let gramMatches = 0;
+  for (const gram of extractNoBoundaryBigrams(question)) {
+    if (!topicGrams.has(gram)) continue;
+    gramMatches += 1;
+    if (gramMatches >= OPEN_LOOP_RECALL_MIN_GRAMS) return true;
+  }
+  return false;
+}
+
+/**
+ * 펫이 스스로 꺼내도 되는 미완료 주제만 고른다. 마지막 언급 시각을 못 읽으면 남긴다 —
  * 날짜를 못 읽었다는 이유로 주제가 조용히 사라지면 원인을 찾기 어렵다.
  *
- * **펫이 미완료 주제를 소재로 삼을지 판정하는 곳(`hasOpenLoops`)도 이 함수를 써야 한다.**
- * 판정과 실제 블록이 갈리면 "미완료 주제 중 하나를 골라 물어보라"는 지시만 가고 목록은
- * 비어서, 모델이 없는 주제를 지어낸다.
+ * **펫이 미완료 주제를 소재로 삼을지 판정하는 곳(`hasOpenLoops`)은 이 함수를 써야 한다.**
+ * 판정에 `selectPromptOpenLoops()`를 쓰면 사용자 질문에 걸려 되살아난 옛 주제까지 세어
+ * "미완료 주제 중 하나를 골라 물어보라"는 지시가 살아나고, 상한을 둔 의미가 없어진다.
  */
-function selectPromptOpenLoops(
+function selectFreshOpenLoops(
   openLoops: MemoryRecord[],
   maxAgeDays = OPEN_LOOP_PROMPT_MAX_AGE_DAYS
 ): MemoryRecord[] {
@@ -195,6 +256,40 @@ function selectPromptOpenLoops(
     const mentionedAt = new Date(String(loop.last_mentioned_at || "")).getTime();
     return Number.isFinite(mentionedAt) ? mentionedAt >= cutoff : true;
   });
+}
+
+/**
+ * 프롬프트에 올릴 미완료 주제. 상한 안쪽 주제는 그대로 올리고, 상한을 넘긴 주제는
+ * 사용자가 이번 문장에서 그 이야기를 직접 꺼냈을 때만 뒤에 덧붙인다 — "펫이 먼저
+ * 되묻지는 않지만 물어보면 기억한다"가 이 함수의 계약이다.
+ *
+ * 결과는 항상 `selectFreshOpenLoops()`의 상위집합이라, 소재 판정이 참이면 블록도 비지 않는다.
+ * 펫이 먼저 말을 거는 경로는 사용자 발화가 없으므로 `userMessage`를 비워 부른다 —
+ * 오프너 지시문을 그대로 넘기면 지시문 단어에 옛 주제가 걸린다.
+ */
+function selectPromptOpenLoops(
+  openLoops: MemoryRecord[],
+  userMessage: unknown = "",
+  options: { maxAgeDays?: number; recallLimit?: number } = {}
+): MemoryRecord[] {
+  if (!Array.isArray(openLoops)) return [];
+
+  const maxAgeDays = Number.isFinite(options.maxAgeDays)
+    ? Number(options.maxAgeDays)
+    : OPEN_LOOP_PROMPT_MAX_AGE_DAYS;
+  const recallLimit = Number.isFinite(options.recallLimit)
+    ? Number(options.recallLimit)
+    : OPEN_LOOP_RECALL_LIMIT;
+
+  const fresh = selectFreshOpenLoops(openLoops, maxAgeDays);
+  if (recallLimit <= 0) return fresh;
+
+  const freshLoops = new Set(fresh);
+  const recalled = openLoops
+    .filter(loop => !freshLoops.has(loop) && referencesOpenLoopTopic(userMessage, loop.topic))
+    .slice(0, recallLimit);
+
+  return recalled.length > 0 ? [...fresh, ...recalled] : fresh;
 }
 
 /**
@@ -224,6 +319,9 @@ export {
   findRelatedMemories,
   buildMemoryContextBlock,
   buildOpenLoopsContextBlock,
+  selectFreshOpenLoops,
   selectPromptOpenLoops,
-  OPEN_LOOP_PROMPT_MAX_AGE_DAYS
+  referencesOpenLoopTopic,
+  OPEN_LOOP_PROMPT_MAX_AGE_DAYS,
+  OPEN_LOOP_RECALL_LIMIT
 };

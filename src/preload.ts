@@ -216,6 +216,8 @@ contextBridge.exposeInMainWorld("desktopPet", {
   getMemoryStats: () => ipcRenderer.invoke("memory:get-stats"),
   getMemories: (category: unknown) => ipcRenderer.invoke("memory:get-all", category),
   getOpenLoops: () => ipcRenderer.invoke("memory:get-open-loops"),
+  getForgottenMemories: () => ipcRenderer.invoke("memory:get-forgotten"),
+  restoreForgottenMemory: (id: unknown) => ipcRenderer.invoke("memory:restore-forgotten", id),
   verifyMemory: (id: unknown) => ipcRenderer.invoke("memory:verify", id),
   unverifyMemory: (id: unknown) => ipcRenderer.invoke("memory:unverify", id),
   deleteMemory: (id: unknown) => ipcRenderer.invoke("memory:delete", id),
