@@ -20,6 +20,13 @@ const ASSISTANT_SAFETY_SETTINGS = [
 
 const ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS = 1024;
 const ASSISTANT_SHORT_MAX_OUTPUT_TOKENS = 480;
+// **사고 토큰도 maxOutputTokens에서 나간다.** 2026-08-19에 thinkingLevel을 minimal에서 low로
+// 올리면서 호출부가 주는 예산은 그대로 뒀는데, 그 예산은 "답변 길이" 기준이라 사고가 앞에서
+// 먹고 답변이 문장 중간에서 끊긴다(2026-08-20 "부르기·자동 말걸기 말풍선의 글이 잘림" 리포트 —
+// 오프너 예산이 320이었다). 예산이 더 작은 경로들(기억 추출 50·150·300)은 답변이 아예 빈
+// 문자열로 와서 조용히 실패한다. 그래서 호출부 예산은 답변용으로만 해석하고, 사고 몫은 여기서
+// 얹는다 — 예산을 경로마다 손으로 키우면 새 호출부가 같은 함정을 다시 밟는다.
+const ASSISTANT_THINKING_HEADROOM_TOKENS = 512;
 const ASSISTANT_PRIMARY_TIMEOUT_MS = 22000;
 const ASSISTANT_RETRY_TIMEOUT_MS = 12000;
 
@@ -80,7 +87,7 @@ function createAskGemini(deps: AskGeminiDeps) {
                   ? ASSISTANT_SHORT_MAX_OUTPUT_TOKENS
                   : ASSISTANT_DEFAULT_MAX_OUTPUT_TOKENS
               )
-            ),
+            ) + ASSISTANT_THINKING_HEADROOM_TOKENS,
             // languageDirective가 프롬프트 앞부분에 있는데, minimal 사고 수준에서는 모델이
             // 그 지시를 놓치고 기본 언어(한국어)로 답하는 사례가 보고됐다 — 다이어그램 생략과
             // 같은 이유(document-summary.ts 참고)로 여기도 한 단계 올린다.
